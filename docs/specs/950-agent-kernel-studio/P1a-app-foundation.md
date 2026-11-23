@@ -1,0 +1,166 @@
+# P1a · App foundation: workspace, shell, bridge and design system
+
+| | |
+|---|---|
+| Status | Not started |
+| Business aspect | The Studio exists: it builds locally, opens a window, and looks like Agent Kernel |
+| Issue milestone | Before milestone 1 |
+| Depends on | [P0](P0-technology-selection.md). Vite, shadcn/ui and Tailwind are decided; other stack names below are P0's provisional choices, to be replaced by the decision record when P0 closes. |
+| Unlocks | [P1b](P1b-data-layer-and-patterns.md); P12 reuses the build pipeline |
+| Screens | The desktop shell (top bar, tabs, bottom panel, status bar) and the component library in Storybook |
+
+## Outcome
+
+A developer clones the repository, runs one command in `ak-studio/`, and the Studio opens: an empty shell with
+the top bar, tabs, bottom panel and status bar, in dark and light. The component library is browsable in
+Storybook. CI builds and tests it on Windows, macOS and Linux and produces an unsigned installer for each.
+There is no project feature yet.
+
+## Scope
+
+**In**
+
+- The `ak-studio/` workspace and its build, run, test and package commands.
+- Electron main, preload and renderer with the security baseline.
+- The typed bridge with a swappable transport.
+- The Studio design system: tokens, base components, shell components.
+- Storybook, as the place designs are finalised ([design-process.md](design-process.md)).
+- CI for three operating systems.
+
+**Out**
+
+- The data and feature layer, shared patterns and skills ([P1b](P1b-data-layer-and-patterns.md)).
+- Opening a folder or any project logic (P2). Signed installers and updates (P12).
+
+## Design gate
+
+Follow [design-process.md](design-process.md). Existing input: briefs 00 and 01 and the System page of the
+canvas. This gate sets the look every later screen inherits, so it is the most important one.
+
+| Subject | Requirements | Questions to settle |
+|---|---|---|
+| Palette and tokens | The Studio looks like Agent Kernel. | **Brand drift:** the briefs make electric blue the primary colour; the repository's current tokens (`docs/src/css/custom.css`) make orange `#FF5E32` primary. Which is the Studio's primary, which colour marks the coding agent, and do both pass 4.5:1 contrast on the app's surfaces. |
+| Density | A tool used for hours. | The type scale, row height and spacing steps. Comfortable and compact, or one density. |
+| Theme | Dark and light. | Which is the default. Whether glass layers hold up in light. |
+| Shell layout | Top bar with project switcher, tabs, run control, deploy status, Build with AI; bottom panel; status bar. No left navigation. | Whether five tabs plus controls fit the top bar at 1100 px. Native or custom window controls per operating system. Where settings open. |
+| Base components | The inventory in brief 01. | Which components are needed by P2 and P3 and are built now, and which wait for the phase that first uses them. |
+
+**Sign-off**
+
+| Subject | Options explored | Decision | Approved by | Date |
+|---|---|---|---|---|
+| Palette, tokens, density, theme | | | | |
+| Shell layout | | | | |
+| Base component set | | | | |
+
+## Work packages
+
+### 1.1 Workspace
+
+- [ ] `ak-studio/` at the repository root, beside `ak-py/`, as a pnpm workspace:
+
+  ```
+  ak-studio/
+    apps/
+      desktop/        Electron main and preload
+      renderer/       The React app. No Electron import. Runs in a browser.
+    packages/
+      contract/       Bridge types and schemas, shared by main and renderer
+      ui/             Design system: tokens and components, with stories
+      kernel-catalog/ Agent Kernel capability catalog (filled in P2)
+    fixtures/         (P1b) The support-triage fixture project and template reference projects
+    tools/            (P1b) Generators: new:feature, new:operation, new:component
+    .agents/skills/   (P1b) The ak-studio-* skills; .claude/skills links here
+    AGENTS.md         (P1b) Points coding agents to the skills
+    README.md         Build, run, test, package
+  ```
+
+- [ ] Commands: `dev`, `build`, `test`, `lint`, `storybook`, `package`. Add matching targets to the root
+      `Makefile` and a section to `DEVELOPER_GUIDE.md`.
+- [ ] Exact dependency versions pinned.
+- [ ] A lint rule that fails the build if `apps/renderer` or `packages/ui` imports `electron` or a Node
+      built-in.
+
+### 1.2 Electron main and preload
+
+- [ ] One window; size and position remembered.
+- [ ] Security baseline: context isolation on, sandbox on, Node integration off, a content security policy, the
+      app served from a custom protocol, navigation and new windows blocked, sender checked on every message.
+- [ ] The preload exposes the bridge transport and nothing else.
+- [ ] Single-instance lock. Application menu per platform.
+- [ ] The app makes no network calls of its own.
+
+### 1.3 The bridge
+
+- [ ] `packages/contract`: every call and every stream is declared once, with a schema for its input and
+      output.
+- [ ] The transport carries two primitives, `request` (one answer) and `subscribe` (a stream with cancel).
+      P1a ships the transport and one plain request; the contract's operation shapes (query, command, job,
+      session) are built on it in [P1b](P1b-data-layer-and-patterns.md).
+- [ ] A `Transport` interface with two implementations: Electron IPC, and a mock for the browser and tests.
+- [ ] Services in the main process are classes registered against the contract. P1a ships one: `AppService`
+      (app version, platform, theme preference).
+- [ ] Errors cross the bridge as typed `StudioError` values, not as thrown strings.
+- [ ] Contract test: every declared operation has a handler; inputs are validated in the main process.
+
+### 1.4 Design system (`packages/ui`)
+
+- [ ] Tokens as CSS variables, dark and light, from the decisions at the design gate, declared in Tailwind's
+      `@theme` with **Tailwind's default colour palette removed**, so only design-system colours exist.
+- [ ] Fonts bundled with the app (no network font loading).
+- [ ] Base components, each with stories for default, hover, focus and disabled:
+  - Controls: Button (primary, secondary, outline, ghost, danger, icon), Input, Textarea, Select, Combobox,
+    Checkbox, Radio, Toggle, Segmented control.
+  - Display: Tag, Badge, Status chip, Path chip, Card, Code block, Tooltip, Skeleton, Spinner, Empty state,
+    Inline banner.
+  - Overlays: Modal, Confirm modal, Drawer, Popover, Menu, Context menu, Toast.
+  - Structure: Tabs, Resizable panels, Data table, Tree.
+- [ ] Components that only a later phase needs (canvas nodes, chat cards, trace views, plan summary) are built
+      in that phase, in this package.
+- [ ] An accessibility check runs on every story in CI.
+
+### 1.5 Desktop shell (`apps/renderer`)
+
+- [ ] `DesktopShell` with `TopBar`, `AppTabs` (Canvas, Code, Config, Test & Trace, Deploy), `BottomPanel`
+      (Problems, Run log, Commands), `StatusBar`.
+- [ ] Each tab shows an empty state naming the phase that fills it.
+- [ ] Routing with in-memory or hash history. Theme switch. Panel sizes remembered.
+- [ ] Runs in a browser against the mock transport.
+
+### 1.6 Continuous integration
+
+- [ ] A workflow that runs on changes under `ak-studio/` only, on Windows, macOS and Linux: lint, type-check,
+      unit tests, Storybook build, an end-to-end smoke test, and an unsigned installer as a build artifact.
+- [ ] The existing Python workflows do not run on Studio-only changes, and the reverse.
+
+## Version awareness
+
+Nothing in P1a reads an Agent Kernel version. It creates the empty `kernel-catalog` package and the shell slot
+in the status bar where P2 shows the version.
+
+## Verification
+
+- [ ] `pnpm install` then `pnpm dev` opens the app on all three operating systems, from a clean clone.
+- [ ] The renderer opens in a browser with the mock transport.
+- [ ] The lint rule catches an `electron` import in the renderer.
+- [ ] Contract test passes; a missing handler fails it.
+- [ ] End-to-end smoke test: the app starts, each tab opens, the theme switches.
+- [ ] Every story passes the accessibility check and the [UX checklist](design-process.md).
+- [ ] CI is green on three operating systems and uploads three installers.
+- [ ] A class from Tailwind's default palette (`text-blue-500`) fails the build.
+
+## Open decisions
+
+- The product name and the app identifier. "Agent Kernel Studio" and `ak-studio/` are working names; the
+  repository has since been rebranded Open Agent Kernel, so the name needs a decision before P12 at the
+  latest.
+- The Studio's licence (the issue recommends open source).
+- Whether the approved components are fed back into the Agent Kernel Design System used by the docs site.
+
+## Risks
+
+| Risk | Default |
+|---|---|
+| Building the whole component inventory up front delays everything | Build only what P2 and P3 need; add the rest in the phase that uses it |
+| The docs site's tokens are tuned for marketing pages | The design gate defines app-specific density and surface tokens on top of the brand colours |
+| The JavaScript workspace disturbs the Python repository's tooling | Path-filtered CI; `ak-studio/` is self-contained; nothing in `ak-py/` depends on it |
