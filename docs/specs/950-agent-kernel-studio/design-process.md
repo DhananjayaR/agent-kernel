@@ -64,6 +64,9 @@ Each phase doc carries a table like this, one row per screen:
 
 Recorded so nobody rediscovers them:
 
+- **Style reference changed.** The briefs assume the docs-site look (pill buttons, glass). The Studio's
+  basic style is now set to resemble React Spectrum (Spectrum 2), with Agent Kernel's colours and fonts.
+  Where a brief's styling differs, the Spectrum-like tokens win; the brief's layout and content still apply.
 - **Brand drift.** The briefs and the canvas's design-system tokens use electric blue `#00DDFF` as primary,
   magenta `#F200FF` for the coding agent, a near-black ground and Inter for body text. The repository's
   current tokens (`docs/src/css/custom.css`, after the OAK rebrand) use orange `#FF5E32` as primary, a navy

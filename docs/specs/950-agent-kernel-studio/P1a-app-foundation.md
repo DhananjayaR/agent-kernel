@@ -40,7 +40,8 @@ canvas. This gate sets the look every later screen inherits, so it is the most i
 | Subject | Requirements | Questions to settle |
 |---|---|---|
 | Palette and tokens | The Studio looks like Agent Kernel. | **Brand drift:** the briefs make electric blue the primary colour; the repository's current tokens (`docs/src/css/custom.css`) make orange `#FF5E32` primary. Which is the Studio's primary, which colour marks the coding agent, and do both pass 4.5:1 contrast on the app's surfaces. |
-| Density | A tool used for hours. | The type scale, row height and spacing steps. Comfortable and compact, or one density. |
+| Style reference | **Decided:** the components' basic style resembles React Spectrum (Spectrum 2), with Agent Kernel's colours and fonts. | How closely to follow it where the briefs differ: the briefs assume glass floating layers and a 40 px row; Spectrum 2 has solid layers and its own size scale. Start from the token table measured in the P0 S1 spike. |
+| Density | A tool used for hours. | The type scale, row height and spacing steps, starting from Spectrum 2's scale. Comfortable and compact, or one density. |
 | Theme | Dark and light. | Which is the default. Whether glass layers hold up in light. |
 | Shell layout | Top bar with project switcher, tabs, run control, deploy status, Build with AI; bottom panel; status bar. No left navigation. | Whether five tabs plus controls fit the top bar at 1100 px. Native or custom window controls per operating system. Where settings open. |
 | Base components | The inventory in brief 01. | Which components are needed by P2 and P3 and are built now, and which wait for the phase that first uses them. |
@@ -49,6 +50,7 @@ canvas. This gate sets the look every later screen inherits, so it is the most i
 
 | Subject | Options explored | Decision | Approved by | Date |
 |---|---|---|---|---|
+| Style reference: how closely to follow Spectrum 2; solid or glass layers | | | | |
 | Palette, tokens, density, theme | | | | |
 | Shell layout | | | | |
 | Base component set | | | | |
@@ -105,6 +107,8 @@ canvas. This gate sets the look every later screen inherits, so it is the most i
 
 ### 1.4 Design system (`packages/ui`)
 
+- [ ] Size, shape, spacing and state tokens that follow Spectrum 2, from the table measured in P0 and the
+      decisions at the design gate. Adobe's icons, fonts and brand colours are not used.
 - [ ] Tokens as CSS variables, dark and light, from the decisions at the design gate, declared in Tailwind's
       `@theme` with **Tailwind's default colour palette removed**, so only design-system colours exist.
 - [ ] Fonts bundled with the app (no network font loading).

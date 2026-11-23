@@ -9,6 +9,7 @@
 | Unlocks | P1a |
 | Screens | None. The spikes build throwaway screens only. |
 | Evidence | [research/tech-stack-evaluation.md](research/tech-stack-evaluation.md) |
+| Execution plan | [P0-plan.md](P0-plan.md): task-by-task steps for the spikes |
 
 ## Outcome
 
@@ -57,6 +58,11 @@ setup works and pin versions.
 - **React Aria Components**, Adobe's unstyled layer under Spectrum, meets C1, C2 and C3.
 - **Decided: shadcn/ui, with Tailwind.** The code is copied into the repository and owned, so it takes the
   Agent Kernel look fully.
+- **Decided: the basic style resembles React Spectrum (Spectrum 2).** The shadcn/ui components are restyled
+  to Spectrum 2's control sizes, density, shapes, state styling and spacing, with Agent Kernel's colours and
+  fonts. Adobe's icons, fonts and brand colours are not used.
+- This strengthens the case for the React Aria base: React Aria is the behaviour layer under Spectrum, so the
+  Studio's components would behave like Spectrum's as well as look like them.
 - **Still open: which primitive base.** shadcn/ui offers Base UI (its default), Radix and React Aria. React
   Aria is the provisional pick because it brings the tree, the virtualised table and drag and drop under one
   accessibility model. Spike S1 checks that coverage; if it falls short, the base is Base UI with TanStack
@@ -79,7 +85,11 @@ Each spike is time-boxed, has pass criteria written before it starts, and ends w
 Build one throwaway screen in the Agent Kernel look.
 
 - [ ] `shadcn init` with the React Aria base, Tailwind 4, tokens from `docs/src/css/custom.css` in `@theme`.
-- [ ] Restyle Button (pill), Tag, Input, Popover and Dialog (glass), in dark and light.
+- [ ] Measure Spectrum 2's sizes, radii, spacing and state styling from its documentation and turn them into
+      tokens.
+- [ ] Restyle Button, Tag, Input, Popover and Dialog to resemble Spectrum 2, in dark and light. Build
+      floating layers both solid (as Spectrum has them) and with glass, for the design gate to choose.
+- [ ] Side-by-side screenshots against the Spectrum 2 documentation.
 - [ ] Build: a 5,000-row virtualised table, a tree with drag and drop, a combobox, a context menu, a command
       palette, resizable panels.
 - [ ] Keyboard-only walk-through and a screen-reader check of each.
@@ -88,7 +98,8 @@ Build one throwaway screen in the Agent Kernel look.
       the design tokens alone.
 - [ ] Render one form from a slice of the `AKConfig` JSON schema with the D12 candidates.
 
-**Pass:** all components match the tokens without overriding library internals; every component is
+**Pass:** the components read as the same family as Spectrum 2 side by side; all components match the
+tokens without overriding library internals; every component is
 keyboard-operable; no more than two components need a second primitive library.
 **If it fails:** repeat with shadcn/ui on Base UI plus TanStack Table and Virtual.
 
@@ -136,7 +147,7 @@ Filled in as spikes finish. Each row is also copied to the README decision log.
 
 | # | Decision | Chosen | Version pinned | Spike note | Date | Approved by |
 |---|---|---|---|---|---|---|
-| D1 | Component library | shadcn/ui (base: open) | | | 23 Nov 2026 | Project owner |
+| D1 | Component library | shadcn/ui, styled to resemble React Spectrum (Spectrum 2); base: open | | | 23 Nov 2026 | Project owner |
 | D2 | Styling | Tailwind CSS 4 | | | 23 Nov 2026 | Project owner |
 | D3 | Bundler | Vite (electron-vite, to confirm in S2) | | | 23 Nov 2026 | Project owner |
 | D4 | Packaging | | | | | |
@@ -152,7 +163,8 @@ Filled in as spikes finish. Each row is also copied to the README decision log.
 
 ## Checklist
 
-- [x] Desk research ([research/tech-stack-evaluation.md](research/tech-stack-evaluation.md))
+- [x] Desk research
+- [ ] Execution plan followed: [P0-plan.md](P0-plan.md) ([research/tech-stack-evaluation.md](research/tech-stack-evaluation.md))
 - [ ] Constraints C1 to C8 confirmed
 - [ ] S1 Components and theming
 - [ ] S2 Build, run and package

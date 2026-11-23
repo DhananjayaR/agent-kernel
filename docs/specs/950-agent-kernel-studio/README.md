@@ -32,7 +32,7 @@ Status values: Not started, Design, In progress, Done.
 | P11 | The remaining targets | 6 | Not started | n/a | [outline](later-phases.md#p11--the-remaining-targets) |
 | P12 | Packaging and release | 7 | Not started | No | [outline](later-phases.md#p12--packaging-and-release) |
 
-**Next action:** run spike S1 (shadcn base and theming) and S2 (electron-vite build and packaging) in P0.
+**Next action:** start [P0-plan.md](P0-plan.md) at Task 1.
 
 P0 to P3 (including P1a and P1b) are detailed and can be picked up as written. P4 to P12 are outlines; each is detailed when the phase
 before it is close to done.
@@ -102,7 +102,8 @@ Detail: [P2](P2-project-and-kernel-version.md).
 | 23 Nov 2026 | Implementation phases are named P0 to P12 and mapped to the issue's milestones | This file |
 | 23 Nov 2026 | Phase order follows the issue (create and edit before coding agent) | [later-phases.md](later-phases.md) |
 | 23 Nov 2026 | Bundler: Vite, through electron-vite. Rspack is dropped. | [P0](P0-technology-selection.md) D3 |
-| 23 Nov 2026 | Component library: shadcn/ui, styled with Tailwind CSS. React Spectrum is dropped. | [P0](P0-technology-selection.md) D1, D2 |
+| 23 Nov 2026 | Component library: shadcn/ui, styled with Tailwind CSS. React Spectrum is not used as a library. | [P0](P0-technology-selection.md) D1, D2 |
+| 23 Nov 2026 | Style reference: the components' basic style resembles React Spectrum (Spectrum 2) in size, density, shape and states, with Agent Kernel's colours and fonts | [P0](P0-technology-selection.md) D1, [P1a](P1a-app-foundation.md) design gate |
 
 ## Open decisions
 
@@ -110,6 +111,7 @@ Detail: [P2](P2-project-and-kernel-version.md).
 |---|---|---|---|
 | 1 | The rest of the technology stack (8 decisions) | End of P0 | Provisional choices in [P0](P0-technology-selection.md) |
 | 1a | Which primitive base shadcn/ui uses: React Aria (provisional) or Base UI | Spike S1 | [P0](P0-technology-selection.md) |
+| 1b | Floating layers: solid, as Spectrum 2 has them, or glass, as the briefs assume | P1a design gate | The S1 spike builds both |
 | 2 | Studio primary colour: the briefs say blue, the current brand tokens say orange | P1a design gate | [design-process.md](design-process.md) |
 | 3 | Product name and app identifier | P1a (working name is fine until P12) | The repository is now branded Open Agent Kernel |
 | 4 | Supported floor version | P2 | |
@@ -162,6 +164,7 @@ Facts checked against the repository at `develop` `2d3375a1`:
 | [architecture.md](architecture.md) | The data and feature layer |
 | [conventions-and-skills.md](conventions-and-skills.md) | Ground rules, UX patterns, development techniques, Studio skills |
 | [P0-technology-selection.md](P0-technology-selection.md) | Stack decisions and spikes |
+| [P0-plan.md](P0-plan.md) | Task-by-task execution plan for the P0 spikes |
 | [P1a-app-foundation.md](P1a-app-foundation.md) | Workspace, Electron shell, bridge transport, design system |
 | [P1b-data-layer-and-patterns.md](P1b-data-layer-and-patterns.md) | Contract shapes, jobs and sessions, shared patterns, generators, enforcement, first skills |
 | [P2-project-and-kernel-version.md](P2-project-and-kernel-version.md) | Welcome, toolchain, command runner, versions and the capability catalog |

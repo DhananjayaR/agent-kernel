@@ -32,13 +32,20 @@ Component names are working names until the P1a design gate.
 
 ### Visual rules
 
+- **The basic style resembles React Spectrum (Spectrum 2):** its control sizes and density, shapes, state
+  styling and spacing rhythm, expressed as the Studio's own tokens. Colours and fonts are Agent Kernel's.
+  When a new component has no precedent in the Studio, look at how Spectrum 2 sizes and states its
+  equivalent before inventing one.
+
 - **Design-system colours only.** Tailwind's default palette is removed, so only role tokens exist
   (`bg-surface`, `text-muted`, `border-default`, `accent-primary`, `status-success`). No arbitrary values
   (`p-[13px]`) and no inline colour styles.
 - **The spacing and type scale is closed.** Only steps from the design system's scale.
 - **Colour roles are fixed:** primary for the primary action, focus and selection; the AI colour for the
   coding agent only; success, warning and danger for states. State is never colour alone.
-- **Glass only on floating layers** (menus, popovers, drawers, modals, toasts). Docked surfaces are solid.
+- **Floating layers** (menus, popovers, drawers, modals, toasts) are solid, as in Spectrum 2, or glass, as
+  the briefs assume: the P1a design gate chooses one, and it is then used everywhere. Docked surfaces are
+  always solid.
 - **One primary action per view.** Everything else is secondary, outline or ghost.
 - **Icons** come from one line icon set, at two sizes. No emoji.
 - **Monospace** for paths, commands, code, identifiers, durations, token counts and money, with tabular
