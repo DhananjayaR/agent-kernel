@@ -55,6 +55,7 @@ setup works and pin versions.
 | D11 | Electron version policy | Latest stable; how often to upgrade | Latest stable at P1a start, upgrade each Electron major | S2 |
 | D12 | Forms and client-side validation | React Hook Form or TanStack Form; a JSON-schema validator (Ajv) or schemas converted to zod | React Hook Form with a JSON-schema validator, because config forms are generated from the kernel's JSON schema | S1 |
 | D13 | Architecture checks | dependency-cruiser; Biome plugins or scripts for custom checks | dependency-cruiser plus small scripts | S2 |
+| D14 | Coding agent with a key | Claude Agent SDK in the main process; the Claude Code CLI's streaming mode; the Agent Client Protocol | Claude Agent SDK, with the user's key held by the main process only | S5 |
 
 ### D1 and D2: the component library, in short
 
@@ -146,6 +147,32 @@ a 10,000-line burst does not freeze the window.
       a JSON schema.
 
 **Pass:** smooth interaction at 300 nodes; the editor matches the tokens; diff and YAML errors work.
+
+### S5 · Coding agent with a key (D14). Two days. Added 23 November 2026.
+
+The owner's requirement: the Studio takes a key from the user and uses it to drive Claude to build apps and
+agents in the project. This reverses the earlier P6 line that the app never stores credentials.
+
+Keyless part (needs no key):
+
+- [ ] The Claude Agent SDK's bundled executable starts from the Electron main process, in development and
+      from the packaged app (asar is the risk: try `asarUnpack` and `pathToClaudeCodeExecutable`).
+- [ ] The key is stored with Electron `safeStorage`, set by a write-only command, and never returned over the
+      bridge. Record the storage backend on Linux.
+- [ ] The key reaches the agent only through the SDK's `env` option, with an isolated configuration
+      directory, so a local Claude Code sign-in cannot stand in for it. A wrong key fails with an
+      authentication error that maps to a `StudioError`.
+- [ ] One session on the bridge: start, prompt, streamed events, a permission request that waits for the
+      user, interrupt, stop. Proven against a scripted fake of the SDK.
+
+Live part (needs a real key from the owner, supplied in a file outside the repository):
+
+- [ ] A real turn streams; approve and deny both work; interrupt stops it; cost and usage are reported.
+- [ ] Whether a shell command run by the agent can read the key from its environment, and the mitigation.
+- [ ] Whether project settings load the skills that `ak skill install --assistant claude` writes.
+
+**Pass:** the pasted key is provably the credential in use; it never crosses the bridge or reaches a log;
+permission requests map to the approval pattern; the packaged app can start the agent.
 
 ## Decision record
 

@@ -1116,6 +1116,81 @@ git push origin --delete spike/950-studio-p0 && git branch -D spike/950-studio-p
 
 ---
 
+### Task 7: Coding agent with a key (S5, D14)
+
+Added 23 November 2026 after the owner's requirement that the Studio takes a key and drives Claude with it.
+Runs on branch `spike/950-studio-p0`, in `ak-studio-spikes/app/`.
+
+**Files:**
+- Create: `src/main/agent/keyStore.ts`, `src/main/agent/codingAgent.ts`, `src/main/agent/sdkAdapter.ts`,
+  `src/main/agent/codingAgent.test.ts`, `src/main/agent/keyStore.test.ts`,
+  `src/renderer/src/spikes/AgentSpike.tsx`, `tests/agent.electron.spec.ts`
+- Modify: `src/renderer/src/bridge/contract.ts` (agent operations), `src/main/handlers.ts`,
+  `electron-builder.yml` (`asarUnpack`), `package.json`
+- Create: `docs/specs/950-agent-kernel-studio/research/spike-s5-coding-agent.md`
+
+**Interfaces:**
+- Consumes: the bridge contract and `Transport` from Task 3 (request, subscribe, sender check).
+- Produces: the findings note, which Task 6's decision record cites for D14.
+
+**Facts from the documentation (checked 23 November 2026; re-check before relying on them):**
+- Package `@anthropic-ai/claude-agent-sdk` (v0.3.330 at the time), Node 18.14 or later. It bundles a native
+  Claude Code executable through optional dependencies; `pathToClaudeCodeExecutable` overrides it.
+- `query({ prompt, options })` returns an async iterator of messages. Options used here: `cwd`, `env`,
+  `permissionMode`, `canUseTool`, `includePartialMessages`, `abortController`, `settingSources`, `resume`.
+- `env` replaces the subprocess environment. Credential precedence puts `ANTHROPIC_API_KEY` above a local
+  sign-in, but a missing key falls through to that sign-in.
+- `canUseTool(toolName, input, { signal, toolUseID, ... })` returns `{ behavior: 'allow', updatedInput }` or
+  `{ behavior: 'deny', message }`.
+- The result message carries `total_cost_usd`, `usage` and `modelUsage`.
+- Anthropic's note: third-party products must not offer claude.ai login or its rate limits without approval;
+  use API-key authentication. A product may say "Claude Agent" but must not call itself "Claude Code".
+
+- [ ] **Step 1: Key store.** `keyStore.ts` exposes `setKey(value)`, `clearKey()`, `hasKey()` and
+  `withKey(fn)`; there is no function that returns the key to a caller outside the main process. It encrypts
+  with `safeStorage.encryptString` into a file under `app.getPath('userData')` with mode `0600`. Record
+  `safeStorage.getSelectedStorageBackend()`; if it is `basic_text`, say in the note that the key is not truly
+  encrypted on that machine. Unit-test with a fake `safeStorage`.
+- [ ] **Step 2: Contract.** Add `agent.key.set` (input `{ key }`, output `{ stored: true }`),
+  `agent.key.status` (output `{ hasKey, backend }`), `agent.key.clear`, `agent.start` (input
+  `{ cwd, prompt }`), `agent.respond` (input `{ requestId, allow }`), `agent.interrupt`, and a subscription
+  `agent.events`. No operation's output type contains the key. Write a test that fails if any output schema
+  has a field named `key`, `apiKey` or `token`.
+- [ ] **Step 3: SDK adapter behind an interface.** `sdkAdapter.ts` is the only file that imports the SDK. It
+  exposes `run({ prompt, cwd, key, onEvent, onPermission, signal })`. It calls `query` with
+  `env: { PATH, HOME: <isolated dir>, CLAUDE_CONFIG_DIR: <isolated dir>, ANTHROPIC_API_KEY: key }` (no spread
+  of `process.env`), `settingSources: ['project']`, `permissionMode: 'default'`, `includePartialMessages: true`
+  and the `abortController`.
+- [ ] **Step 4: Service.** `codingAgent.ts` takes the adapter as a constructor argument. It maps SDK messages
+  to bridge events (`text`, `tool`, `permission-request`, `result` with cost, `error`), holds one pending
+  permission request at a time, resolves it from `agent.respond`, denies it on interrupt, and masks the key
+  value in any event text before it is sent. Unit-test with a scripted fake adapter: streamed text; a
+  permission request approved; one denied; interrupt while waiting; an authentication error mapped to
+  `{ code: 'agent.auth', message }`; a key value inside event text is masked.
+- [ ] **Step 5: Wire and show.** Register the handlers with the sender check. `AgentSpike.tsx`: a password
+  field that sends the key once and clears itself, a status line, a prompt box, the event list, and an
+  approval card with approve and deny.
+- [ ] **Step 6: Keyless runs.** (a) In development, start a turn with the key `sk-ant-invalid`: expect the
+  bundled executable to start and the turn to end in an authentication error, not in a successful reply. A
+  successful reply voids the result: the local sign-in leaked in. (b) Package with `electron-builder --dir`
+  and repeat from the packaged app; if the executable cannot start from inside the asar archive, add
+  `asarUnpack` for the SDK's platform package and, failing that, `pathToClaudeCodeExecutable`. Record what
+  worked.
+- [ ] **Step 7: Live runs, only if `SPIKE_AGENT_KEY_FILE` points to a file holding a real key.** Never print
+  the key. A real turn in a scratch folder: streaming, approve, deny, interrupt, cost. Ask the agent to run
+  `env` through its shell tool and record whether the key appears. Put a skill under `.claude/` in the
+  scratch folder and record whether it loads. Without the file, mark every live row "Not run — needs a key".
+- [ ] **Step 8: Note and commit.** Write `spike-s5-coding-agent.md` with the same sections as the other
+  notes: result, a criterion table with evidence, findings for the architecture (where the key lives, what
+  crosses the bridge, how permissions map, packaging), what was not run. Commit:
+
+```bash
+git add ak-studio-spikes docs/specs/950-agent-kernel-studio/research/spike-s5-coding-agent.md
+git commit -m "chore(spike): S5 coding agent with a key, with findings"
+```
+
+---
+
 ## Order and parallel work
 
 ```mermaid
