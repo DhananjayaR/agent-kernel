@@ -5,7 +5,7 @@
 | Status | Not started |
 | Business aspect | The Studio exists: it builds locally, opens a window, and looks like Agent Kernel |
 | Issue milestone | Before milestone 1 |
-| Depends on | [P0](P0-technology-selection.md). Vite, shadcn/ui and Tailwind are decided; other stack names below are P0's provisional choices, to be replaced by the decision record when P0 closes. |
+| Depends on | [P0](P0-technology-selection.md). The stack and pinned versions are in its [decision record](P0-technology-selection.md#decision-record), which is in owner review: only D1a, D5 and D12 are approved so far. Windows and macOS were never run; CI on three systems must pass before this phase relies on those results. |
 | Unlocks | [P1b](P1b-data-layer-and-patterns.md); P12 reuses the build pipeline |
 | Screens | The desktop shell (top bar, tabs, bottom panel, status bar) and the component library in Storybook |
 
@@ -40,9 +40,9 @@ canvas. This gate sets the look every later screen inherits, so it is the most i
 | Subject | Requirements | Questions to settle |
 |---|---|---|
 | Palette and tokens | The Studio looks like Agent Kernel. | **Brand drift:** the briefs make electric blue the primary colour; the repository's current tokens (`docs/src/css/custom.css`) make orange `#FF5E32` primary. Which is the Studio's primary, which colour marks the coding agent, and do both pass 4.5:1 contrast on the app's surfaces. |
-| Style reference | **Decided:** the components' basic style resembles React Spectrum (Spectrum 2), with Agent Kernel's colours and fonts. | How closely to follow it where the briefs differ: the briefs assume glass floating layers and a 40 px row; Spectrum 2 has solid layers and its own size scale. Start from the token table measured in the P0 S1 spike. |
+| Style reference | **Decided:** the components' basic style resembles React Spectrum (Spectrum 2), with Agent Kernel's colours and fonts. | How closely to follow it where the briefs differ: the briefs assume glass floating layers and a 40 px row; floating layers are **solid, decided in P0**, and Spectrum 2 has its own size scale. Start from the token table measured in the P0 S1 spike. |
 | Density | A tool used for hours. | The type scale, row height and spacing steps, starting from Spectrum 2's scale. Comfortable and compact, or one density. |
-| Theme | Dark and light. | Which is the default. Whether glass layers hold up in light. |
+| Theme | Dark and light. | Which is the default. |
 | Shell layout | Top bar with project switcher, tabs, run control, deploy status, Build with AI; bottom panel; status bar. No left navigation. | Whether five tabs plus controls fit the top bar at 1100 px. Native or custom window controls per operating system. Where settings open. |
 | Base components | The inventory in brief 01. | Which components are needed by P2 and P3 and are built now, and which wait for the phase that first uses them. |
 
@@ -50,7 +50,7 @@ canvas. This gate sets the look every later screen inherits, so it is the most i
 
 | Subject | Options explored | Decision | Approved by | Date |
 |---|---|---|---|---|
-| Style reference: how closely to follow Spectrum 2; solid or glass layers | | | | |
+| Style reference: how closely to follow Spectrum 2 (floating layers are solid, decided in P0) | | | | |
 | Palette, tokens, density, theme | | | | |
 | Shell layout | | | | |
 | Base component set | | | | |
@@ -79,9 +79,10 @@ canvas. This gate sets the look every later screen inherits, so it is the most i
 
 - [ ] Commands: `dev`, `build`, `test`, `lint`, `storybook`, `package`. Add matching targets to the root
       `Makefile` and a section to `DEVELOPER_GUIDE.md`.
-- [ ] Exact dependency versions pinned.
+- [ ] Exact dependency versions pinned, starting from the P0 decision record. Biome (not ESLint) lints; TypeScript 7.
 - [ ] A lint rule that fails the build if `apps/renderer` or `packages/ui` imports `electron` or a Node
-      built-in.
+      built-in: dependency-cruiser 18.9.0 with `@swc/core` 1.16.22, plus its self-test as a CI step (without
+      `@swc/core` it passes silently; P0 D13).
 
 ### 1.2 Electron main and preload
 
@@ -96,10 +97,10 @@ canvas. This gate sets the look every later screen inherits, so it is the most i
 
 - [ ] `packages/contract`: every call and every stream is declared once, with a schema for its input and
       output.
-- [ ] The transport carries two primitives, `request` (one answer) and `subscribe` (a stream with cancel).
+- [ ] The contract is the in-house zod contract with the `Transport` interface (P0 D5), not oRPC. The transport carries two primitives, `request` (one answer) and `subscribe` (a stream with cancel).
       P1a ships the transport and one plain request; the contract's operation shapes (query, command, job,
       session) are built on it in [P1b](P1b-data-layer-and-patterns.md).
-- [ ] A `Transport` interface with two implementations: Electron IPC, and a mock for the browser and tests.
+- [ ] A `Transport` interface with two implementations: Electron IPC (sender checked on every message), and a mock for the browser and tests. The same renderer code runs on both.
 - [ ] Services in the main process are classes registered against the contract. P1a ships one: `AppService`
       (app version, platform, theme preference).
 - [ ] Errors cross the bridge as typed `StudioError` values, not as thrown strings.

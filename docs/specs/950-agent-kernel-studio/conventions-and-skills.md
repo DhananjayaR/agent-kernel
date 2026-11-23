@@ -43,9 +43,8 @@ Component names are working names until the P1a design gate.
 - **The spacing and type scale is closed.** Only steps from the design system's scale.
 - **Colour roles are fixed:** primary for the primary action, focus and selection; the AI colour for the
   coding agent only; success, warning and danger for states. State is never colour alone.
-- **Floating layers** (menus, popovers, drawers, modals, toasts) are solid, as in Spectrum 2, or glass, as
-  the briefs assume: the P1a design gate chooses one, and it is then used everywhere. Docked surfaces are
-  always solid.
+- **Floating layers** (menus, popovers, drawers, modals, toasts) are solid, as in Spectrum 2, not glass.
+  Decided in P0 on 23 November 2026 ([P0](P0-technology-selection.md) D1a). Docked surfaces are also solid.
 - **One primary action per view.** Everything else is secondary, outline or ghost.
 - **Icons** come from one line icon set, at two sizes. No emoji.
 - **Monospace** for paths, commands, code, identifiers, durations, token counts and money, with tabular

@@ -1,0 +1,42 @@
+{
+  "contrast-dark-dialog-solid": {
+    "background": "rgb(13, 49, 90)",
+    "text": "rgb(232, 238, 247)",
+    "ratio": 11.22
+  },
+  "contrast-dark-dialog-glass": {
+    "background": "rgba(13, 49, 90, 0.72)",
+    "text": "rgb(232, 238, 247)",
+    "ratio": 12.57
+  },
+  "contrast-light-dialog-solid": {
+    "background": "rgb(255, 255, 255)",
+    "text": "rgb(2, 40, 79)",
+    "ratio": 14.8
+  },
+  "contrast-light-dialog-glass": {
+    "background": "rgba(255, 255, 255, 0.72)",
+    "text": "rgb(2, 40, 79)",
+    "ratio": 14.8
+  },
+  "contrast-light-dialog-glass-brief-fill": {
+    "background": "rgba(13, 49, 90, 0.72)",
+    "text": "rgb(2, 40, 79)",
+    "ratio": 2.67
+  },
+  "scroll": {
+    "scrollHeight": 200032,
+    "steps": 90,
+    "minRowsInView": 8,
+    "maxRowsInDom": 15,
+    "last": {
+      "scrollTop": 199648,
+      "rowsInView": 8,
+      "rowsInDom": 11
+    }
+  },
+  "ariaCombobox": "- listbox \"Suggestions Model (500 options)\":\n  - option \"model-000\"\n  - option \"model-001\"\n  - option \"model-002\"\n  - option \"model-003\"\n  - option \"model-004\"\n  - option \"model-005\"\n  - option \"model-006\"\n  - option \"model-007\"\n  - option \"model-008\"\n  - option \"model-009\"",
+  "ariaTree": "- treegrid \"Projects\":\n  - row \"project-0\" [level=1]:\n    - gridcell \"Drag project-0 Expand project-0 project-0\":\n      - button \"Drag project-0\"\n      - button \"Expand project-0\"\n      - text: project-0\n  - row \"project-1\" [level=1]:\n    - gridcell \"Drag project-1 Expand project-1 project-1\":\n      - button \"Drag project-1\"\n      - button \"Expand project-1\"\n      - text: project-1\n  - row \"project-2\" [level=1]:",
+  "ariaDialog": "- dialog \"Delete agent\":\n  - heading \"Delete agent\" [level=2]\n  - text: The agent and its run history are removed. This cannot be undone. Type the agent name\n  - textbox \"Type the agent name\"\n  - button \"Cancel\"\n  - button \"Delete\"\n  - button \"Close\"",
+  "spectrumDocsReachable": true
+}

@@ -13,11 +13,11 @@ that **Release 1** and splits it into implementation phases **P0 to P12**, each 
 
 ## Progress
 
-Status values: Not started, Design, In progress, Done.
+Status values: Not started, Design, In progress, In review, Done.
 
 | Phase | Business aspect | Issue milestone | Status | Design signed off | Doc |
 |---|---|---|---|---|---|
-| P0 | Technology selection | Before 1 | In progress (bundler and component library decided; spikes open) | n/a | [P0](P0-technology-selection.md) |
+| P0 | Technology selection | Before 1 | In review (spikes ran on Linux only; record drafted; Windows and macOS not run) | n/a | [P0](P0-technology-selection.md) |
 | P1a | App foundation: workspace, shell, bridge, design system | Before 1 | Not started | No | [P1a](P1a-app-foundation.md) |
 | P1b | Data and feature layer, shared patterns, Studio skills | Before 1 | Not started | No | [P1b](P1b-data-layer-and-patterns.md) |
 | P2 | Open a project and know its Agent Kernel version | 1 | Not started | No | [P2](P2-project-and-kernel-version.md) |
@@ -32,7 +32,7 @@ Status values: Not started, Design, In progress, Done.
 | P11 | The remaining targets | 6 | Not started | n/a | [outline](later-phases.md#p11--the-remaining-targets) |
 | P12 | Packaging and release | 7 | Not started | No | [outline](later-phases.md#p12--packaging-and-release) |
 
-**Next action:** start [P0-plan.md](P0-plan.md) at Task 1.
+**Next action:** owner review of the [P0 decision record](P0-technology-selection.md#decision-record) and a CI run on Windows and macOS, then the P1a design gate.
 
 P0 to P3 (including P1a and P1b) are detailed and can be picked up as written. P4 to P12 are outlines; each is detailed when the phase
 before it is close to done.
@@ -104,14 +104,20 @@ Detail: [P2](P2-project-and-kernel-version.md).
 | 23 Nov 2026 | Bundler: Vite, through electron-vite. Rspack is dropped. | [P0](P0-technology-selection.md) D3 |
 | 23 Nov 2026 | Component library: shadcn/ui, styled with Tailwind CSS. React Spectrum is not used as a library. | [P0](P0-technology-selection.md) D1, D2 |
 | 23 Nov 2026 | Style reference: the components' basic style resembles React Spectrum (Spectrum 2) in size, density, shape and states, with Agent Kernel's colours and fonts | [P0](P0-technology-selection.md) D1, [P1a](P1a-app-foundation.md) design gate |
+| 23 Nov 2026 | Bridge: the in-house zod contract with the `Transport` interface, not oRPC. Same renderer code over IPC and WebSocket; sender checked on every IPC message, which oRPC's Electron path does not do. Approved by Dhananjaya Rajasinghe | [P0](P0-technology-selection.md) D5, [S3](research/spike-s3-bridge.md) |
+| 23 Nov 2026 | Form validation is strict: Ajv `coerceTypes` off, so `"30"` for an integer `ttl` is rejected. Validators stay precompiled (CSP blocks runtime compile). Approved by Dhananjaya Rajasinghe | [P0](P0-technology-selection.md) D12, [S1](research/spike-s1-components.md) |
+| 23 Nov 2026 | Floating layers are solid, as in Spectrum 2, not glass. Decided in P0. Approved by Dhananjaya Rajasinghe | [P0](P0-technology-selection.md) D1a, [conventions-and-skills.md](conventions-and-skills.md) |
+| 23 Nov 2026 | Changed from provisional: shadcn/ui primitive base is React Aria, confirmed on Linux by S1 (two other libraries: splitter, toasts). Pending owner review | [P0](P0-technology-selection.md) D1, [S1](research/spike-s1-components.md) |
+| 23 Nov 2026 | Changed from provisional: the architecture check is dependency-cruiser with the swc parser and a CI self-test, because without `@swc/core` it passes silently under TypeScript 7. Pending owner review | [P0](P0-technology-selection.md) D13, [S2](research/spike-s2-build.md) |
+| 23 Nov 2026 | Changed from provisional: ESLint is dropped, Biome lints, because typescript-eslint cannot load under TypeScript 7.0. Pending owner review | [P0](P0-technology-selection.md) D10, [S2](research/spike-s2-build.md) |
 
 ## Open decisions
 
 | # | Decision | Needed by | Notes |
 |---|---|---|---|
-| 1 | The rest of the technology stack (8 decisions) | End of P0 | Provisional choices in [P0](P0-technology-selection.md) |
-| 1a | Which primitive base shadcn/ui uses: React Aria (provisional) or Base UI | Spike S1 | [P0](P0-technology-selection.md) |
-| 1b | Floating layers: solid, as Spectrum 2 has them, or glass, as the briefs assume | P1a design gate | The S1 spike builds both |
+| 1 | Owner review of the rest of the P0 decision record, and CI on Windows and macOS (never run). D8 (state, data, routing) was not exercised by any spike; D11 (Electron policy) was not tested | End of P0 | [P0 decision record](P0-technology-selection.md#decision-record) |
+| 1c | Canvas keyboard model: Tab reaches the first node only after all edges; `edgesFocusable={false}` fixes it but loses edge keyboard access | P3 design gate | [S4](research/spike-s4-canvas-code.md) |
+| 1d | CodeMirror cold open missed 200 ms (360 to 382 ms); try preload on idle. Also needs a person: side-by-side look against Spectrum 2, screen-reader pass, canvas and glass/solid on a real GPU | P1a design gate | [P0 exit criteria](P0-technology-selection.md#exit-criteria) |
 | 2 | Studio primary colour: the briefs say blue, the current brand tokens say orange | P1a design gate | [design-process.md](design-process.md) |
 | 3 | Product name and app identifier | P1a (working name is fine until P12) | The repository is now branded Open Agent Kernel |
 | 4 | Supported floor version | P2 | |
