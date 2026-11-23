@@ -78,6 +78,7 @@ keeps a second copy that can silently disagree with it.
 | Working copies | Canvas node positions while dragging; a config form being edited; an unsent chat message | The renderer, briefly | Feature store or form state, under the working-copy rule below |
 | Preferences | Theme, panel sizes, density | `AppService` (the app's data folder) | Query cache; written through a command |
 | Secrets | Model keys in `.env` | `SecretStore` in the main process only | Names and resolve state only |
+| The coding agent's key | The user's Anthropic API key | `AgentKeyStore` in the main process only | Whether a key is stored, and how; never the value |
 
 Rules:
 
@@ -209,6 +210,103 @@ type Session = {
 - A session can spawn jobs (an agent turn inside an agent session; a chat exchange against the local server).
 - All sessions stop when the project scope is disposed.
 
+## The coding agent and its key
+
+Added 23 November 2026 from spike [S5](research/spike-s5-coding-agent.md). The Studio takes a key from the
+user and uses it to drive Claude, through the Claude Agent SDK, to build agents in the open project. The
+keyless half of the spike ran, on Linux; the half that needs a real key did not. Each rule below says which
+it rests on.
+
+```mermaid
+flowchart LR
+  UI["Renderer — key field, chat, approval card"] -- "agent.key.set (write-only)" --> KS["AgentKeyStore (main)"]
+  UI -- "session.start, prompt, job.respond" --> AS["AgentService (main)"]
+  KS -- "withKey(fn)" --> AD["Agent adapter — the only file that imports the SDK"]
+  AS --> AD
+  AD -- "env built from nothing + the key" --> CLI["Agent executable (child process)"]
+  AD -- "events, masked" --> AS -- "stream + job state" --> UI
+```
+
+**The key**
+
+- **One owner.** `AgentKeyStore`, in the main process, is the only code that holds the key. It has no
+  function that returns the key; it lends it to a callback (`withKey`) inside the main process.
+- **Write-only over the bridge.** `agent.key.set` carries the key in, once; the field then clears itself.
+  `agent.key.status` returns only `{ hasKey, backend }`. No operation output or stream chunk may contain a
+  `key`, `apiKey` or `token` field: a contract test fails if one appears, and the registry parses every
+  output against its schema, which strips undeclared fields. (Verified in S5.)
+- **Never over the WebSocket.** The browser transport used for UI work refuses every agent operation, and
+  the key field is disabled there. (Verified in S5.)
+- **Storage.** Encrypted with Electron `safeStorage` (the async API) into the app's data folder, mode 0600.
+  Where the operating system offers no encryption (Linux with no keyring reports `basic_text`), the key is
+  held in memory for the run, is not written, and the UI says so. (The memory path ran in S5; the encrypted
+  path ran only against a fake.)
+- **Not a project secret.** The key belongs to the user and the app, not to the project. It is never written
+  to the project's `.env` or any project file, and is separate from the model keys `SecretStore` reads.
+- **Masked.** The key's value joins the list of known secret values masked in every event, log line and
+  error detail before it crosses the bridge. Masking works on whole messages, not on streamed fragments, so
+  a key split across two fragments cannot slip through.
+- **Which credential.** An Anthropic API key. Anthropic's documentation says third-party products must not
+  offer claude.ai login or its rate limits without approval, so a subscription token is not offered. Cloud
+  provider credentials (Amazon Bedrock, Vertex AI) are a later extension of the same store.
+
+**The agent process**
+
+- **One adapter.** Only the adapter imports the SDK; a boundary rule enforces it. `AgentService` depends on
+  the agent-neutral interface (start, prompt, events, permission, interrupt), so tests use a scripted fake
+  and another agent can be added later.
+- **An environment built from nothing.** The adapter passes the SDK an `env` holding only `PATH`, an
+  isolated home and configuration folder under the app's data folder, and the key. Nothing is spread from
+  the app's own environment. This is what makes the pasted key the credential in use: a Claude Code already
+  signed in on the machine cannot stand in for it. (Verified in S5: a wrong key fails with an authentication
+  error, the executable reports its key source as `ANTHROPIC_API_KEY`, and a stub saw none of the planted
+  variables. macOS keeps sign-ins in the Keychain, so isolation there is unverified.)
+- **Permission mode is explicit.** The adapter always passes `permissionMode: "default"`. Left out, the SDK
+  may choose a mode in which a model approves tool calls and the user is never asked.
+- **Packaging.** The SDK's executable (about 380 MB per platform) must sit outside the asar archive
+  (`asarUnpack`) and the adapter must point `pathToClaudeCodeExecutable` at it; without that the packaged
+  app fails with `spawn ENOTDIR`. Each operating system builds its own installer. (Verified on Linux.)
+
+**The opened folder is not trusted**
+
+S5 found that a hook in the project's `.claude/settings.json` ran with no prompt and could read the key from
+its environment. The agent's own shell tool very probably can too (unverified). So anything the agent or the
+project runs must be assumed able to read the key.
+
+- A project's agent settings (hooks, permission rules) are **not** loaded by default. The first time a
+  project is opened with the agent, the Studio lists the hooks and pre-allowed tools it found and asks; only
+  then does it load them.
+- Project skills are wanted: they are what `ak skill install --assistant claude` writes, and they are
+  instructions, not code. In S5 the same setting loaded both the project's skills and its hooks, so P6 must
+  find how to load skills without hooks, or fall back to the confirmation above. (S5 saw a project skill
+  listed; whether the model uses it needs a live run.)
+- P6 must try keeping the key out of the child environment altogether (the SDK's key-helper source, or an
+  environment scrub) before the feature ships. Until one works, the UI states plainly that the agent can
+  read the key, and recommends a key with a spending limit.
+
+**Sessions, turns and approvals**
+
+- The agent is a **session** (`agent.session`), one per project. A turn is a **job** inside it, with the
+  turn's events as its stream. A turn is one agent process; the next turn in the same project resumes the
+  same conversation.
+- A permission request puts the job in `waiting-for-user` with a `UserRequest` of kind `permission`, shown
+  with the approval pattern and answered only through `job.respond`. One request is open at a time; others
+  queue.
+- Interrupt denies every open request and stops the turn. So do stopping the session, closing the project
+  and quitting.
+- **State is replayed.** A window that reloads or a view that mounts late gets the job's current state and
+  its open request from `jobs.list`, like any other job. S5's spike screen did not do this, and a pending
+  request was lost on a tab switch, leaving the turn hung. The agent gets no private event channel.
+- Cost and token use arrive on the turn's result and are shown per turn. They are estimates.
+
+**Errors and wording**
+
+- SDK failures map to catalog codes: `agent.auth` (the key was rejected), `agent.noKey`, `agent.busy`,
+  `agent.failed`. Authentication is detected from the SDK's error field, not from message text alone.
+- Raw SDK text is never shown as the message. It says "Claude Code", which Anthropic's naming rule forbids a
+  third-party product to call itself; the UI says "Claude Agent". Raw text may appear only in the collapsed,
+  masked `detail`.
+
 ## Errors
 
 ```ts
@@ -272,7 +370,7 @@ features/config/
 - One class per domain: `ProjectService`, `ToolchainService`, `KernelService`, `GraphService`,
   `ConfigService`, `RunService`, `TestService`, `DeployService`, `AgentService`, `RulesService`,
   `SecretService`, `JobService`, `SessionService`, `AppService`.
-- Dependencies are passed to the constructor (`CommandRunner`, `ProjectFs`, `Watcher`, `SecretStore`), so
+- Dependencies are passed to the constructor (`CommandRunner`, `ProjectFs`, `Watcher`, `SecretStore`, `AgentKeyStore`, the agent adapter), so
   services are tested with fakes and no real process.
 - A service registers its handlers against the contract; the registry fails start-up if any operation has no
   handler.

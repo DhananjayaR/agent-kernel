@@ -155,14 +155,14 @@ agents in the project. This reverses the earlier P6 line that the app never stor
 
 Keyless part (needs no key):
 
-- [ ] The Claude Agent SDK's bundled executable starts from the Electron main process, in development and
+- [x] The Claude Agent SDK's bundled executable starts from the Electron main process, in development and
       from the packaged app (asar is the risk: try `asarUnpack` and `pathToClaudeCodeExecutable`).
-- [ ] The key is stored with Electron `safeStorage`, set by a write-only command, and never returned over the
+- [x] The key is stored with Electron `safeStorage`, set by a write-only command, and never returned over the
       bridge. Record the storage backend on Linux.
-- [ ] The key reaches the agent only through the SDK's `env` option, with an isolated configuration
+- [x] The key reaches the agent only through the SDK's `env` option, with an isolated configuration
       directory, so a local Claude Code sign-in cannot stand in for it. A wrong key fails with an
       authentication error that maps to a `StudioError`.
-- [ ] One session on the bridge: start, prompt, streamed events, a permission request that waits for the
+- [x] One session on the bridge: start, prompt, streamed events, a permission request that waits for the
       user, interrupt, stop. Proven against a scripted fake of the SDK.
 
 Live part (needs a real key from the owner, supplied in a file outside the repository):
@@ -197,6 +197,7 @@ D12).
 | D11 | Electron version policy | Provisional policy stands (latest stable at P1a start, upgrade each major). No spike tested a policy; the spikes only ran on one version | electron 45.4.1 (version the spikes ran on) | [S2](research/spike-s2-build.md) | 23 Nov 2026 | Pending owner review |
 | D12 | Forms and validation | **Strict validation.** React Hook Form with Ajv, `coerceTypes` off, so a string `"30"` for an integer `ttl` is rejected, in forms and in the YAML editor. Validators stay precompiled with Ajv standalone, because the renderer CSP blocks runtime compile. Generic rendering from the JSON schema plus a per-field override map (Optional sections, enum-like strings). Consequences: the spike validator was generated with `coerceTypes: true`, so it is regenerated; integer form fields convert to numbers on change themselves. Not checked: whether the kernel's own loader coerces | react-hook-form 7.92.0, ajv 8.20.0 (`ajv/dist/2020` and standalone), yaml 2.9.1 | [S1](research/spike-s1-components.md), [S4](research/spike-s4-canvas-code.md) | 23 Nov 2026 | Dhananjaya Rajasinghe |
 | D13 | Architecture checks | dependency-cruiser with the swc parser, plus a self-test as a CI step. **Hazard:** under TypeScript 7, if `@swc/core` is absent, dependency-cruiser passes silently ("1 modules, 0 dependencies") and CI stays green. `pnpm depcruise:selftest` runs the rules on a fixture and fails if the violation is not caught. Revisit at TypeScript 7.1 | dependency-cruiser 18.9.0, @swc/core 1.16.22 | [S2](research/spike-s2-build.md) | 23 Nov 2026 | Pending owner review |
+| D14 | Coding agent with a key | Claude Agent SDK in the main process, behind one adapter. The user's Anthropic API key is held by the main process only, set by a write-only command, and passed to the agent in an environment built from nothing, so a local Claude Code sign-in cannot stand in for it. Packaged app needs `asarUnpack` and `pathToClaudeCodeExecutable`. **Keyless half only:** no live turn has run. **Risk:** code in the opened folder (a hook) can read the key | @anthropic-ai/claude-agent-sdk 0.3.330 | [S5](research/spike-s5-coding-agent.md) | 23 Nov 2026 | Pending owner review |
 
 **Where a spike changed a provisional choice.** D5 was "own contract; adopt oRPC if it streams". oRPC
 streamed, so the rule did not trigger; the owner chose the in-house contract on the sender-check and
@@ -226,6 +227,7 @@ match the provisional choice.
 - [ ] S2 Build, run and package. Ran on Linux; Windows and macOS and CI not run
 - [ ] S3 The bridge. Ran on Linux; cancel on Windows and macOS not run
 - [ ] S4 Canvas and code. Ran on Linux, software-rendered; cold-open target missed; real-GPU check not done
+- [ ] S5 Coding agent with a key. Keyless half ran on Linux; the live half needs a key from the owner
 - [ ] Decision record complete and approved. Drafted; D1a, D5 and D12 approved 23 Nov 2026; the rest pending owner review
 - [ ] Spike code deleted or archived outside `ak-studio/`. Left on branch `spike/950-studio-p0` until P1a starts
 
@@ -255,6 +257,14 @@ match the provisional choice.
 - Windows and macOS: the one-command build and run, the cancel test, the NSIS and dmg installers, and the
   three-system CI workflow (`.github/workflows/studio-spike.yml`, written, parsed, never executed).
 - Not verified on a runner: the Linux `sysctl kernel.apparmor_restrict_unprivileged_userns=0` step.
+
+### Not run, needs a key (S5)
+
+- A real turn: streaming, approve, deny, interrupt, a non-zero cost.
+- Whether the agent's shell tool can read the key, and whether a key helper or an environment scrub keeps it
+  out. A project hook can read it (verified).
+- Whether the model uses a project skill (it is listed), and a resume that carries a real conversation.
+- Key storage with a real operating-system keyring. The spike machine had none.
 
 ### Not done, needs a person
 
