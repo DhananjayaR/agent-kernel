@@ -157,7 +157,7 @@ Keyless part (needs no key):
 
 - [x] The Claude Agent SDK's bundled executable starts from the Electron main process, in development and
       from the packaged app (asar is the risk: try `asarUnpack` and `pathToClaudeCodeExecutable`).
-- [x] The key is stored with Electron `safeStorage`, set by a write-only command, and never returned over the
+- [ ] (partly: the spike machine has no keyring, so only the in-memory path and a fake ran) The key is stored with Electron `safeStorage`, set by a write-only command, and never returned over the
       bridge. Record the storage backend on Linux.
 - [x] The key reaches the agent only through the SDK's `env` option, with an isolated configuration
       directory, so a local Claude Code sign-in cannot stand in for it. A wrong key fails with an
@@ -263,7 +263,10 @@ match the provisional choice.
 - A real turn: streaming, approve, deny, interrupt, a non-zero cost.
 - Whether the agent's shell tool can read the key, and whether a key helper or an environment scrub keeps it
   out. A project hook can read it (verified).
-- Whether the model uses a project skill (it is listed), and a resume that carries a real conversation.
+- Whether the files `ak skill install --assistant claude` writes (`.claude/commands`) load; S5 tested
+  `.claude/skills/` only. Whether the model then uses them. A resume that carries a real conversation.
+- Whether the agent can do real work in the isolated environment (git, `uv`, cloud credentials), and which
+  variables to pass.
 - Key storage with a real operating-system keyring. The spike machine had none.
 
 ### Not done, needs a person

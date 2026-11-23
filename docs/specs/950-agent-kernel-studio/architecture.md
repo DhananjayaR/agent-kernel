@@ -246,7 +246,7 @@ flowchart LR
 - **Masked.** The key's value joins the list of known secret values masked in every event, log line and
   error detail before it crosses the bridge. Masking works on whole messages, not on streamed fragments, so
   a key split across two fragments cannot slip through.
-- **Which credential.** An Anthropic API key. Anthropic's documentation says third-party products must not
+- **Which credential.** Assumed: an Anthropic API key, pending the owner's confirmation. Anthropic's documentation says third-party products must not
   offer claude.ai login or its rate limits without approval, so a subscription token is not offered. Cloud
   provider credentials (Amazon Bedrock, Vertex AI) are a later extension of the same store.
 
@@ -255,12 +255,16 @@ flowchart LR
 - **One adapter.** Only the adapter imports the SDK; a boundary rule enforces it. `AgentService` depends on
   the agent-neutral interface (start, prompt, events, permission, interrupt), so tests use a scripted fake
   and another agent can be added later.
-- **An environment built from nothing.** The adapter passes the SDK an `env` holding only `PATH`, an
+- **An environment built from nothing (provisional).** The adapter passes the SDK an `env` holding only `PATH`, an
   isolated home and configuration folder under the app's data folder, and the key. Nothing is spread from
   the app's own environment. This is what makes the pasted key the credential in use: a Claude Code already
   signed in on the machine cannot stand in for it. (Verified in S5: a wrong key fails with an authentication
   error, the executable reports its key source as `ANTHROPIC_API_KEY`, and a stub saw none of the planted
   variables. macOS keeps sign-ins in the Keychain, so isolation there is unverified.)
+  **The cost is untested:** no tool call ran in S5. With an isolated home and only `PATH`, the agent's shell
+  has no git identity, `uv` cache, cloud credentials, proxy or certificate settings, or virtual environment,
+  and building an Agent Kernel project needs several of them. The live run must settle an allowlist of
+  variables to pass, and whether the isolated configuration folder alone is enough without isolating home.
 - **Permission mode is explicit.** The adapter always passes `permissionMode: "default"`. Left out, the SDK
   may choose a mode in which a model approves tool calls and the user is never asked.
 - **Packaging.** The SDK's executable (about 380 MB per platform) must sit outside the asar archive
@@ -276,10 +280,10 @@ project runs must be assumed able to read the key.
 - A project's agent settings (hooks, permission rules) are **not** loaded by default. The first time a
   project is opened with the agent, the Studio lists the hooks and pre-allowed tools it found and asks; only
   then does it load them.
-- Project skills are wanted: they are what `ak skill install --assistant claude` writes, and they are
-  instructions, not code. In S5 the same setting loaded both the project's skills and its hooks, so P6 must
-  find how to load skills without hooks, or fall back to the confirmation above. (S5 saw a project skill
-  listed; whether the model uses it needs a live run.)
+- Agent Kernel's own instructions are wanted: `ak skill install --assistant claude` writes them to
+  `.claude/commands`. **S5 did not test that location.** It tested a skill under `.claude/skills/`, which was
+  listed, and the same setting also loaded the project's hooks. P6 must check that the `ak` output loads, and
+  find how to load it without hooks, or fall back to the confirmation above.
 - P6 must try keeping the key out of the child environment altogether (the SDK's key-helper source, or an
   environment scrub) before the feature ships. Until one works, the UI states plainly that the agent can
   read the key, and recommends a key with a spending limit.
@@ -295,8 +299,8 @@ project runs must be assumed able to read the key.
 - Interrupt denies every open request and stops the turn. So do stopping the session, closing the project
   and quitting.
 - **State is replayed.** A window that reloads or a view that mounts late gets the job's current state and
-  its open request from `jobs.list`, like any other job. S5's spike screen did not do this, and a pending
-  request was lost on a tab switch, leaving the turn hung. The agent gets no private event channel.
+  its open request from `jobs.list`, like any other job. S5's spike screen did not do this: review of its code found that a pending
+  request would be lost on a tab switch, leaving the turn hung (no request fired in a real run). The agent gets no private event channel.
 - Cost and token use arrive on the turn's result and are shown per turn. They are estimates.
 
 **Errors and wording**
@@ -433,6 +437,8 @@ Studio parse or guess it. Proposed additions to `ak-py`, each specified through 
 | No arbitrary values (`p-[13px]`) or inline colour styles | A small custom check over class names (a Biome plugin or a script), written in P1b |
 | Every operation has a handler | Registry check at start-up and a contract test |
 | Every error code has a presentation | Contract test |
+| The agent SDK is imported only by the agent adapter | dependency-cruiser rule |
+| No operation output or stream chunk has a `key`, `apiKey` or `token` field | Contract test over every output schema |
 | Every capability and app command a manifest names exists | Unit test |
 | Templates reproduce their reference projects | Regeneration test |
 | Every secret-looking config field is in the secret list | Unit test against the in-tree `AKConfig` |

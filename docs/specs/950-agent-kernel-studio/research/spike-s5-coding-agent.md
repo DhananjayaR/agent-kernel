@@ -19,6 +19,7 @@ streaming, approve and deny against the model, interrupt, cost, and whether the 
 1. **A project hook gets the key.** A `SessionStart` hook in the opened folder's `.claude/settings.json` ran
    unprompted, and its environment contained `ANTHROPIC_API_KEY`. So any folder the user opens can read the key.
 2. **A project skill loads.** A skill in the opened folder's `.claude/skills/` was listed in `init.skills`.
+   Not tested: `.claude/commands`, which is where `ak skill install --assistant claude` writes.
 
 The changes from the brief:
 1. On this machine Electron's `safeStorage` has no encryption (backend `basic_text`), so the key is held in memory

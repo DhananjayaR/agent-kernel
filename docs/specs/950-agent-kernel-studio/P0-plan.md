@@ -1202,6 +1202,7 @@ flowchart LR
   T2 --> T5[5 Tooling and CI S2]
   T3 --> T5
   T4 --> T5 --> T6[6 Decision record]
+  T3 --> T7[7 Coding agent S5] --> T6
 ```
 
 Tasks 2 and 3 can run in parallel after Task 1. Task 4 needs Task 2's tokens and schema file. About nine
@@ -1218,3 +1219,4 @@ working days for one person, six with two.
 | D8 state, data, routing | 3 (note); not built, taken as listed unless the spike argues otherwise |
 | D13 architecture checks | 5 |
 | Decision record, approval, spike code retired | 6 |
+| S5 checklist: key store, write-only key, isolated environment, session on the bridge, packaged app, live run (D14) | 7 |
