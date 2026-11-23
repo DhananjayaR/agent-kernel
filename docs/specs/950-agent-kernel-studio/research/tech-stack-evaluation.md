@@ -11,7 +11,7 @@ component library. The comparisons below are kept as the record of why.
 
 | # | Constraint | Why |
 |---|---|---|
-| C1 | Theme fully to the Agent Kernel look: its tokens, pill buttons and tags, glass floating layers, dark and light | The Studio must look like Agent Kernel, not like a vendor's design system |
+| C1 | Theme fully to the Agent Kernel look: its tokens, pill buttons and tags, solid floating layers (glass in the briefs; solid decided in P0 on 23 November 2026), dark and light | The Studio must look like Agent Kernel, not like a vendor's design system |
 | C2 | Dense desktop UI: tree, virtualised table, combobox, menus, context menu, command palette, resizable panels, tabs, toasts, drag and drop | The builder needs all of them |
 | C3 | Accessible by default: keyboard, focus, screen reader | Part of "best UX"; costly to retrofit |
 | C4 | The renderer runs in a plain browser | The issue's later hosted Studio; also makes testing and design review easier |

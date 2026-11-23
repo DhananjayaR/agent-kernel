@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | In review: four spikes ran on Linux only; the decision record is drafted and waits for owner review; Windows and macOS were never run |
+| Status | In review: four spikes ran on Linux; the decision record is drafted and waits for owner review. Windows and macOS are deferred by the owner (23 November 2026). Spike S5 (coding agent with a key) added the same day |
 | Business aspect | None visible to users. Decides what the Studio is built with, so every later phase builds on proven choices. |
 | Issue milestone | Before milestone 1 |
 | Depends on | Nothing |
@@ -13,11 +13,12 @@
 
 ## Outcome
 
-A decision record for every part of the stack, each backed by a spike that ran on Windows, macOS and Linux.
+A decision record for every part of the stack, each backed by a spike. The target was Windows, macOS and Linux; the owner deferred Windows and macOS on
+23 November 2026, so the evidence is from Linux.
 Spike code is throwaway and is not carried into P1a.
 
 **Where it stands.** The spikes ran on Linux (WSL2) only. The spike branch was never pushed and the CI
-workflow never ran, so every Windows and macOS item is "Not run — pending CI on three systems". The record
+workflow never ran, so every Windows and macOS item is "Deferred — Linux only for now". The record
 below is a draft for owner review. See [Exit criteria](#exit-criteria) for what is open.
 
 ## What the choices are judged against
@@ -92,7 +93,8 @@ Build one throwaway screen in the Agent Kernel look.
 - [ ] Measure Spectrum 2's sizes, radii, spacing and state styling from its documentation and turn them into
       tokens.
 - [ ] Restyle Button, Tag, Input, Popover and Dialog to resemble Spectrum 2, in dark and light. Build
-      floating layers both solid (as Spectrum has them) and with glass, for the design gate to choose.
+      floating layers both solid (as Spectrum has them) and with glass, to compare. Decided 23 November 2026:
+      solid.
 - [ ] Side-by-side screenshots against the Spectrum 2 documentation.
 - [ ] Build: a 5,000-row virtualised table, a tree with drag and drop, a combobox, a context menu, a command
       palette, resizable panels.
@@ -137,7 +139,7 @@ a 10,000-line burst does not freeze the window.
 
 ### S4 · Canvas and code (D6, D7). Two days.
 
-- [ ] React Flow: 300 custom nodes with the glass style, pan and zoom stay smooth; auto-layout runs off the
+- [ ] React Flow: 300 custom nodes (the spike used the briefs' glass style; nodes are solid in the app), pan and zoom stay smooth; auto-layout runs off the
       main thread.
 - [ ] Decide React Flow 13 or the 12 pin.
 - [ ] CodeMirror: a 2,000-line Python file with highlighting, a side-by-side diff, YAML with inline errors from
@@ -148,7 +150,7 @@ a 10,000-line burst does not freeze the window.
 ## Decision record
 
 Each row is also copied to the README decision log. All spike evidence is from Linux (WSL2) only. Every
-Windows and macOS item is **Not run — pending CI on three systems**. Dates are the spike date. Approval is
+Windows and macOS item is **Deferred — Linux only for now**. Dates are the spike date. Approval is
 "Pending owner review" on every row except the three the owner decided on 23 November 2026 (D1a, D5 and
 D12).
 
@@ -157,8 +159,8 @@ D12).
 | D1 | Component library | shadcn/ui on the React Aria base, restyled to resemble React Spectrum (Spectrum 2). shadcn/ui and the Spectrum 2 style were chosen by the owner earlier; the React Aria base is confirmed on Linux. We own `tree.tsx` (not in the shadcn registry) and a virtualised `table.tsx`. Two other libraries: splitter and toasts | shadcn 4.23.0 (style `aria-nova`), react-aria-components 1.22.1, cn 0.5.2, class-variance-authority 0.7.1, lucide-react 1.77.0, react-resizable-panels 4.24.1, sonner 2.0.8 | [S1](research/spike-s1-components.md) | 23 Nov 2026 | Pending owner review |
 | D1a | Floating layers (menus, popovers, drawers, modals, toasts) | **Solid, as in Spectrum 2, not glass.** Decided in P0. Matches the Spectrum 2 style reference. S1 also found the brief's light-mode glass fill gave 2.67:1 title contrast and needed its own fill | n/a | [S1](research/spike-s1-components.md) | 23 Nov 2026 | Dhananjaya Rajasinghe |
 | D2 | Styling | Tailwind CSS 4, tokens in `@theme`, default colour palette removed, shadcn's semantic names mapped onto the Agent Kernel tokens. Needs a `cn` config kept in step with the tokens | tailwindcss 4.3.5, @tailwindcss/vite 4.3.5, tw-animate-css 1.4.0, @fontsource-variable/archivo 5.3.0, @fontsource/jetbrains-mono 5.3.0 | [S1](research/spike-s1-components.md) | 23 Nov 2026 | Pending owner review |
-| D3 | Bundler and development loop | Vite through electron-vite. No blocker on Linux; Electron Forge fallback not needed. Cold `electron-vite build` about 1.0 s, renderer hot reload about 58 ms, main restart about 131 ms. Windows and macOS: Not run — pending CI on three systems | electron-vite 6.0.0, vite 8.3.8 | [S2](research/spike-s2-build.md) | 23 Nov 2026 | Pending owner review |
-| D4 | Packaging | electron-builder. AppImage and deb built and the packaged app starts on Linux. NSIS and dmg installers: Not run — pending CI on three systems. Installing from an installer: not done, needs a person. Signing is P12 | electron-builder 26.18.0 | [S2](research/spike-s2-build.md) | 23 Nov 2026 | Pending owner review |
+| D3 | Bundler and development loop | Vite through electron-vite. No blocker on Linux; Electron Forge fallback not needed. Cold `electron-vite build` about 1.0 s, renderer hot reload about 58 ms, main restart about 131 ms. Windows and macOS: Deferred — Linux only for now | electron-vite 6.0.0, vite 8.3.8 | [S2](research/spike-s2-build.md) | 23 Nov 2026 | Pending owner review |
+| D4 | Packaging | electron-builder. AppImage and deb built and the packaged app starts on Linux. NSIS and dmg installers: Deferred — Linux only for now. Installing from an installer: not done, needs a person. Signing is P12 | electron-builder 26.18.0 | [S2](research/spike-s2-build.md) | 23 Nov 2026 | Pending owner review |
 | D5 | Typed bridge | **The in-house zod contract with the `Transport` interface, not oRPC.** Reason from S3: the same renderer code runs over Electron IPC and WebSocket, and the in-house IPC checks the sender on every message; oRPC's Electron path has no sender check. oRPC 1.16.5 also streamed, aborted and ran over WebSocket, so the choice is on those grounds, not on a failed test. Keep `handlers.ts` transport-free | zod 4.6.7; ws 8.23.0 (development WebSocket server only). oRPC 1.16.5 tried, not adopted | [S3](research/spike-s3-bridge.md) | 23 Nov 2026 | Dhananjaya Rajasinghe |
 | D6 | Canvas | React Flow 13 with dagre, layout in a worker. 13 passed; 12 not needed. Costs seen: 183 to 200 ms main-thread stall when 300 nodes mount; worst single frame 50 ms in the 300-node overview. Keyboard model open (see below) | @xyflow/react 13.0.2, @dagrejs/dagre 3.1.3 | [S4](research/spike-s4-canvas-code.md) | 23 Nov 2026 | Pending owner review |
 | D7 | Code viewer | CodeMirror 6, with a read-only merge view for diffs and an Ajv + `yaml` lint source. Four defaults to set: `MergeView` `diffConfig.scanLimit`, a scrolling parent, `linter` `delay`, filtering `anyOf` noise. Cold open of the Code tab missed the 200 ms target (360 to 382 ms); preload on idle is untested | codemirror 6.0.2, @codemirror/view 6.43.15, @codemirror/state 6.7.6, @codemirror/language 6.13.1, @codemirror/lang-python 6.2.1, @codemirror/lang-yaml 6.1.3, @codemirror/merge 6.12.3, @codemirror/lint 6.9.8, @lezer/highlight 1.2.5, yaml 2.9.1 | [S4](research/spike-s4-canvas-code.md) | 23 Nov 2026 | Pending owner review |
@@ -216,12 +218,12 @@ match the provisional choice.
 | C2 | Met on Linux: tree, virtualised sortable table (5,000 rows), drag and drop, combobox, menus, context menu, command palette, panels, tabs, toasts | Own `tree.tsx` and `table.tsx`; two extra libraries (splitter, toasts) |
 | C3 | Keyboard: met for every component built. Screen-reader pass: **not done, needs a person** (accessibility-tree snapshots only). Canvas keyboard model open | Screen-reader pass at the P1a design gate; canvas keyboard at the P3 design gate |
 | C4 | Met: the same renderer code ran in a browser over WebSocket and in Electron over IPC | None |
-| C5 | Linux only. **Windows and macOS: Not run — pending CI on three systems** | Run the CI workflow on three systems before P1a relies on it |
-| C6 | Linux: met. **Windows and macOS: Not run — pending CI on three systems** | As C5 |
-| C7 | Linux: met on both transports (10,000-line burst, worst frame 17 ms; cancel leaves 0 child processes). **Windows and macOS cancel: Not run — pending CI on three systems.** `taskkill /T /F` and `process.kill(-pid)` on macOS are untested | The vitest cancel test runs in CI on all three; the Playwright bridge specs are Linux-only until the `pgrep` counter is made portable |
+| C5 | Linux only. **Windows and macOS: Deferred — Linux only for now** | Run the CI workflow on three systems before P1a relies on it |
+| C6 | Linux: met. **Windows and macOS: Deferred — Linux only for now** | As C5 |
+| C7 | Linux: met on both transports (10,000-line burst, worst frame 17 ms; cancel leaves 0 child processes). **Windows and macOS cancel: Deferred — Linux only for now.** `taskkill /T /F` and `process.kill(-pid)` on macOS are untested | The vitest cancel test runs in CI on all three; the Playwright bridge specs are Linux-only until the `pgrep` counter is made portable |
 | C8 | Risks noted: React Flow 13.0.2 is seven days old; one dependency-cruiser release is on the pnpm minimum-release-age exception list; TypeScript 7 blocks ESLint; `cn` config must track the tokens | Pin exactly; review the exception; revisit at TypeScript 7.1 |
 
-### Not run, pending CI on three systems
+### Deferred: Windows and macOS
 
 - Windows and macOS: the one-command build and run, the cancel test, the NSIS and dmg installers, and the
   three-system CI workflow (`.github/workflows/studio-spike.yml`, written, parsed, never executed).

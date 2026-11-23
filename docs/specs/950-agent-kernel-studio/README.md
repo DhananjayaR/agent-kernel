@@ -17,7 +17,7 @@ Status values: Not started, Design, In progress, In review, Done.
 
 | Phase | Business aspect | Issue milestone | Status | Design signed off | Doc |
 |---|---|---|---|---|---|
-| P0 | Technology selection | Before 1 | In review (spikes ran on Linux only; record drafted; Windows and macOS not run) | n/a | [P0](P0-technology-selection.md) |
+| P0 | Technology selection | Before 1 | In review (spikes ran on Linux; record drafted; Windows and macOS deferred by the owner; spike S5 added) | n/a | [P0](P0-technology-selection.md) |
 | P1a | App foundation: workspace, shell, bridge, design system | Before 1 | Not started | No | [P1a](P1a-app-foundation.md) |
 | P1b | Data and feature layer, shared patterns, Studio skills | Before 1 | Not started | No | [P1b](P1b-data-layer-and-patterns.md) |
 | P2 | Open a project and know its Agent Kernel version | 1 | Not started | No | [P2](P2-project-and-kernel-version.md) |
