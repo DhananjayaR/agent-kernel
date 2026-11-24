@@ -2,9 +2,10 @@
 	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
 		"outDir": "./dist",
-		"rootDir": "./src",
-		"tsBuildInfoFile": "./dist/.tsbuildinfo"
+		"rootDir": ".",
+		"tsBuildInfoFile": "./dist/.tsbuildinfo",
+		"types": ["node"]
 	},
-	"include": ["src"],
+	"include": ["src", "electron.vite.config.ts"],
 	"references": [{ "path": "../../packages/contract" }]
 }

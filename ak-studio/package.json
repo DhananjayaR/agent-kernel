@@ -8,9 +8,9 @@
 		"node": "24.22.1"
 	},
 	"scripts": {
-		"dev": "echo 'dev: added in Task 3'",
-		"build": "echo 'build: added in Task 3'",
-		"test": "echo 'test: added in Task 2'",
+		"dev": "pnpm --filter @ak-studio/desktop dev",
+		"build": "pnpm --filter @ak-studio/desktop build",
+		"test": "pnpm -r --if-present test",
 		"lint": "biome check .",
 		"typecheck": "tsc -b",
 		"storybook": "echo 'storybook: added in Task 6'",

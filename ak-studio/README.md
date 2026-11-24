@@ -4,18 +4,31 @@ Electron desktop app for Agent Kernel (issue #950). pnpm workspace; Node 24.22.1
 
 ```bash
 cd ak-studio
-pnpm install --frozen-lockfile
-pnpm lint        # Biome check (real)
-pnpm typecheck   # tsc -b over all members (real)
+pnpm install --frozen-lockfile   # also fetches the Electron binary (apps/desktop postinstall)
+pnpm lint        # Biome check
+pnpm typecheck   # tsc -b over all members
+pnpm test        # every member's unit tests (Vitest)
 pnpm depcruise   # boundary rules (dependency-cruiser, swc parser)
 pnpm depcruise:selftest  # proves the rules can fail and the parser finds modules
+pnpm build       # electron-vite: main, preload and renderer into apps/desktop/out/
+pnpm dev         # Electron against the electron-vite dev server
+pnpm --filter @ak-studio/desktop start   # run the last build (on headless Linux: xvfb-run -a ...)
 ```
 
-Members: `apps/desktop`, `apps/renderer`, `packages/contract`, `packages/ui`, `packages/kernel-catalog`
-(scaffolds so far; app code arrives in later P1a tasks).
+Members: `apps/desktop`, `apps/renderer`, `packages/contract`, `packages/ui`, `packages/kernel-catalog`.
 
-Scripts that are placeholders for now (print "added in Task N" and exit 0): `dev`, `build` (Task 3),
-`test` (Task 2), `storybook` (Task 6), `package` (Task 7). `lint` and `typecheck` are real.
+Scripts that are placeholders for now (print "added in Task N" and exit 0): `storybook` (Task 6), `package`
+(Task 7).
+
+**Desktop app.** `apps/desktop` holds the Electron main process and preload, and the electron-vite config,
+which also builds `apps/renderer` (so the renderer holds no Node-run file). The window loads `app://studio/`,
+a custom protocol serving `apps/desktop/out/renderer/` with the content security policy as a response header.
+Context isolation and the sandbox are on, Node integration is off, navigation, new windows and permissions are
+refused, and every request whose scheme is not `app:` or `devtools:` (or, unpackaged, the dev server) is
+cancelled. The preload exposes one global, `window.studio` (`request`, `subscribe`). Window size, position and
+maximised state are kept in `window-state.json` in the app's data folder. Unpackaged builds started with
+`AK_STUDIO_TEST_HOOKS=1` expose `globalThis.__akStudioTestHooks` in the main process
+(`cancelledRequestCount()`, `cancelledRequestUrls()`) for the Electron smoke test.
 
 Boundary rules live in `.dependency-cruiser.cjs`: the renderer and `packages/ui` import no `electron` or Node
 built-in; `packages/contract` imports only `zod`; `packages/ui` imports neither `apps/*` nor

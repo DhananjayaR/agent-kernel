@@ -67,6 +67,7 @@ module.exports = {
 		parser: "swc",
 		tsConfig: { fileName: "tsconfig.json" },
 		doNotFollow: { path: "node_modules" },
-		exclude: { path: "^(apps|packages)/[^/]+/dist/" },
+		// Build output (tsc declarations in dist/, electron-vite bundles in out/) is not source.
+		exclude: { path: "^(apps|packages)/[^/]+/(dist|out)/" },
 	},
 };
