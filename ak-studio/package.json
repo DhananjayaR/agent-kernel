@@ -15,7 +15,7 @@
 		"typecheck": "tsc -b",
 		"storybook": "echo 'storybook: added in Task 6'",
 		"package": "echo 'package: added in Task 7'",
-		"depcruise": "depcruise apps packages --config .dependency-cruiser.cjs",
+		"depcruise": "node tools/depcruise.mjs",
 		"depcruise:selftest": "node tools/depcruise-selftest/run.mjs"
 	},
 	"devDependencies": {

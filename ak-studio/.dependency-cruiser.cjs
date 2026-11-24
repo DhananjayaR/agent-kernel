@@ -3,7 +3,11 @@
 // under TypeScript 7 dependency-cruiser's default parser silently reports "1 modules, 0 dependencies".
 // `pnpm depcruise:selftest` proves the rules can fail and that the parser actually found modules.
 
-const RENDERER_OR_UI = "^(apps/renderer|packages/ui)/src/";
+// Whole member folders (so .storybook, stories and config files are covered), minus installed and built files.
+const RENDERER_OR_UI = {
+	path: "^(apps/renderer|packages/ui)/",
+	pathNot: "(^|/)(node_modules|dist)/",
+};
 
 /** @type {import('dependency-cruiser').IConfiguration} */
 module.exports = {
@@ -13,15 +17,16 @@ module.exports = {
 			comment:
 				"The renderer and packages/ui run in a plain browser; they never import electron.",
 			severity: "error",
-			from: { path: RENDERER_OR_UI },
-			to: { path: "^electron($|/)" },
+			from: RENDERER_OR_UI,
+			// Both forms: unresolved ("electron") and resolved (node_modules/electron/...).
+			to: { path: "(^|/)node_modules/electron/|^electron($|/)" },
 		},
 		{
 			name: "renderer-ui-no-node-builtins",
 			comment:
 				"The renderer and packages/ui import no Node built-in (node: prefixed or bare).",
 			severity: "error",
-			from: { path: RENDERER_OR_UI },
+			from: RENDERER_OR_UI,
 			to: { dependencyTypes: ["core"] },
 		},
 		{
@@ -62,5 +67,6 @@ module.exports = {
 		parser: "swc",
 		tsConfig: { fileName: "tsconfig.json" },
 		doNotFollow: { path: "node_modules" },
+		exclude: { path: "^(apps|packages)/[^/]+/dist/" },
 	},
 };
