@@ -1197,6 +1197,11 @@ git commit -m "chore(spike): S5 coding agent with a key, with findings"
 
 Added 24 November 2026. Runs on branch `spike/950-studio-p0`, in `ak-studio-spikes/app/`.
 
+**Ran 24 November 2026** with the owner's go-ahead. Steps 1 to 4 and 6 to 8 ran (Step 6 with a weaker check;
+no `strace`). In Step 5 the dummy-key run passed; **the turn on the subscription did not run**, because the
+machine's sign-in had expired. The machine had no `claude` command, so the desktop app's copy was used
+through a spike-only override. To finish: sign in a Claude Code, then run `scripts/s5b-live-probe.mjs`.
+
 **Stop first:** Steps 3 to 6 use the Claude Code sign-in on the machine they run on. Do not run them without
 the owner's go-ahead for that machine. Never read, print or copy a credential file or keychain entry.
 

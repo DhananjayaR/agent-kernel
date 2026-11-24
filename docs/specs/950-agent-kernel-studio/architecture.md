@@ -275,12 +275,16 @@ flowchart LR
   sign-in error against 2.1.321. `agent.status` enforces a lowest supported version. The install locations in the spike were written from memory and must be checked against the documentation.
 - **Finding it.** The adapter looks on `PATH`, then in the documented install locations, then at a path the
   user can set. A user who has only the Claude desktop app has no `claude` command: the desktop app keeps a
-  private copy, which the Studio must not use. That user sees "not installed". (Found on the spike machine.)
-- **No SDK session store.** The SDK's `sessionStore` resume path reads Claude Code's credential file, or the
-  macOS Keychain, inside the host process. The adapter must not use it; a boundary test forbids the option.
+  private copy, which the Studio must not use. That user sees "not installed". (Found on the spike machine, which runs Claude Code on a subscription
+  through the desktop app: it had no `claude` command, and the sign-in on disk was not usable by a `claude`
+  command line. Why is not known. So a desktop-app user may have to install and sign in separately.)
+- **No SDK session store.** The SDK's `sessionStore` resume path appears to read Claude Code's credential
+  file, or the macOS Keychain, inside the host process. (Reported from reading the SDK's shipped code during
+  S5; not exercised and not independently checked.) The adapter must not use it; a boundary test forbids the option.
 - **The user's environment.** An app started from a desktop launcher does not get the terminal's `PATH` or
-  exported variables; the install-location lookup is what finds `claude` there. (Verified in S5 by starting
-  the packaged app with a minimal environment; a real launcher start is not run.) The agent runs with the user's home, configuration folder and environment, so
+  exported variables; the install-location lookup is meant to find `claude` there. (S5 started the packaged
+  app with a minimal environment and it correctly reported "not installed". The lookup itself passed only a
+  unit test with a stub; no real installation has been found from a launcher.) The agent runs with the user's home, configuration folder and environment, so
   the sign-in, git identity, `uv` cache and cloud credentials are present. The user's own Claude Code
   settings, hooks and MCP servers load, as they would in a terminal. The isolated environment of the earlier
   design is dropped: it existed to keep a local sign-in out, which is now the opposite of the goal.

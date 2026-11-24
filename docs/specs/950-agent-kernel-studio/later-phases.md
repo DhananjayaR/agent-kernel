@@ -142,7 +142,7 @@ requests as cards; sees what changed on the canvas and in a diff; accepts or rev
 - Run the live turn of spike S5 if P0 did not: streaming, approve, deny, interrupt and usage on a working
   subscription. A lowest supported Claude Code version, checked in the status view.
 - A user with only the Claude desktop app has no `claude` command: the status view sends them to the Claude
-  Code installer. The adapter never uses the SDK's `sessionStore`, which reads the credential file.
+  Code installer. The adapter never uses the SDK's `sessionStore`, which appears to read the credential file (not exercised).
 
 **Skill.** `ak-studio-coding-agent-adapter`. The coding agent is a session; an agent turn is a job; each permission request puts it in
 `waiting-for-user` and renders with the approval pattern.
