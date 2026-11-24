@@ -14,11 +14,14 @@
 		"lint": "biome check .",
 		"typecheck": "tsc -b",
 		"storybook": "echo 'storybook: added in Task 6'",
-		"package": "echo 'package: added in Task 7'"
+		"package": "echo 'package: added in Task 7'",
+		"depcruise": "depcruise apps packages --config .dependency-cruiser.cjs",
+		"depcruise:selftest": "node tools/depcruise-selftest/run.mjs"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.6.8",
 		"@playwright/test": "1.65.1",
+		"@swc/core": "1.16.22",
 		"@types/node": "24.19.2",
 		"dependency-cruiser": "18.9.0",
 		"typescript": "7.0.2",
