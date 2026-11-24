@@ -68,6 +68,12 @@ To see all available Makefile commands:
 ```bash
 make help
 ```
+## Agent Kernel Studio
+
+The Electron desktop app lives in `ak-studio/` (pnpm workspace, Node 24.22.1, pnpm 12.4.1). See
+[ak-studio/README.md](ak-studio/README.md). From the root, `make studio-dev`, `studio-build`, `studio-test` and
+`studio-lint` run the matching `pnpm --dir ak-studio` command.
+
 ## Code Quality
 
 ### Formatting Standards

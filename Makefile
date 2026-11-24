@@ -1,4 +1,4 @@
-.PHONY: dev-setup lint lint-check lint-examples lint-examples-check lint-all lint-check-all lock-bounds-check deploy-inject deploy-revert help
+.PHONY: dev-setup lint lint-check lint-examples lint-examples-check lint-all lint-check-all lock-bounds-check deploy-inject deploy-revert studio-dev studio-build studio-test studio-lint help
 
 EXAMPLE_DIRS := examples
 
@@ -40,6 +40,10 @@ help:
 	@echo "  lock-bounds-check   - Lists uv.lock versions outside the bounds ak-py declares (not part of lint-check-all)"
 	@echo "  deploy-inject       - Injects local module sources/backend.tf into deployment examples"
 	@echo "  deploy-revert       - Reverts deployment examples back to registry module sources"
+	@echo "  studio-dev          - Runs Agent Kernel Studio in development mode (ak-studio)"
+	@echo "  studio-build        - Builds Agent Kernel Studio (ak-studio)"
+	@echo "  studio-test         - Runs Agent Kernel Studio tests (ak-studio)"
+	@echo "  studio-lint         - Lints Agent Kernel Studio with Biome (ak-studio)"
 	@echo "  help                - Show this help message"
 
 dev-setup:
@@ -121,3 +125,15 @@ deploy-inject:
 
 deploy-revert:
 	@python3 scripts/deploy/inject_dependencies.py --revert
+
+studio-dev:
+	pnpm --dir ak-studio dev
+
+studio-build:
+	pnpm --dir ak-studio build
+
+studio-test:
+	pnpm --dir ak-studio test
+
+studio-lint:
+	pnpm --dir ak-studio lint

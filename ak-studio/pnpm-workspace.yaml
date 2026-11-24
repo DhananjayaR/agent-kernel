@@ -1,0 +1,10 @@
+packages:
+  - apps/*
+  - packages/*
+allowBuilds:
+  "@swc/core": false
+  electron: false
+  electron-winstaller: false
+  esbuild: false
+minimumReleaseAgeExclude:
+  - dependency-cruiser@18.9.0

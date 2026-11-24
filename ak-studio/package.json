@@ -1,0 +1,27 @@
+{
+	"name": "ak-studio",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Agent Kernel Studio workspace",
+	"packageManager": "pnpm@12.4.1",
+	"engines": {
+		"node": "24.22.1"
+	},
+	"scripts": {
+		"dev": "echo 'dev: added in Task 3'",
+		"build": "echo 'build: added in Task 3'",
+		"test": "echo 'test: added in Task 2'",
+		"lint": "biome check .",
+		"typecheck": "tsc -b",
+		"storybook": "echo 'storybook: added in Task 6'",
+		"package": "echo 'package: added in Task 7'"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.6.8",
+		"@playwright/test": "1.65.1",
+		"@types/node": "24.19.2",
+		"dependency-cruiser": "18.9.0",
+		"typescript": "7.0.2",
+		"vitest": "5.1.1"
+	}
+}

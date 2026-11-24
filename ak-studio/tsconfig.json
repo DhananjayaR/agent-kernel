@@ -1,0 +1,10 @@
+{
+	"files": [],
+	"references": [
+		{ "path": "packages/contract" },
+		{ "path": "packages/kernel-catalog" },
+		{ "path": "packages/ui" },
+		{ "path": "apps/renderer" },
+		{ "path": "apps/desktop" }
+	]
+}
