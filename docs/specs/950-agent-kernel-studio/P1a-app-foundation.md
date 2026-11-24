@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Not started |
+| Status | Started 24 November 2026. [Execution plan](P1a-plan.md); design gate at step 3 (options), waiting for the owner |
 | Business aspect | The Studio exists: it builds locally, opens a window, and looks like Agent Kernel |
 | Issue milestone | Before milestone 1 |
 | Depends on | [P0](P0-technology-selection.md). The stack and pinned versions are in its [decision record](P0-technology-selection.md#decision-record), which is in owner review: only D1a, D5 and D12 are approved so far. Windows and macOS were never run; CI on three systems must pass before this phase relies on those results. |
@@ -35,7 +35,8 @@ There is no project feature yet.
 ## Design gate
 
 Follow [design-process.md](design-process.md). Existing input: briefs 00 and 01 and the System page of the
-canvas. This gate sets the look every later screen inherits, so it is the most important one.
+canvas. Options for palette, fonts, density and theme, with measured contrast:
+[research/p1a-design-gate-options.md](research/p1a-design-gate-options.md). This gate sets the look every later screen inherits, so it is the most important one.
 
 | Subject | Requirements | Questions to settle |
 |---|---|---|

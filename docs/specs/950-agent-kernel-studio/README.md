@@ -18,7 +18,7 @@ Status values: Not started, Design, In progress, In review, Done.
 | Phase | Business aspect | Issue milestone | Status | Design signed off | Doc |
 |---|---|---|---|---|---|
 | P0 | Technology selection | Before 1 | In review (spikes ran on Linux; record drafted; Windows and macOS deferred by the owner; spike S5 added; no turn has run on a subscription yet) | n/a | [P0](P0-technology-selection.md) |
-| P1a | App foundation: workspace, shell, bridge, design system | Before 1 | Not started | No | [P1a](P1a-app-foundation.md) |
+| P1a | App foundation: workspace, shell, bridge, design system | Before 1 | Started 24 Nov 2026: plan written; design-gate options drafted, waiting for the owner; non-UI tasks proceed | No | [P1a](P1a-app-foundation.md), [plan](P1a-plan.md) |
 | P1b | Data and feature layer, shared patterns, Studio skills | Before 1 | Not started | No | [P1b](P1b-data-layer-and-patterns.md) |
 | P2 | Open a project and know its Agent Kernel version | 1 | Not started | No | [P2](P2-project-and-kernel-version.md) |
 | P3 | See the project: read-only Canvas, Code, Config | 1 | Not started | No | [P3](P3-read-only-builder.md) |
@@ -113,6 +113,7 @@ Detail: [P2](P2-project-and-kernel-version.md).
 | 23 Nov 2026 | Windows and macOS are deferred; Phase 0 evidence is from Linux. Decided by Dhananjaya Rajasinghe | [P0](P0-technology-selection.md#exit-criteria) |
 | 23 Nov 2026 | New requirement: the Studio takes a key from the user and drives Claude with it to build agents. Spike S5 and decision D14 added to P0; the Claude Agent SDK runs in the main process and holds the key there. Replaces "the app never stores credentials" | [architecture](architecture.md#the-coding-agent-and-the-users-claude-code), [P6](later-phases.md#p6--build-with-ai) |
 | 24 Nov 2026 | The coding agent uses the user's own Claude Code, already installed and signed in with a subscription. Decided by Dhananjaya Rajasinghe. Replaces the pasted-key design of 23 Nov. That the Studio itself never takes or stores the subscription token is our reading of Anthropic's rules, awaiting the owner's confirmation; under it, "the app never stores credentials" stands again. Mechanics ran on 24 Nov; no turn has run on a subscription; needs Anthropic's confirmation before P6 | [architecture](architecture.md#the-coding-agent-and-the-users-claude-code), [P0](P0-technology-selection.md) D14 |
+| 24 Nov 2026 | P1a started at the owner's request. The P0 record is still in review (only D1a, D5, D12 approved); P1a builds on the drafted rows and is Linux only, with the three-system CI written but not executed | [P1a-plan.md](P1a-plan.md) |
 
 ## Open decisions
 
@@ -175,6 +176,8 @@ Facts checked against the repository at `develop` `2d3375a1`:
 | [conventions-and-skills.md](conventions-and-skills.md) | Ground rules, UX patterns, development techniques, Studio skills |
 | [P0-technology-selection.md](P0-technology-selection.md) | Stack decisions and spikes |
 | [P0-plan.md](P0-plan.md) | Task-by-task execution plan for the P0 spikes |
+| [P1a-plan.md](P1a-plan.md) | Task-by-task execution plan for P1a, with its pre-flight rulings |
+| [research/p1a-design-gate-options.md](research/p1a-design-gate-options.md) | P1a design gate: palette, fonts, density and theme options, with measured contrast |
 | [P1a-app-foundation.md](P1a-app-foundation.md) | Workspace, Electron shell, bridge transport, design system |
 | [P1b-data-layer-and-patterns.md](P1b-data-layer-and-patterns.md) | Contract shapes, jobs and sessions, shared patterns, generators, enforcement, first skills |
 | [P2-project-and-kernel-version.md](P2-project-and-kernel-version.md) | Welcome, toolchain, command runner, versions and the capability catalog |
