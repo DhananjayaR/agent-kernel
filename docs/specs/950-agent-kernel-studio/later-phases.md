@@ -134,7 +134,8 @@ requests as cards; sees what changed on the canvas and in a diff; accepts or rev
 - The agent's commands appear in the Commands panel, marked as the agent's.
 - The agent never applies or destroys Terraform.
 - The Studio uses the Claude Code already installed and signed in on the user's machine (owner's decision,
-  24 November 2026). It never stores, reads or asks for a credential, and shows no login of its own.
+  24 November 2026). On our reading of Anthropic's rules, awaiting the owner's confirmation, it never
+  stores, reads or asks for a credential, and shows no login of its own.
 - A status view: not installed, not signed in, or ready, with the version and which credential Claude Code
   is using. When not signed in, it tells the user to sign in from a terminal.
 - The opened folder's agent hooks and permission rules are listed and confirmed before they are loaded.
@@ -148,7 +149,7 @@ requests as cards; sees what changed on the canvas and in a diff; accepts or rev
 partly accepted turn looks. What the drawer shows when Claude Code is missing or not signed in. The wording:
 the feature is "Claude Agent"; "Claude Code" names only the user's installed program.
 
-**Open before starting.** Anthropic's confirmation that a third-party app may drive the user's signed-in
+**Open before starting.** Agreement to Anthropic's Commercial Terms, and Anthropic's confirmation that a third-party app may drive the user's signed-in
 Claude Code (its pages do not say so; see the architecture). Whether an API key is offered later as a second
 route for users without a subscription. The lowest Claude Code version supported.
 

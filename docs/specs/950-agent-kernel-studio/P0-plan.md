@@ -1178,7 +1178,7 @@ Runs on branch `spike/950-studio-p0`, in `ak-studio-spikes/app/`.
   and repeat from the packaged app; if the executable cannot start from inside the asar archive, add
   `asarUnpack` for the SDK's platform package and, failing that, `pathToClaudeCodeExecutable`. Record what
   worked.
-- [ ] **Step 7: Live runs, only if `SPIKE_AGENT_KEY_FILE` points to a file holding a real key.** Never print
+- **Step 7 (cancelled 24 November 2026, see above): Live runs, only if `SPIKE_AGENT_KEY_FILE` points to a file holding a real key.** Never print
   the key. A real turn in a scratch folder: streaming, approve, deny, interrupt, cost. Ask the agent to run
   `env` through its shell tool and record whether the key appears. Put a skill under `.claude/` in the
   scratch folder and record whether it loads. Without the file, mark every live row "Not run — needs a key".
@@ -1223,7 +1223,8 @@ the owner's go-ahead for that machine. Never read, print or copy a credential fi
   fails on any output field named `key`, `apiKey` or `token`.
 - [ ] **Step 2: Find the installation.** The adapter resolves `claude` on the user's `PATH` and the
   documented install locations, and reads its version. Test with a stub executable on a temporary `PATH`,
-  and with none.
+  and with none. Repeat from the packaged app started from a desktop launcher, which does not get the
+  terminal's `PATH` or exported variables.
 - [ ] **Step 3: Run the SDK against it.** Pass `pathToClaudeCodeExecutable` and the user's own environment
   (no isolated home or configuration folder, no credential variable added). Record whether the SDK installs
   with its optional executable packages omitted and whether the versions work together. If either fails,

@@ -212,9 +212,9 @@ type Session = {
 
 ## The coding agent and the user's Claude Code
 
-Revised 24 November 2026 on the owner's decision: the Studio expects Claude Code to be installed and signed
-in on the user's machine, and uses that sign-in (normally a Claude subscription). The Studio holds no
-credential. This replaces the design of 23 November, in which the user pasted an API key into the Studio.
+Revised 24 November 2026. The owner's decision: the user's machine already has Claude Code with a
+subscription, and that subscription is used. Our reading of Anthropic's rules, which the owner has yet to
+confirm: the Studio therefore runs that Claude Code and never takes, stores or passes on its token. This replaces the design of 23 November, in which the user pasted an API key into the Studio.
 
 Spike [S5](research/spike-s5-coding-agent.md) tested the earlier design, on Linux, with no real credential.
 Its results on the adapter, approvals, errors and the untrusted folder still apply. Its results on the key
@@ -250,12 +250,16 @@ flowchart LR
   credentials or session tokens", that "sign-in to a Claude account must complete through Anthropic's own
   flow", and that "the Claude Code binary must not be modified", nor any of its authentication methods
   removed or restricted. They also say each end user authenticates with their own credentials and is billed
-  under their own agreement. So a subscription token pasted into or stored by the Studio is ruled out, and
+  under their own agreement. They also bar third parties from routing requests "through Free, Pro, Max, or
+  Ultra plan credentials on behalf of their users", which is the sentence this design has to survive, and say
+  that running Claude Code in a product "requires agreeing to our Commercial Terms of Service".
+  So a subscription token pasted into or stored by the Studio is ruled out, and
   running the user's own unmodified, signed-in Claude Code is the only subscription route left.
 - **That route is our reading, not a stated permission.** No page says a third-party desktop app may drive
   the user's signed-in Claude Code. The SDK overview says that, unless previously approved, third parties may
   not offer claude.ai login or its rate limits "including agents built on the Claude Agent SDK". The owner
-  must confirm with Anthropic before P6 ships (the legal page says to contact sales).
+  must confirm with Anthropic before P6 starts (the legal page says to contact sales). The check gates P6, not
+  P0 or P1a, so earlier phases do not wait on a reply.
 
 **The agent process**
 
@@ -268,7 +272,9 @@ flowchart LR
   bundled executable, and whether SDK 0.3.330 works with whatever Claude Code version the user has. If
   either fails, the adapter drives the executable's own non-interactive mode instead; the interface above
   does not change.
-- **The user's environment.** The agent runs with the user's home, configuration folder and environment, so
+- **The user's environment.** An app started from a desktop launcher does not get the terminal's `PATH` or
+  exported variables, so finding `claude` and its environment must be tested from the packaged app started
+  that way (not run). The agent runs with the user's home, configuration folder and environment, so
   the sign-in, git identity, `uv` cache and cloud credentials are present. The user's own Claude Code
   settings, hooks and MCP servers load, as they would in a terminal. The isolated environment of the earlier
   design is dropped: it existed to keep a local sign-in out, which is now the opposite of the goal.

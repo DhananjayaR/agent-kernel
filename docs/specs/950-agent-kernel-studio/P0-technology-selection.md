@@ -177,7 +177,7 @@ isolated environment, and bundling the executable.
 runs on, so it needs the owner's go-ahead for that machine.
 
 - [ ] The adapter finds the user's `claude` executable and reads its version, in development and from the
-      packaged app.
+      packaged app started from a desktop launcher (which does not get the terminal's `PATH`).
 - [ ] The SDK runs against that executable (`pathToClaudeCodeExecutable`), and installs without its own
       bundled one. If not, drive the executable's non-interactive mode directly.
 - [ ] Status without a turn: not installed, not signed in, ready, and the credential source. The command
@@ -192,7 +192,7 @@ runs on, so it needs the owner's go-ahead for that machine.
 
 **Pass:** a turn runs on the user's own sign-in with no credential entered into, stored by or passed through
 the Studio; permission requests map to the approval pattern; the packaged app can start the user's Claude
-Code; the owner has Anthropic's confirmation that this use is allowed.
+Code. Anthropic's confirmation that this use is allowed is not a P0 criterion: it gates P6.
 
 ## Decision record
 
@@ -217,7 +217,7 @@ D12).
 | D11 | Electron version policy | Provisional policy stands (latest stable at P1a start, upgrade each major). No spike tested a policy; the spikes only ran on one version | electron 45.4.1 (version the spikes ran on) | [S2](research/spike-s2-build.md) | 23 Nov 2026 | Pending owner review |
 | D12 | Forms and validation | **Strict validation.** React Hook Form with Ajv, `coerceTypes` off, so a string `"30"` for an integer `ttl` is rejected, in forms and in the YAML editor. Validators stay precompiled with Ajv standalone, because the renderer CSP blocks runtime compile. Generic rendering from the JSON schema plus a per-field override map (Optional sections, enum-like strings). Consequences: the spike validator was generated with `coerceTypes: true`, so it is regenerated; integer form fields convert to numbers on change themselves. Not checked: whether the kernel's own loader coerces | react-hook-form 7.92.0, ajv 8.20.0 (`ajv/dist/2020` and standalone), yaml 2.9.1 | [S1](research/spike-s1-components.md), [S4](research/spike-s4-canvas-code.md) | 23 Nov 2026 | Dhananjaya Rajasinghe |
 | D13 | Architecture checks | dependency-cruiser with the swc parser, plus a self-test as a CI step. **Hazard:** under TypeScript 7, if `@swc/core` is absent, dependency-cruiser passes silently ("1 modules, 0 dependencies") and CI stays green. `pnpm depcruise:selftest` runs the rules on a fixture and fails if the violation is not caught. Revisit at TypeScript 7.1 | dependency-cruiser 18.9.0, @swc/core 1.16.22 | [S2](research/spike-s2-build.md) | 23 Nov 2026 | Pending owner review |
-| D14 | Coding agent | **Revised 24 Nov 2026 (owner).** The Studio runs the user's own installed, signed-in Claude Code (normally a subscription) through the Claude Agent SDK, behind one adapter in the main process. The Studio holds no credential, shows no login and does not ship the executable. **Not run:** the SDK against the user's installation, sign-in detection, a live turn. **Open:** Anthropic's pages do not state that a third-party app may do this; the owner confirms with Anthropic before P6 ships. S5's results for the earlier pasted-key design (adapter, approvals, error shape, untrusted folder) carry over; its key store and isolated environment do not | @anthropic-ai/claude-agent-sdk 0.3.330 | [S5](research/spike-s5-coding-agent.md) | 24 Nov 2026 | Pending owner review; credential route decided by Dhananjaya Rajasinghe |
+| D14 | Coding agent | **Revised 24 Nov 2026.** Owner's decision: use the subscription of the Claude Code already on the user's machine. The Studio runs the user's own installed, signed-in Claude Code (normally a subscription) through the Claude Agent SDK, behind one adapter in the main process. The Studio holds no credential, shows no login and does not ship the executable. **Not run:** the SDK against the user's installation, sign-in detection, a live turn. **Open:** Anthropic's pages do not state that a third-party app may do this; the owner confirms with Anthropic before P6 starts. That the Studio itself never takes or stores the subscription token is our reading of Anthropic's rules, awaiting the owner's confirmation. S5's results for the earlier pasted-key design (adapter, approvals, error shape, untrusted folder) carry over; its key store and isolated environment do not | @anthropic-ai/claude-agent-sdk 0.3.330 | [S5](research/spike-s5-coding-agent.md) | 24 Nov 2026 | Pending owner review; use of the subscription decided by Dhananjaya Rajasinghe |
 
 **Where a spike changed a provisional choice.** D5 was "own contract; adopt oRPC if it streams". oRPC
 streamed, so the rule did not trigger; the owner chose the in-house contract on the sender-check and
@@ -285,7 +285,7 @@ match the provisional choice.
   Studio reads no credential.
 - Whether the files `ak skill install --assistant claude` writes (`.claude/commands`) load; S5 tested
   `.claude/skills/` only. Whether the model then uses them. A resume that carries a real conversation.
-- Anthropic's confirmation that a third-party app may drive the user's signed-in Claude Code.
+- Anthropic's confirmation that a third-party app may drive the user's signed-in Claude Code (gates P6).
 
 ### Not done, needs a person
 
