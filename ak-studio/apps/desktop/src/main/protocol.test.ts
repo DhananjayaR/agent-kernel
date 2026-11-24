@@ -1,6 +1,6 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
 	contentTypeFor,
@@ -9,18 +9,21 @@ import {
 } from "./protocol";
 import { buildCsp } from "./security";
 
-const ROOT = "/srv/renderer";
+// A platform-native absolute root; resolveAppPath does not touch the disk.
+const ROOT = resolve(tmpdir(), "ak-studio-renderer-root");
 
 describe("resolveAppPath", () => {
 	it.each([
-		["app://studio/", "/srv/renderer/index.html"],
-		["app://studio/index.html", "/srv/renderer/index.html"],
-		["app://studio/assets/index-abc.js", "/srv/renderer/assets/index-abc.js"],
-		["app://studio/assets/", "/srv/renderer/assets/index.html"],
-		["app://studio/a%20b.css?x=1#h", "/srv/renderer/a b.css"],
-		["app://studio/assets/../index.html", "/srv/renderer/index.html"],
-	])("maps %s", (url, file) => {
-		expect(resolveAppPath(ROOT, url)).toBe(file);
+		["app://studio/", ["index.html"]],
+		["app://studio/index.html", ["index.html"]],
+		["app://studio/assets/index-abc.js", ["assets", "index-abc.js"]],
+		["app://studio/assets/", ["assets", "index.html"]],
+		["app://studio/a%20b.css?x=1#h", ["a b.css"]],
+		["app://studio/assets/../index.html", ["index.html"]],
+		// The URL parser folds %2e%2e segments itself, so this stays inside the root.
+		["app://studio/%2e%2e/%2e%2e/etc/passwd", ["etc", "passwd"]],
+	])("maps %s", (url, parts) => {
+		expect(resolveAppPath(ROOT, url)).toBe(join(ROOT, ...parts));
 	});
 
 	it.each([
@@ -28,16 +31,13 @@ describe("resolveAppPath", () => {
 		"https://studio/index.html", // wrong scheme
 		"app://studio/..%2f..%2fetc%2fpasswd", // encoded traversal
 		"app://studio/%2e%2e%2fsecret",
+		"app://studio/..%5c..%5cwindows", // encoded backslash: refused on every platform
+		"app://studio/assets%5cindex.js",
 		"app://studio/%00.html", // NUL
 		"app://studio/%E0%A4%A", // malformed escape
 		"not a url",
 	])("refuses %s", (url) => {
 		expect(resolveAppPath(ROOT, url)).toBeNull();
-	});
-
-	it("keeps an encoded backslash inside the root (an ordinary character on POSIX)", () => {
-		const file = resolveAppPath(ROOT, "app://studio/..%5c..%5cwindows");
-		expect(file === null || file.startsWith(`${ROOT}/`)).toBe(true);
 	});
 });
 
@@ -51,24 +51,26 @@ describe("contentTypeFor", () => {
 });
 
 describe("createAppProtocolHandler", () => {
-	let dir: string;
+	// A unique parent per run: the served root inside it, and a file beside the root that must stay unreachable.
+	let parent: string;
+	let root: string;
 	const csp = buildCsp();
 
 	beforeAll(() => {
-		dir = mkdtempSync(join(tmpdir(), "ak-studio-protocol-"));
-		mkdirSync(join(dir, "assets"));
-		writeFileSync(join(dir, "index.html"), "<!doctype html><p>hi</p>");
-		writeFileSync(join(dir, "assets", "app.js"), "export {};");
-		writeFileSync(join(dir, "..", "ak-studio-outside.txt"), "secret");
+		parent = mkdtempSync(join(tmpdir(), "ak-studio-protocol-"));
+		root = join(parent, "renderer");
+		mkdirSync(join(root, "assets"), { recursive: true });
+		writeFileSync(join(root, "index.html"), "<!doctype html><p>hi</p>");
+		writeFileSync(join(root, "assets", "app.js"), "export {};");
+		writeFileSync(join(parent, "outside.txt"), "secret");
 	});
 	afterAll(() => {
-		rmSync(dir, { recursive: true, force: true });
-		rmSync(join(dir, "..", "ak-studio-outside.txt"), { force: true });
+		rmSync(parent, { recursive: true, force: true });
 	});
 
 	it("serves index.html for / with the CSP and nosniff", async () => {
 		const res = await createAppProtocolHandler(
-			dir,
+			root,
 			csp,
 		)(new Request("app://studio/"));
 		expect(res.status).toBe(200);
@@ -80,7 +82,7 @@ describe("createAppProtocolHandler", () => {
 
 	it("serves assets with their content type", async () => {
 		const res = await createAppProtocolHandler(
-			dir,
+			root,
 			csp,
 		)(new Request("app://studio/assets/app.js"));
 		expect(res.status).toBe(200);
@@ -90,10 +92,11 @@ describe("createAppProtocolHandler", () => {
 	});
 
 	it("answers 404, still with the CSP, for missing files, traversal and other methods", async () => {
-		const handle = createAppProtocolHandler(dir, csp);
+		const handle = createAppProtocolHandler(root, csp);
 		for (const req of [
 			new Request("app://studio/missing.js"),
-			new Request("app://studio/..%2fak-studio-outside.txt"),
+			new Request("app://studio/..%2foutside.txt"),
+			new Request("app://studio/..%5coutside.txt"),
 			new Request("app://studio/assets"), // a directory
 			new Request("app://studio/index.html", { method: "POST", body: "x" }),
 		]) {

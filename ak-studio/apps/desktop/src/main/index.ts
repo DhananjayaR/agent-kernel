@@ -13,6 +13,7 @@ import {
 	installDevCspHeader,
 	installRequestGate,
 	RequestGate,
+	resolveDevServerUrl,
 } from "./security";
 import {
 	clampWindowState,
@@ -34,10 +35,26 @@ declare global {
 	var __akStudioTestHooks: StudioTestHooks | undefined;
 }
 
-// The electron-vite dev server, trusted only in unpackaged builds.
-const devServerUrl = app.isPackaged
-	? undefined
-	: process.env.ELECTRON_RENDERER_URL || undefined;
+// The electron-vite dev server: trusted only in unpackaged builds, and only on a loopback host.
+let devServerUrl: string | undefined;
+let startupError: string | undefined;
+try {
+	devServerUrl = resolveDevServerUrl(
+		app.isPackaged,
+		process.env.ELECTRON_RENDERER_URL,
+	);
+} catch (err) {
+	startupError = err instanceof Error ? err.message : String(err);
+}
+
+// Unpackaged builds get their own name and data folder, so `pnpm dev` and an installed app share neither data
+// nor the single-instance lock (which is keyed on the data folder). An explicit --user-data-dir still wins.
+if (!app.isPackaged) {
+	app.setName(`${app.getName()} (dev)`);
+	if (!app.commandLine.hasSwitch("user-data-dir")) {
+		app.setPath("userData", join(app.getPath("appData"), app.getName()));
+	}
+}
 const rendererDir = join(import.meta.dirname, "../renderer");
 const preloadPath = join(import.meta.dirname, "../preload/index.cjs");
 
@@ -92,7 +109,10 @@ function createWindow(): BrowserWindow {
 		if (mainWindow === win) mainWindow = null;
 	});
 	persistWindowState(win, stateFile);
-	void win.loadURL(devServerUrl ?? APP_URL);
+	const url = devServerUrl ?? APP_URL;
+	win.loadURL(url).catch((err: unknown) => {
+		console.error(`[studio] could not load ${url}: ${String(err)}`);
+	});
 	return win;
 }
 
@@ -146,8 +166,11 @@ function start(): void {
 	});
 }
 
-// One instance: a second launch hands over to the first (which focuses its window) and exits.
-if (app.requestSingleInstanceLock()) {
+if (startupError) {
+	console.error(`[studio] refusing to start: ${startupError}`);
+	app.exit(1);
+} else if (app.requestSingleInstanceLock()) {
+	// One instance: a second launch hands over to the first (which focuses its window) and exits.
 	start();
 } else {
 	app.quit();

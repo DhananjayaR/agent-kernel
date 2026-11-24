@@ -28,7 +28,10 @@ refused, and every request whose scheme is not `app:` or `devtools:` (or, unpack
 cancelled. The preload exposes one global, `window.studio` (`request`, `subscribe`). Window size, position and
 maximised state are kept in `window-state.json` in the app's data folder. Unpackaged builds started with
 `AK_STUDIO_TEST_HOOKS=1` expose `globalThis.__akStudioTestHooks` in the main process
-(`cancelledRequestCount()`, `cancelledRequestUrls()`) for the Electron smoke test.
+(`cancelledRequestCount()`, `cancelledRequestUrls()`, the newest 100) for the Electron smoke test. The count
+covers Chromium's network stack only, not Node networking in the main process. Unpackaged builds run as
+"Agent Kernel Studio (dev)" with their own data folder and single-instance lock, and accept
+`ELECTRON_RENDERER_URL` only on `localhost`, `127.0.0.1` or `[::1]` (otherwise they refuse to start).
 
 Boundary rules live in `.dependency-cruiser.cjs`: the renderer and `packages/ui` import no `electron` or Node
 built-in; `packages/contract` imports only `zod`; `packages/ui` imports neither `apps/*` nor

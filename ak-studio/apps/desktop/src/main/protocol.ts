@@ -32,7 +32,7 @@ export function contentTypeFor(filePath: string): string {
 
 /**
  * Maps an `app://studio/...` URL to a file under `rootDir`, or null if the URL is not ours or would escape
- * `rootDir` (`..`, encoded separators, absolute paths, NUL bytes). `/` maps to `index.html`.
+ * `rootDir` (`..`, encoded separators, absolute paths, NUL bytes, backslashes). `/` maps to `index.html`.
  */
 export function resolveAppPath(rootDir: string, rawUrl: string): string | null {
 	let url: URL;
@@ -48,7 +48,8 @@ export function resolveAppPath(rootDir: string, rawUrl: string): string | null {
 	} catch {
 		return null;
 	}
-	if (pathname.includes("\0")) return null;
+	// NUL never; a backslash is a separator on Windows and never appears in the built renderer's paths.
+	if (pathname.includes("\0") || pathname.includes("\\")) return null;
 	if (pathname.endsWith("/")) pathname += "index.html";
 	const root = resolve(rootDir);
 	const file = resolve(root, `.${sep}${pathname}`);

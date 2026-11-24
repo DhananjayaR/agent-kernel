@@ -4,10 +4,14 @@ import { describe, expect, it } from "vitest";
 import {
 	APP_URL,
 	buildCsp,
+	describeOrigin,
 	hardenWebContents,
+	isLoopbackDevServerUrl,
 	isNavigationAllowed,
 	isRequestAllowed,
+	MAX_RECORDED_URLS,
 	RequestGate,
+	resolveDevServerUrl,
 } from "./security";
 
 const DEV = "http://localhost:5173";
@@ -70,6 +74,63 @@ describe("RequestGate", () => {
 			"https://example.com/a",
 			"http://example.com/b",
 		]);
+	});
+
+	it("keeps the count exact but only the newest URLs", () => {
+		const gate = new RequestGate();
+		const total = MAX_RECORDED_URLS + 25;
+		for (let i = 0; i < total; i++)
+			gate.shouldCancel(`https://example.com/${i}`);
+		expect(gate.cancelledCount).toBe(total);
+		expect(gate.cancelledUrls).toHaveLength(MAX_RECORDED_URLS);
+		expect(gate.cancelledUrls[0]).toBe("https://example.com/25");
+		expect(gate.cancelledUrls.at(-1)).toBe(`https://example.com/${total - 1}`);
+	});
+});
+
+describe("describeOrigin", () => {
+	it("keeps only scheme and host", () => {
+		expect(
+			describeOrigin("https://user:pw@example.com:8443/p?q=secret#h"),
+		).toBe("https://example.com:8443");
+		expect(describeOrigin("file:///etc/passwd")).toBe("file:");
+		expect(describeOrigin("data:text/plain,secret")).toBe("data:");
+		expect(describeOrigin("not a url")).toBe("<invalid url>");
+	});
+});
+
+describe("isLoopbackDevServerUrl / resolveDevServerUrl", () => {
+	it.each([
+		"http://localhost:5173",
+		"http://localhost:5173/",
+		"http://127.0.0.1:5173/",
+		"http://[::1]:5173/",
+		"https://localhost:5173/",
+	])("accepts %s", (url) => {
+		expect(isLoopbackDevServerUrl(url)).toBe(true);
+		expect(resolveDevServerUrl(false, url)).toBe(url);
+	});
+
+	it.each([
+		"https://example.com/",
+		"http://192.168.1.10:5173/",
+		"http://localhost.example.com:5173/",
+		"http://127.0.0.2:5173/",
+		"file:///tmp/index.html",
+		"ws://localhost:5173/",
+		"not a url",
+	])("refuses %s", (url) => {
+		expect(isLoopbackDevServerUrl(url)).toBe(false);
+		expect(() => resolveDevServerUrl(false, url)).toThrow(
+			/ELECTRON_RENDERER_URL must be/,
+		);
+	});
+
+	it("ignores the variable in packaged builds and when unset or empty", () => {
+		expect(resolveDevServerUrl(true, "https://example.com/")).toBeUndefined();
+		expect(resolveDevServerUrl(true, "http://localhost:5173")).toBeUndefined();
+		expect(resolveDevServerUrl(false, undefined)).toBeUndefined();
+		expect(resolveDevServerUrl(false, "")).toBeUndefined();
 	});
 });
 

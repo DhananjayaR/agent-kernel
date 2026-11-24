@@ -58,10 +58,60 @@ export function isRequestAllowed(
 	return allowed.includes(`${url.protocol}//${url.host}`);
 }
 
-/** Records every cancelled request so a test can assert that the app made none. */
+const LOOPBACK_HOSTS: ReadonlySet<string> = new Set([
+	"localhost",
+	"127.0.0.1",
+	"[::1]",
+]);
+
+/** Whether `rawUrl` is an http(s) URL on a loopback host: the only kind of dev server the app trusts. */
+export function isLoopbackDevServerUrl(rawUrl: string): boolean {
+	try {
+		const url = new URL(rawUrl);
+		return (
+			(url.protocol === "http:" || url.protocol === "https:") &&
+			LOOPBACK_HOSTS.has(url.hostname)
+		);
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * The dev server URL to trust: none in packaged builds; in unpackaged builds `ELECTRON_RENDERER_URL` if set,
+ * which must be on a loopback host. Throws otherwise, so the app refuses to start.
+ */
+export function resolveDevServerUrl(
+	isPackaged: boolean,
+	envValue: string | undefined,
+): string | undefined {
+	if (isPackaged || !envValue) return undefined;
+	if (!isLoopbackDevServerUrl(envValue)) {
+		throw new Error(
+			`ELECTRON_RENDERER_URL must be an http(s) URL on localhost, 127.0.0.1 or [::1]; got ${JSON.stringify(envValue)}`,
+		);
+	}
+	return envValue;
+}
+
+/** Scheme and host only, for logs: full URLs can carry paths and query strings that do not belong in a log. */
+export function describeOrigin(rawUrl: string): string {
+	try {
+		const url = new URL(rawUrl);
+		return url.host ? `${url.protocol}//${url.host}` : url.protocol;
+	} catch {
+		return "<invalid url>";
+	}
+}
+
+/** How many cancelled URLs the gate keeps (the newest); the count itself is always exact. */
+export const MAX_RECORDED_URLS = 100;
+
+/** Counts every cancelled request so a test can assert that the app made none. */
 export class RequestGate {
 	readonly #devServerUrl: string | undefined;
-	readonly #cancelled: string[] = [];
+	readonly #recent: string[] = [];
+	#count = 0;
 
 	constructor(devServerUrl?: string) {
 		this.#devServerUrl = devServerUrl;
@@ -70,24 +120,31 @@ export class RequestGate {
 	/** Returns true if the request must be cancelled, and records it. */
 	shouldCancel(url: string): boolean {
 		if (isRequestAllowed(url, this.#devServerUrl)) return false;
-		this.#cancelled.push(url);
+		this.#count++;
+		this.#recent.push(url);
+		if (this.#recent.length > MAX_RECORDED_URLS) this.#recent.shift();
 		return true;
 	}
 
 	get cancelledCount(): number {
-		return this.#cancelled.length;
+		return this.#count;
 	}
 
+	/** The newest MAX_RECORDED_URLS cancelled URLs, oldest first. */
 	get cancelledUrls(): readonly string[] {
-		return [...this.#cancelled];
+		return [...this.#recent];
 	}
 }
 
-/** Cancels every request the gate refuses, on the given session. */
+/**
+ * Cancels every request the gate refuses, on the given session. This sees Chromium's network stack only (the
+ * renderer, and `net`/`session` requests from main); Node's `fetch`, `http` and `net` modules bypass it.
+ */
 export function installRequestGate(session: Session, gate: RequestGate): void {
 	session.webRequest.onBeforeRequest((details, callback) => {
 		const cancel = gate.shouldCancel(details.url);
-		if (cancel) console.warn(`[studio] blocked request: ${details.url}`);
+		if (cancel)
+			console.warn(`[studio] blocked request: ${describeOrigin(details.url)}`);
 		callback({ cancel });
 	});
 }

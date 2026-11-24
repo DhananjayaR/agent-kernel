@@ -14,6 +14,20 @@ function assertOp(op: unknown): asserts op is string {
 	}
 }
 
+// One `bridge:event` listener for the whole page, dispatching by subscription id.
+const subscribers = new Map<string, (event: unknown) => void>();
+ipcRenderer.on(
+	BRIDGE_CHANNELS.event,
+	(_e: IpcRendererEvent, msg: EventMessage): void => {
+		if (typeof msg?.id === "string") subscribers.get(msg.id)?.(msg.event);
+	},
+);
+
+/** For unit tests: the number of live subscriptions. Not exposed to the page. */
+export function activeSubscriptionCount(): number {
+	return subscribers.size;
+}
+
 const studio = {
 	request(op: string, input: unknown): Promise<unknown> {
 		assertOp(op);
@@ -30,20 +44,15 @@ const studio = {
 			throw new TypeError("studio: onEvent must be a function");
 		}
 		const id = crypto.randomUUID();
-		const listener = (_e: IpcRendererEvent, msg: EventMessage): void => {
-			if (msg?.id === id) onEvent(msg.event);
-		};
-		ipcRenderer.on(BRIDGE_CHANNELS.event, listener);
+		// Throws if `input` cannot be cloned; nothing is registered in that case.
 		ipcRenderer.send(BRIDGE_CHANNELS.subscribe, {
 			id,
 			op,
 			input,
 		} satisfies SubscribeMessage);
-		let active = true;
+		subscribers.set(id, onEvent);
 		return () => {
-			if (!active) return;
-			active = false;
-			ipcRenderer.removeListener(BRIDGE_CHANNELS.event, listener);
+			if (!subscribers.delete(id)) return;
 			ipcRenderer.send(BRIDGE_CHANNELS.unsubscribe, {
 				id,
 			} satisfies UnsubscribeMessage);
