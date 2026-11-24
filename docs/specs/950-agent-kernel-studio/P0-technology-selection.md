@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | In review: four spikes ran on Linux; the decision record is drafted and waits for owner review. Windows and macOS are deferred by the owner (23 November 2026). Spike S5 (coding agent with a key) added the same day |
+| Status | In review: four spikes ran on Linux; the decision record is drafted and waits for owner review. Windows and macOS are deferred by the owner (23 November 2026). Spike S5 (coding agent) added the same day; its design changed on 24 November 2026 to the user's own signed-in Claude Code, which is not yet run |
 | Business aspect | None visible to users. Decides what the Studio is built with, so every later phase builds on proven choices. |
 | Issue milestone | Before milestone 1 |
 | Depends on | Nothing |
@@ -55,7 +55,7 @@ setup works and pin versions.
 | D11 | Electron version policy | Latest stable; how often to upgrade | Latest stable at P1a start, upgrade each Electron major | S2 |
 | D12 | Forms and client-side validation | React Hook Form or TanStack Form; a JSON-schema validator (Ajv) or schemas converted to zod | React Hook Form with a JSON-schema validator, because config forms are generated from the kernel's JSON schema | S1 |
 | D13 | Architecture checks | dependency-cruiser; Biome plugins or scripts for custom checks | dependency-cruiser plus small scripts | S2 |
-| D14 | Coding agent with a key | Claude Agent SDK in the main process; the Claude Code CLI's streaming mode; the Agent Client Protocol | Claude Agent SDK, with the user's key held by the main process only | S5 |
+| D14 | Coding agent | Claude Agent SDK in the main process; the Claude Code CLI's streaming mode; the Agent Client Protocol | Claude Agent SDK driving the user's own installed, signed-in Claude Code; the Studio holds no credential | S5 |
 
 ### D1 and D2: the component library, in short
 
@@ -148,10 +148,14 @@ a 10,000-line burst does not freeze the window.
 
 **Pass:** smooth interaction at 300 nodes; the editor matches the tokens; diff and YAML errors work.
 
-### S5 · Coding agent with a key (D14). Two days. Added 23 November 2026.
+### S5 · Coding agent (D14). Two days. Added 23 November 2026, revised 24 November 2026.
 
-The owner's requirement: the Studio takes a key from the user and uses it to drive Claude to build apps and
-agents in the project. This reverses the earlier P6 line that the app never stores credentials.
+The owner's requirement: the Studio drives Claude to build apps and agents in the project. On 23 November
+this was read as a key pasted into the Studio, and the first half below was built and run on that reading.
+On 24 November the owner settled it: the user's machine already has Claude Code signed in with a
+subscription, and the Studio uses that. The second half covers the settled design and has not run.
+
+**First half: the pasted-key design (superseded as a design; the results marked "carries over" still hold).**
 
 Keyless part (needs no key):
 
@@ -165,14 +169,30 @@ Keyless part (needs no key):
 - [x] One session on the bridge: start, prompt, streamed events, a permission request that waits for the
       user, interrupt, stop. Proven against a scripted fake of the SDK.
 
-Live part (needs a real key from the owner, supplied in a file outside the repository):
+Carries over: the single adapter, the session and permission mapping, the authentication error shape, and
+the finding that a project hook runs unprompted. Superseded: the key store, the write-only command, the
+isolated environment, and bundling the executable.
 
-- [ ] A real turn streams; approve and deny both work; interrupt stops it; cost and usage are reported.
-- [ ] Whether a shell command run by the agent can read the key from its environment, and the mitigation.
-- [ ] Whether project settings load the skills that `ak skill install --assistant claude` writes.
+**Second half: the user's own Claude Code (not run).** Every live item uses the sign-in on the machine it
+runs on, so it needs the owner's go-ahead for that machine.
 
-**Pass:** the pasted key is provably the credential in use; it never crosses the bridge or reaches a log;
-permission requests map to the approval pattern; the packaged app can start the agent.
+- [ ] The adapter finds the user's `claude` executable and reads its version, in development and from the
+      packaged app.
+- [ ] The SDK runs against that executable (`pathToClaudeCodeExecutable`), and installs without its own
+      bundled one. If not, drive the executable's non-interactive mode directly.
+- [ ] Status without a turn: not installed, not signed in, ready, and the credential source. The command
+      comes from Claude Code's documentation.
+- [ ] A real turn on the sign-in streams; approve and deny both work; interrupt stops it; usage is reported;
+      the agent reports a subscription source, not an API key.
+- [ ] With `ANTHROPIC_API_KEY` set in the environment, the Studio shows that the key, not the subscription,
+      is in use.
+- [ ] The Studio's process never reads a credential file or keychain entry (checked by tracing file opens).
+- [ ] Whether project settings load the files `ak skill install --assistant claude` writes
+      (`.claude/commands`), and whether they can load without the project's hooks.
+
+**Pass:** a turn runs on the user's own sign-in with no credential entered into, stored by or passed through
+the Studio; permission requests map to the approval pattern; the packaged app can start the user's Claude
+Code; the owner has Anthropic's confirmation that this use is allowed.
 
 ## Decision record
 
@@ -197,7 +217,7 @@ D12).
 | D11 | Electron version policy | Provisional policy stands (latest stable at P1a start, upgrade each major). No spike tested a policy; the spikes only ran on one version | electron 45.4.1 (version the spikes ran on) | [S2](research/spike-s2-build.md) | 23 Nov 2026 | Pending owner review |
 | D12 | Forms and validation | **Strict validation.** React Hook Form with Ajv, `coerceTypes` off, so a string `"30"` for an integer `ttl` is rejected, in forms and in the YAML editor. Validators stay precompiled with Ajv standalone, because the renderer CSP blocks runtime compile. Generic rendering from the JSON schema plus a per-field override map (Optional sections, enum-like strings). Consequences: the spike validator was generated with `coerceTypes: true`, so it is regenerated; integer form fields convert to numbers on change themselves. Not checked: whether the kernel's own loader coerces | react-hook-form 7.92.0, ajv 8.20.0 (`ajv/dist/2020` and standalone), yaml 2.9.1 | [S1](research/spike-s1-components.md), [S4](research/spike-s4-canvas-code.md) | 23 Nov 2026 | Dhananjaya Rajasinghe |
 | D13 | Architecture checks | dependency-cruiser with the swc parser, plus a self-test as a CI step. **Hazard:** under TypeScript 7, if `@swc/core` is absent, dependency-cruiser passes silently ("1 modules, 0 dependencies") and CI stays green. `pnpm depcruise:selftest` runs the rules on a fixture and fails if the violation is not caught. Revisit at TypeScript 7.1 | dependency-cruiser 18.9.0, @swc/core 1.16.22 | [S2](research/spike-s2-build.md) | 23 Nov 2026 | Pending owner review |
-| D14 | Coding agent with a key | Claude Agent SDK in the main process, behind one adapter. The user's Anthropic API key is held by the main process only, set by a write-only command, and passed to the agent in an environment built from nothing, so a local Claude Code sign-in cannot stand in for it. Packaged app needs `asarUnpack` and `pathToClaudeCodeExecutable`. **Keyless half only:** no live turn has run. **Risk:** code in the opened folder (a hook) can read the key | @anthropic-ai/claude-agent-sdk 0.3.330 | [S5](research/spike-s5-coding-agent.md) | 23 Nov 2026 | Pending owner review |
+| D14 | Coding agent | **Revised 24 Nov 2026 (owner).** The Studio runs the user's own installed, signed-in Claude Code (normally a subscription) through the Claude Agent SDK, behind one adapter in the main process. The Studio holds no credential, shows no login and does not ship the executable. **Not run:** the SDK against the user's installation, sign-in detection, a live turn. **Open:** Anthropic's pages do not state that a third-party app may do this; the owner confirms with Anthropic before P6 ships. S5's results for the earlier pasted-key design (adapter, approvals, error shape, untrusted folder) carry over; its key store and isolated environment do not | @anthropic-ai/claude-agent-sdk 0.3.330 | [S5](research/spike-s5-coding-agent.md) | 24 Nov 2026 | Pending owner review; credential route decided by Dhananjaya Rajasinghe |
 
 **Where a spike changed a provisional choice.** D5 was "own contract; adopt oRPC if it streams". oRPC
 streamed, so the rule did not trigger; the owner chose the in-house contract on the sender-check and
@@ -227,7 +247,7 @@ match the provisional choice.
 - [ ] S2 Build, run and package. Ran on Linux; Windows and macOS and CI not run
 - [ ] S3 The bridge. Ran on Linux; cancel on Windows and macOS not run
 - [ ] S4 Canvas and code. Ran on Linux, software-rendered; cold-open target missed; real-GPU check not done
-- [ ] S5 Coding agent with a key. Keyless half ran on Linux; the live half needs a key from the owner
+- [ ] S5 Coding agent. The pasted-key half ran on Linux and is superseded; the half for the user's own Claude Code has not run
 - [ ] Decision record complete and approved. Drafted; D1a, D5 and D12 approved 23 Nov 2026; the rest pending owner review
 - [ ] Spike code deleted or archived outside `ak-studio/`. Left on branch `spike/950-studio-p0` until P1a starts
 
@@ -258,16 +278,14 @@ match the provisional choice.
   three-system CI workflow (`.github/workflows/studio-spike.yml`, written, parsed, never executed).
 - Not verified on a runner: the Linux `sysctl kernel.apparmor_restrict_unprivileged_userns=0` step.
 
-### Not run, needs a key (S5)
+### Not run: the coding agent on the user's own Claude Code (S5, second half)
 
-- A real turn: streaming, approve, deny, interrupt, a non-zero cost.
-- Whether the agent's shell tool can read the key, and whether a key helper or an environment scrub keeps it
-  out. A project hook can read it (verified).
+- Everything in the second half of S5: finding the installation, the SDK against it, status detection, a
+  real turn (streaming, approve, deny, interrupt, usage), the credential source shown, and the check that the
+  Studio reads no credential.
 - Whether the files `ak skill install --assistant claude` writes (`.claude/commands`) load; S5 tested
   `.claude/skills/` only. Whether the model then uses them. A resume that carries a real conversation.
-- Whether the agent can do real work in the isolated environment (git, `uv`, cloud credentials), and which
-  variables to pass.
-- Key storage with a real operating-system keyring. The spike machine had none.
+- Anthropic's confirmation that a third-party app may drive the user's signed-in Claude Code.
 
 ### Not done, needs a person
 

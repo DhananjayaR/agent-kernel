@@ -17,7 +17,7 @@ Status values: Not started, Design, In progress, In review, Done.
 
 | Phase | Business aspect | Issue milestone | Status | Design signed off | Doc |
 |---|---|---|---|---|---|
-| P0 | Technology selection | Before 1 | In review (spikes ran on Linux; record drafted; Windows and macOS deferred by the owner; spike S5 added) | n/a | [P0](P0-technology-selection.md) |
+| P0 | Technology selection | Before 1 | In review (spikes ran on Linux; record drafted; Windows and macOS deferred by the owner; spike S5 added, its second half not run) | n/a | [P0](P0-technology-selection.md) |
 | P1a | App foundation: workspace, shell, bridge, design system | Before 1 | Not started | No | [P1a](P1a-app-foundation.md) |
 | P1b | Data and feature layer, shared patterns, Studio skills | Before 1 | Not started | No | [P1b](P1b-data-layer-and-patterns.md) |
 | P2 | Open a project and know its Agent Kernel version | 1 | Not started | No | [P2](P2-project-and-kernel-version.md) |
@@ -32,7 +32,7 @@ Status values: Not started, Design, In progress, In review, Done.
 | P11 | The remaining targets | 6 | Not started | n/a | [outline](later-phases.md#p11--the-remaining-targets) |
 | P12 | Packaging and release | 7 | Not started | No | [outline](later-phases.md#p12--packaging-and-release) |
 
-**Next action:** owner review of the [P0 decision record](P0-technology-selection.md#decision-record), and a test key for the live half of spike S5 (coding agent). Then the P1a design gate. Windows and macOS are deferred.
+**Next action:** owner review of the [P0 decision record](P0-technology-selection.md#decision-record), the owner's go-ahead to run the second half of spike S5 on a signed-in Claude Code, and Anthropic's confirmation of that use. Then the P1a design gate. Windows and macOS are deferred.
 
 P0 to P3 (including P1a and P1b) are detailed and can be picked up as written. P4 to P12 are outlines; each is detailed when the phase
 before it is close to done.
@@ -111,14 +111,15 @@ Detail: [P2](P2-project-and-kernel-version.md).
 | 23 Nov 2026 | Changed from provisional: the architecture check is dependency-cruiser with the swc parser and a CI self-test, because without `@swc/core` it passes silently under TypeScript 7. Pending owner review | [P0](P0-technology-selection.md) D13, [S2](research/spike-s2-build.md) |
 | 23 Nov 2026 | Changed from provisional: ESLint is dropped, Biome lints, because typescript-eslint cannot load under TypeScript 7.0. Pending owner review | [P0](P0-technology-selection.md) D10, [S2](research/spike-s2-build.md) |
 | 23 Nov 2026 | Windows and macOS are deferred; Phase 0 evidence is from Linux. Decided by Dhananjaya Rajasinghe | [P0](P0-technology-selection.md#exit-criteria) |
-| 23 Nov 2026 | New requirement: the Studio takes a key from the user and drives Claude with it to build agents. Spike S5 and decision D14 added to P0; the Claude Agent SDK runs in the main process and holds the key there. Replaces "the app never stores credentials" | [architecture](architecture.md#the-coding-agent-and-its-key), [P6](later-phases.md#p6--build-with-ai) |
+| 23 Nov 2026 | New requirement: the Studio takes a key from the user and drives Claude with it to build agents. Spike S5 and decision D14 added to P0; the Claude Agent SDK runs in the main process and holds the key there. Replaces "the app never stores credentials" | [architecture](architecture.md#the-coding-agent-and-the-users-claude-code), [P6](later-phases.md#p6--build-with-ai) |
+| 24 Nov 2026 | The coding agent uses the user's own Claude Code, already installed and signed in with a subscription. The Studio holds no credential and shows no login. Replaces the pasted-key design of 23 Nov; "the app never stores credentials" stands again. Decided by Dhananjaya Rajasinghe. Not yet run; needs Anthropic's confirmation | [architecture](architecture.md#the-coding-agent-and-the-users-claude-code), [P0](P0-technology-selection.md) D14 |
 
 ## Open decisions
 
 | # | Decision | Needed by | Notes |
 |---|---|---|---|
 | 1 | Owner review of the rest of the P0 decision record. D8 (state, data, routing) was not exercised by any spike; D11 (Electron policy) was not tested. Windows and macOS are deferred by the owner | End of P0 | [P0 decision record](P0-technology-selection.md#decision-record) |
-| 1e | Coding agent (D14): which credential (an Anthropic API key is assumed; a subscription token needs Anthropic's approval); a test key for the live half of S5; how to keep the key from code in the opened folder; accept about 380 MB per platform for the agent executable or download it on first use | End of P0 for the credential; P6 for the rest | [S5](research/spike-s5-coding-agent.md) |
+| 1e | Coding agent (D14): the Studio uses the user's own signed-in Claude Code and holds no credential (decided 24 Nov 2026). Open: Anthropic's confirmation that a third-party app may do this; the owner's go-ahead to run the second half of S5 on a signed-in machine; whether the SDK works against the user's installation | End of P0 for the spike; before P6 ships for Anthropic | [S5](research/spike-s5-coding-agent.md), [architecture](architecture.md#the-coding-agent-and-the-users-claude-code) |
 | 1c | Canvas keyboard model: Tab reaches the first node only after all edges; `edgesFocusable={false}` fixes it but loses edge keyboard access | P3 design gate | [S4](research/spike-s4-canvas-code.md) |
 | 1d | CodeMirror cold open missed 200 ms (360 to 382 ms); try preload on idle. Also needs a person: side-by-side look against Spectrum 2, screen-reader pass, canvas and glass/solid on a real GPU | P1a design gate | [P0 exit criteria](P0-technology-selection.md#exit-criteria) |
 | 2 | Studio primary colour: the briefs say blue, the current brand tokens say orange | P1a design gate | [design-process.md](design-process.md) |
@@ -129,7 +130,7 @@ Detail: [P2](P2-project-and-kernel-version.md).
 | 6a | Approve the architecture and the ground rules | Start of P1b | [architecture.md](architecture.md), [conventions-and-skills.md](conventions-and-skills.md) |
 | 6b | Mark secret fields in `AKConfig` (they are plain `str` today), so resolved config can be masked without a hand-kept list | Design in P3 | [architecture.md](architecture.md) |
 | 6c | Move the project templates into `ak-py` as files that both the `ak-init` skill and the Studio read | Before P4 | Until then, reviewed reference projects |
-| 7 | Anthropic's rules for the coding agent: API key only unless Anthropic approves a claude.ai login; the product says "Claude Agent", not "Claude Code" | Before P6 | Checked against the documentation on 23 Nov 2026; see [architecture](architecture.md#the-coding-agent-and-its-key) |
+| 7 | Anthropic's rules for the coding agent: no collecting or storing of Claude.ai credentials, no login screen of our own, the Claude Code executable unmodified. Running the user's own signed-in Claude Code is our reading of the rules, not a stated permission: confirm with Anthropic. The Studio's feature is "Claude Agent"; the Studio never calls itself "Claude Code" | Before P6 | Checked against the documentation on 24 Nov 2026; see [architecture](architecture.md#the-coding-agent-and-the-users-claude-code) |
 | 8 | First deploy target | P10 | |
 | 9 | Studio licence | Before P12 | The issue recommends open source |
 

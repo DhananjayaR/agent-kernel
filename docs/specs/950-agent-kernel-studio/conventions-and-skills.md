@@ -53,8 +53,9 @@ Component names are working names until the P1a design gate.
 ### Copy rules
 
 - Sentence case everywhere in the app.
-- The coding agent is "Claude Agent" in the UI, never "Claude Code" (Anthropic's naming rule for products
-  built on its SDK). Raw SDK error text, which says "Claude Code", is never shown as a message.
+- The Studio's coding-agent feature is "Claude Agent"; the Studio never calls itself or its feature
+  "Claude Code" (Anthropic's naming rule for products built on its SDK). "Claude Code" names only the
+  user's installed program ("Sign in to Claude Code"). Raw agent error text is never shown as a message.
 - Agent Kernel's own words: handoff, pre-hook, post-hook, session store, guardrail, execution mode.
 - Buttons say what happens: "Apply plan", not "OK". Destructive buttons name the thing: "Destroy deployment".
 - Errors say what happened and what to do next, in that order. No "Something went wrong".

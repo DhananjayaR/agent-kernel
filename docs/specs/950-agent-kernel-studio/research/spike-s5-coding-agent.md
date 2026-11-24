@@ -2,6 +2,17 @@
 
 **Date:** 2026-11-23  **Ran on:** Linux (WSL2) only  **Time spent:** under 1 day  **Decision it feeds:** D14
 
+> **Superseded in part, 24 November 2026.** This spike tested a design in which the user pastes an API key
+> into the Studio. The owner has since settled that the Studio uses the user's own Claude Code, already
+> installed and signed in with a subscription, and holds no credential
+> ([architecture](../architecture.md#the-coding-agent-and-the-users-claude-code)).
+> - **Still holds:** the single adapter, the session and permission mapping, the authentication error shape,
+>   the packaging finding about `pathToClaudeCodeExecutable`, and that a project hook runs unprompted.
+> - **No longer the design:** the key store, the write-only command, the environment built from nothing
+>   (which proved a local sign-in is kept *out*, now the opposite of the goal), and the bundled executable.
+> - **Not run:** anything on the new design. See Task 8 in [P0-plan.md](../P0-plan.md).
+> - The policy paragraph near the end reflects the 23 November reading; the architecture has the 24 November one.
+
 ## Result
 
 Pass with changes, keyless only. The key from the password field is the credential the agent uses, and nothing

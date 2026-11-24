@@ -1116,9 +1116,11 @@ git push origin --delete spike/950-studio-p0 && git branch -D spike/950-studio-p
 
 ---
 
-### Task 7: Coding agent with a key (S5, D14)
+### Task 7: Coding agent, pasted-key design (S5 first half, D14) — superseded
 
-Added 23 November 2026 after the owner's requirement that the Studio takes a key and drives Claude with it.
+Added 23 November 2026, when the owner's requirement was read as a key pasted into the Studio. Steps 1 to 6
+and 8 ran. **Step 7 is cancelled:** on 24 November 2026 the owner settled that the Studio uses the user's
+own signed-in Claude Code, so no test key is needed. Task 8 covers that design.
 Runs on branch `spike/950-studio-p0`, in `ak-studio-spikes/app/`.
 
 **Files:**
@@ -1191,6 +1193,62 @@ git commit -m "chore(spike): S5 coding agent with a key, with findings"
 
 ---
 
+### Task 8: Coding agent on the user's own Claude Code (S5 second half, D14)
+
+Added 24 November 2026. Runs on branch `spike/950-studio-p0`, in `ak-studio-spikes/app/`.
+
+**Stop first:** Steps 3 to 6 use the Claude Code sign-in on the machine they run on. Do not run them without
+the owner's go-ahead for that machine. Never read, print or copy a credential file or keychain entry.
+
+**Files:**
+- Modify: `src/main/agent/sdkAdapter.ts`, `src/main/agent/codingAgent.ts`, their tests,
+  `src/renderer/src/bridge/contract.ts`, `src/renderer/src/spikes/AgentSpike.tsx`, `electron-builder.yml`,
+  `tests/agent.electron.spec.ts`
+- Delete: `src/main/agent/keyStore.ts`, `src/main/agent/keyStore.test.ts`
+- Modify: `docs/specs/950-agent-kernel-studio/research/spike-s5-coding-agent.md`
+
+**Interfaces:**
+- Consumes: the adapter interface and agent contract from Task 7.
+- Produces: the second half of the findings note, cited by D14.
+
+**Facts from the documentation (checked 24 November 2026; re-check before relying on them):**
+- Claude Code's credential precedence ends with the subscription sign-in; `ANTHROPIC_API_KEY` and cloud
+  settings in the environment outrank it.
+- "Bare" mode never reads the sign-in or the keychain, and is to become the default for `-p`.
+- Anthropic's rules: no collecting, storing or intermediating of Claude.ai credentials; sign-in completes in
+  Anthropic's own flow; the executable is not modified and none of its authentication methods restricted.
+
+- [ ] **Step 1: Remove the key path.** Delete the key store and `agent.key.*`. Add `agent.status` with output
+  `{ state: 'notInstalled' | 'notSignedIn' | 'ready', version?, credentialSource? }`. Keep the test that
+  fails on any output field named `key`, `apiKey` or `token`.
+- [ ] **Step 2: Find the installation.** The adapter resolves `claude` on the user's `PATH` and the
+  documented install locations, and reads its version. Test with a stub executable on a temporary `PATH`,
+  and with none.
+- [ ] **Step 3: Run the SDK against it.** Pass `pathToClaudeCodeExecutable` and the user's own environment
+  (no isolated home or configuration folder, no credential variable added). Record whether the SDK installs
+  with its optional executable packages omitted and whether the versions work together. If either fails,
+  drive the executable's non-interactive streaming mode from the adapter and record the flags from
+  `claude --help`.
+- [ ] **Step 4: Status.** Find, in the documentation or `claude --help`, how to tell signed-in from not
+  without starting a turn. Map the results to `agent.status`. Record the command; do not guess it.
+- [ ] **Step 5: Live turn.** In a scratch folder: streaming, approve, deny, interrupt, usage. Record the
+  credential source the agent reports. Repeat with a dummy `ANTHROPIC_API_KEY` in the environment and
+  confirm the Studio shows that the key, not the subscription, is in use and the turn fails cleanly.
+- [ ] **Step 6: No credential read.** Trace file opens of the Electron main process during a turn
+  (`strace -f -e trace=openat -p <pid>`, filtered to the main process) and confirm it opens no credential
+  file. The child executable will; that is expected.
+- [ ] **Step 7: Project instructions.** Run `ak skill install --assistant claude` in the scratch folder and
+  record whether the result loads, and whether it can load without the folder's hooks.
+- [ ] **Step 8: Note and commit.** Add the second half to `spike-s5-coding-agent.md`: a criterion table with
+  evidence, and what was not run. Commit:
+
+```bash
+git add ak-studio-spikes docs/specs/950-agent-kernel-studio/research/spike-s5-coding-agent.md
+git commit -m "chore(spike): S5 second half, the user's own Claude Code"
+```
+
+---
+
 ## Order and parallel work
 
 ```mermaid
@@ -1202,7 +1260,7 @@ flowchart LR
   T2 --> T5[5 Tooling and CI S2]
   T3 --> T5
   T4 --> T5 --> T6[6 Decision record]
-  T3 --> T7[7 Coding agent S5] --> T6
+  T3 --> T7[7 Coding agent S5, first half] --> T8[8 Coding agent S5, second half] --> T6
 ```
 
 Tasks 2 and 3 can run in parallel after Task 1. Task 4 needs Task 2's tokens and schema file. About nine
@@ -1219,4 +1277,5 @@ working days for one person, six with two.
 | D8 state, data, routing | 3 (note); not built, taken as listed unless the spike argues otherwise |
 | D13 architecture checks | 5 |
 | Decision record, approval, spike code retired | 6 |
-| S5 checklist: key store, write-only key, isolated environment, session on the bridge, packaged app, live run (D14) | 7 |
+| S5 first half (superseded design): key store, write-only key, isolated environment, session on the bridge, packaged app (D14) | 7 |
+| S5 second half: the user's installation, the SDK against it, status, live turn, no credential read, project instructions (D14) | 8 |

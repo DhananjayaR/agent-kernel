@@ -78,7 +78,7 @@ keeps a second copy that can silently disagree with it.
 | Working copies | Canvas node positions while dragging; a config form being edited; an unsent chat message | The renderer, briefly | Feature store or form state, under the working-copy rule below |
 | Preferences | Theme, panel sizes, density | `AppService` (the app's data folder) | Query cache; written through a command |
 | Secrets | Model keys in `.env` | `SecretStore` in the main process only | Names and resolve state only |
-| The coding agent's key | The user's Anthropic API key | `AgentKeyStore` in the main process only | Whether a key is stored, and how; never the value |
+| The coding agent's sign-in | The user's Claude Code sign-in (normally a subscription) | Claude Code itself; the Studio never holds it | Status only: installed, signed in, version, credential source |
 
 Rules:
 
@@ -210,83 +210,94 @@ type Session = {
 - A session can spawn jobs (an agent turn inside an agent session; a chat exchange against the local server).
 - All sessions stop when the project scope is disposed.
 
-## The coding agent and its key
+## The coding agent and the user's Claude Code
 
-Added 23 November 2026 from spike [S5](research/spike-s5-coding-agent.md). The Studio takes a key from the
-user and uses it to drive Claude, through the Claude Agent SDK, to build agents in the open project. The
-keyless half of the spike ran, on Linux; the half that needs a real key did not. Each rule below says which
-it rests on.
+Revised 24 November 2026 on the owner's decision: the Studio expects Claude Code to be installed and signed
+in on the user's machine, and uses that sign-in (normally a Claude subscription). The Studio holds no
+credential. This replaces the design of 23 November, in which the user pasted an API key into the Studio.
+
+Spike [S5](research/spike-s5-coding-agent.md) tested the earlier design, on Linux, with no real credential.
+Its results on the adapter, approvals, errors and the untrusted folder still apply. Its results on the key
+store and the isolated environment are superseded. **Nothing in the new design has run yet**; each rule below
+says what it rests on.
 
 ```mermaid
 flowchart LR
-  UI["Renderer — key field, chat, approval card"] -- "agent.key.set (write-only)" --> KS["AgentKeyStore (main)"]
-  UI -- "session.start, prompt, job.respond" --> AS["AgentService (main)"]
-  KS -- "withKey(fn)" --> AD["Agent adapter — the only file that imports the SDK"]
-  AS --> AD
-  AD -- "env built from nothing + the key" --> CLI["Agent executable (child process)"]
+  UI["Renderer — status, chat, approval card"] -- "agent.status, session.start, prompt, job.respond" --> AS["AgentService (main)"]
+  AS --> AD["Agent adapter — the only file that imports the SDK"]
+  AD -- "runs, with the user's own environment" --> CLI["The user's installed Claude Code (child process)"]
+  CLI -- "reads its own sign-in" --> CRED["Claude Code's credential store"]
   AD -- "events, masked" --> AS -- "stream + job state" --> UI
 ```
 
-**The key**
+**The credential**
 
-- **One owner.** `AgentKeyStore`, in the main process, is the only code that holds the key. It has no
-  function that returns the key; it lends it to a callback (`withKey`) inside the main process.
-- **Write-only over the bridge.** `agent.key.set` carries the key in, once; the field then clears itself.
-  `agent.key.status` returns only `{ hasKey, backend }`. No operation output or stream chunk may contain a
-  `key`, `apiKey` or `token` field: a contract test fails if one appears, and the registry parses every
-  output against its schema, which strips undeclared fields. (Verified in S5.)
-- **Never over the WebSocket.** The browser transport used for UI work refuses every agent operation, and
-  the key field is disabled there. (Verified in S5.)
-- **Storage.** Encrypted with Electron `safeStorage` (the async API) into the app's data folder, mode 0600.
-  Where the operating system offers no encryption (Linux with no keyring reports `basic_text`), the key is
-  held in memory for the run, is not written, and the UI says so. (The memory path ran in S5; the encrypted
-  path ran only against a fake.)
-- **Not a project secret.** The key belongs to the user and the app, not to the project. It is never written
-  to the project's `.env` or any project file, and is separate from the model keys `SecretStore` reads.
-- **Masked.** The key's value joins the list of known secret values masked in every event, log line and
-  error detail before it crosses the bridge. Masking works on whole messages, not on streamed fragments, so
-  a key split across two fragments cannot slip through.
-- **Which credential.** Assumed: an Anthropic API key, pending the owner's confirmation. Anthropic's documentation says third-party products must not
-  offer claude.ai login or its rate limits without approval, so a subscription token is not offered. Cloud
-  provider credentials (Amazon Bedrock, Vertex AI) are a later extension of the same store.
+- **The Studio never holds it.** There is no key field, no key store and no token in the app's data folder.
+  The Studio does not read Claude Code's credential files or the operating system's keychain entry, and does
+  not pass a token in the environment. Claude Code authenticates itself, as it does in a terminal.
+- **Sign-in happens in Claude Code.** When Claude Code is not signed in, the Studio says so and tells the
+  user to sign in from a terminal. It does not show a login screen of its own or collect a token.
+- **The Studio does not choose the credential.** Claude Code applies its own precedence: an
+  `ANTHROPIC_API_KEY` or cloud-provider setting in the user's environment outranks the subscription sign-in.
+  The Studio does not strip or override these. It shows which source is in use (the agent reports it when a
+  turn starts), so a user is not billed on a key by surprise.
+- **Nothing credential-like crosses the bridge.** No operation output or stream chunk may contain a `key`,
+  `apiKey` or `token` field: a contract test fails if one appears, and the registry parses every output
+  against its schema, which strips undeclared fields. (Verified in S5.) The browser transport used for UI
+  work refuses every agent operation. (Verified in S5.)
+- **Why this shape: Anthropic's rules,** read on 24 November 2026 from the Claude Code legal and compliance
+  page and the Agent SDK overview. They say developers "may not collect, store, or intermediate Claude.ai
+  credentials or session tokens", that "sign-in to a Claude account must complete through Anthropic's own
+  flow", and that "the Claude Code binary must not be modified", nor any of its authentication methods
+  removed or restricted. They also say each end user authenticates with their own credentials and is billed
+  under their own agreement. So a subscription token pasted into or stored by the Studio is ruled out, and
+  running the user's own unmodified, signed-in Claude Code is the only subscription route left.
+- **That route is our reading, not a stated permission.** No page says a third-party desktop app may drive
+  the user's signed-in Claude Code. The SDK overview says that, unless previously approved, third parties may
+  not offer claude.ai login or its rate limits "including agents built on the Claude Agent SDK". The owner
+  must confirm with Anthropic before P6 ships (the legal page says to contact sales).
 
 **The agent process**
 
 - **One adapter.** Only the adapter imports the SDK; a boundary rule enforces it. `AgentService` depends on
-  the agent-neutral interface (start, prompt, events, permission, interrupt), so tests use a scripted fake
-  and another agent can be added later.
-- **An environment built from nothing (provisional).** The adapter passes the SDK an `env` holding only `PATH`, an
-  isolated home and configuration folder under the app's data folder, and the key. Nothing is spread from
-  the app's own environment. This is what makes the pasted key the credential in use: a Claude Code already
-  signed in on the machine cannot stand in for it. (Verified in S5: a wrong key fails with an authentication
-  error, the executable reports its key source as `ANTHROPIC_API_KEY`, and a stub saw none of the planted
-  variables. macOS keeps sign-ins in the Keychain, so isolation there is unverified.)
-  **The cost is untested:** no tool call ran in S5. With an isolated home and only `PATH`, the agent's shell
-  has no git identity, `uv` cache, cloud credentials, proxy or certificate settings, or virtual environment,
-  and building an Agent Kernel project needs several of them. The live run must settle an allowlist of
-  variables to pass, and whether the isolated configuration folder alone is enough without isolating home.
+  the agent-neutral interface (status, start, prompt, events, permission, interrupt), so tests use a scripted
+  fake and another agent can be added later. (Verified in S5.)
+- **The user's installation, not a bundled one.** The adapter finds the user's `claude` executable and points
+  the SDK at it (`pathToClaudeCodeExecutable`). The Studio does not ship or modify the executable, which
+  also removes about 380 MB per platform from the installer. **Not run:** whether the SDK installs without its
+  bundled executable, and whether SDK 0.3.330 works with whatever Claude Code version the user has. If
+  either fails, the adapter drives the executable's own non-interactive mode instead; the interface above
+  does not change.
+- **The user's environment.** The agent runs with the user's home, configuration folder and environment, so
+  the sign-in, git identity, `uv` cache and cloud credentials are present. The user's own Claude Code
+  settings, hooks and MCP servers load, as they would in a terminal. The isolated environment of the earlier
+  design is dropped: it existed to keep a local sign-in out, which is now the opposite of the goal.
+- **Status before use.** `agent.status` reports one of: not installed, installed but too old, not signed in,
+  ready (with the version and the credential source). **Not run:** how to detect sign-in without starting a
+  turn; the command must come from Claude Code's documentation, not from memory.
 - **Permission mode is explicit.** The adapter always passes `permissionMode: "default"`. Left out, the SDK
-  may choose a mode in which a model approves tool calls and the user is never asked.
-- **Packaging.** The SDK's executable (about 380 MB per platform) must sit outside the asar archive
-  (`asarUnpack`) and the adapter must point `pathToClaudeCodeExecutable` at it; without that the packaged
-  app fails with `spawn ENOTDIR`. Each operating system builds its own installer. (Verified on Linux.)
+  may choose a mode in which a model approves tool calls and the user is never asked. (From the SDK
+  documentation; the approval path ran only against a fake.)
+- **Non-interactive mode must keep the sign-in.** Claude Code's documentation says its "bare" mode never
+  reads the sign-in and will become the default for non-interactive runs. The adapter must not use bare
+  mode. This is a dependency on Anthropic to watch at every upgrade.
+- **Subscription limits.** The plans' limits "assume ordinary, individual usage". The Studio runs one turn at
+  a time per project and no background or unattended turns.
 
 **The opened folder is not trusted**
 
-S5 found that a hook in the project's `.claude/settings.json` ran with no prompt and could read the key from
-its environment. The agent's own shell tool very probably can too (unverified). So anything the agent or the
-project runs must be assumed able to read the key.
+S5 found that a hook in a project's `.claude/settings.json` ran with no prompt. With the user's own
+environment, such a hook runs as the user, exactly as it would if they started Claude Code in that folder
+from a terminal. The Studio holds no secret of its own for it to steal, but opening a folder in the Studio
+must not be a quieter way to run its code.
 
 - A project's agent settings (hooks, permission rules) are **not** loaded by default. The first time a
   project is opened with the agent, the Studio lists the hooks and pre-allowed tools it found and asks; only
-  then does it load them.
+  then does it load them. The user's own settings are theirs and load without a question.
 - Agent Kernel's own instructions are wanted: `ak skill install --assistant claude` writes them to
   `.claude/commands`. **S5 did not test that location.** It tested a skill under `.claude/skills/`, which was
   listed, and the same setting also loaded the project's hooks. P6 must check that the `ak` output loads, and
   find how to load it without hooks, or fall back to the confirmation above.
-- P6 must try keeping the key out of the child environment altogether (the SDK's key-helper source, or an
-  environment scrub) before the feature ships. Until one works, the UI states plainly that the agent can
-  read the key, and recommends a key with a spending limit.
 
 **Sessions, turns and approvals**
 
@@ -301,15 +312,19 @@ project runs must be assumed able to read the key.
 - **State is replayed.** A window that reloads or a view that mounts late gets the job's current state and
   its open request from `jobs.list`, like any other job. S5's spike screen did not do this: review of its code found that a pending
   request would be lost on a tab switch, leaving the turn hung (no request fired in a real run). The agent gets no private event channel.
-- Cost and token use arrive on the turn's result and are shown per turn. They are estimates.
+- Token use arrives on the turn's result and is shown per turn. On a subscription the cost figure is an
+  estimate of API price, not a charge; the UI labels it so, or hides it.
 
 **Errors and wording**
 
-- SDK failures map to catalog codes: `agent.auth` (the key was rejected), `agent.noKey`, `agent.busy`,
-  `agent.failed`. Authentication is detected from the SDK's error field, not from message text alone.
-- Raw SDK text is never shown as the message. It says "Claude Code", which Anthropic's naming rule forbids a
-  third-party product to call itself; the UI says "Claude Agent". Raw text may appear only in the collapsed,
-  masked `detail`.
+- Failures map to catalog codes: `agent.notInstalled`, `agent.notSignedIn` (also when the sign-in is
+  rejected or expired), `agent.busy`, `agent.failed`. Authentication is detected from the SDK's error field,
+  not from message text alone. (The error shape was verified in S5 with a wrong API key; a rejected
+  subscription sign-in is not run.)
+- **Naming.** The Studio's own feature is "Claude Agent"; the Studio never calls itself or its feature
+  "Claude Code". It does name Claude Code where it means the user's installed program: "Claude Code is not
+  installed", "Sign in to Claude Code". Raw agent text is never shown as the message; it may appear only in
+  the collapsed, masked `detail`.
 
 ## Errors
 
@@ -374,7 +389,7 @@ features/config/
 - One class per domain: `ProjectService`, `ToolchainService`, `KernelService`, `GraphService`,
   `ConfigService`, `RunService`, `TestService`, `DeployService`, `AgentService`, `RulesService`,
   `SecretService`, `JobService`, `SessionService`, `AppService`.
-- Dependencies are passed to the constructor (`CommandRunner`, `ProjectFs`, `Watcher`, `SecretStore`, `AgentKeyStore`, the agent adapter), so
+- Dependencies are passed to the constructor (`CommandRunner`, `ProjectFs`, `Watcher`, `SecretStore`, the agent adapter), so
   services are tested with fakes and no real process.
 - A service registers its handlers against the contract; the registry fails start-up if any operation has no
   handler.

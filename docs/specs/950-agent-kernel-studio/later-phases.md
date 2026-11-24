@@ -120,38 +120,37 @@ and the others read-only.
 | Screens | Build with AI drawer: Chat and Code views, approval cards, pending changes |
 | Design input | Brief 05 |
 
-**Outcome.** A person gives the Studio an Anthropic API key once, then asks Claude, running locally in the
+**Outcome.** A person who has Claude Code installed and signed in asks Claude, running locally in the
 folder, for a change; approves its permission
 requests as cards; sees what changed on the canvas and in a diff; accepts or reverts each turn.
 
 **Work, in outline**
 
 - One agent-neutral coding-agent interface: start a session, send a prompt, stream events, relay permission
-  requests, report changed files. The Claude Agent SDK is its only adapter
-  ([architecture](architecture.md#the-coding-agent-and-its-key), decided in P0 as D14).
+  requests, report changed files. The Claude Agent SDK, driving the user's own Claude Code, is its only
+  adapter ([architecture](architecture.md#the-coding-agent-and-the-users-claude-code), decided in P0 as D14).
 - Checkpoint before each turn: git when the folder is a repository, the app's own snapshot otherwise. Accept
   and revert belong to the app, not to the adapter.
 - The agent's commands appear in the Commands panel, marked as the agent's.
 - The agent never applies or destroys Terraform.
-- The user supplies an Anthropic API key in the Studio. The main process stores it (encrypted where the
-  operating system allows), never returns it to the UI, and passes it only to the agent process. A Claude
-  Code already signed in on the machine is not used. This replaces the earlier rule that the app never
-  stores credentials (owner's requirement, 23 November 2026).
-- A settings screen for the key: set, replace, remove, and where it is stored.
+- The Studio uses the Claude Code already installed and signed in on the user's machine (owner's decision,
+  24 November 2026). It never stores, reads or asks for a credential, and shows no login of its own.
+- A status view: not installed, not signed in, or ready, with the version and which credential Claude Code
+  is using. When not signed in, it tells the user to sign in from a terminal.
 - The opened folder's agent hooks and permission rules are listed and confirmed before they are loaded.
-- Run the live half of spike S5, which needs a real key: streaming, approve, deny, interrupt, cost, and
-  whether the agent's shell can read the key. Try keeping the key out of the agent's environment.
+- Run the second half of spike S5 if P0 did not: the SDK against the user's installation, status detection
+  and a live turn.
 
 **Skill.** `ak-studio-coding-agent-adapter`. The coding agent is a session; an agent turn is a job; each permission request puts it in
 `waiting-for-user` and renders with the approval pattern.
 
 **Design questions.** Drawer docking with the layout fixed in P3. How a long agent turn shows progress. How a
-partly accepted turn looks. What the drawer shows when no key is set or the key is rejected. The wording:
-the product says "Claude Agent", never "Claude Code".
+partly accepted turn looks. What the drawer shows when Claude Code is missing or not signed in. The wording:
+the feature is "Claude Agent"; "Claude Code" names only the user's installed program.
 
-**Open before starting.** Whether a subscription token may ever be offered beside an API key: Anthropic's
-documentation says not without its approval. The installer grows by about 380 MB per platform for the agent
-executable: accept it, or download the executable on first use.
+**Open before starting.** Anthropic's confirmation that a third-party app may drive the user's signed-in
+Claude Code (its pages do not say so; see the architecture). Whether an API key is offered later as a second
+route for users without a subscription. The lowest Claude Code version supported.
 
 ---
 
