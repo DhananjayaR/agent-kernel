@@ -104,9 +104,10 @@ function focusMainWindow(): void {
 }
 
 function start(): void {
-	// Every web contents, including any created later, refuses navigation, new windows and webviews.
+	// Every web contents, including any created later, refuses navigation (bar the dev server), new windows and
+	// webviews.
 	app.on("web-contents-created", (_event, contents) =>
-		hardenWebContents(contents),
+		hardenWebContents(contents, devServerUrl),
 	);
 	app.on("second-instance", focusMainWindow);
 

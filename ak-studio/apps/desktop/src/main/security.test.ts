@@ -5,6 +5,7 @@ import {
 	APP_URL,
 	buildCsp,
 	hardenWebContents,
+	isNavigationAllowed,
 	isRequestAllowed,
 	RequestGate,
 } from "./security";
@@ -72,8 +73,29 @@ describe("RequestGate", () => {
 	});
 });
 
+describe("isNavigationAllowed", () => {
+	it.each([
+		APP_URL,
+		"app://studio/other",
+		"https://example.com/",
+		"http://localhost:5173/",
+		"file:///x",
+	])("refuses %s in production", (url) => {
+		expect(isNavigationAllowed(url)).toBe(false);
+	});
+
+	it("allows only the dev server's own origin in development (Vite full reload)", () => {
+		expect(isNavigationAllowed(`${DEV}/`, DEV)).toBe(true);
+		expect(isNavigationAllowed(`${DEV}/index.html?t=1`, DEV)).toBe(true);
+		expect(isNavigationAllowed("http://localhost:5174/", DEV)).toBe(false);
+		expect(isNavigationAllowed("https://example.com/", DEV)).toBe(false);
+		expect(isNavigationAllowed(APP_URL, DEV)).toBe(false);
+		expect(isNavigationAllowed("not a url", DEV)).toBe(false);
+	});
+});
+
 describe("hardenWebContents", () => {
-	function fakeContents() {
+	function fakeContents(devServerUrl?: string) {
 		const emitter = new EventEmitter();
 		let openHandler: ((d: { url: string }) => { action: string }) | undefined;
 		const contents = Object.assign(emitter, {
@@ -81,8 +103,18 @@ describe("hardenWebContents", () => {
 				openHandler = h;
 			},
 		});
-		hardenWebContents(contents as unknown as WebContents);
-		return { emitter, open: (url: string) => openHandler?.({ url }) };
+		hardenWebContents(contents as unknown as WebContents, devServerUrl);
+		const prevented = (eventName: string, url: string): boolean => {
+			let result = false;
+			emitter.emit(eventName, {
+				url,
+				preventDefault: () => {
+					result = true;
+				},
+			});
+			return result;
+		};
+		return { prevented, open: (url: string) => openHandler?.({ url }) };
 	}
 
 	it.each([
@@ -90,23 +122,27 @@ describe("hardenWebContents", () => {
 		"will-frame-navigate",
 		"will-redirect",
 		"will-attach-webview",
-	])("prevents %s, whatever the target", (eventName) => {
-		const { emitter } = fakeContents();
+	])("prevents %s, whatever the target, in production", (eventName) => {
+		const { prevented } = fakeContents();
 		for (const url of [APP_URL, "https://example.com/", "file:///x"]) {
-			let prevented = false;
-			emitter.emit(eventName, {
-				url,
-				preventDefault: () => {
-					prevented = true;
-				},
-			});
-			expect(prevented).toBe(true);
+			expect(prevented(eventName, url)).toBe(true);
 		}
 	});
 
+	it("lets the page navigate within the dev server only, in development", () => {
+		const { prevented } = fakeContents(DEV);
+		for (const eventName of ["will-navigate", "will-frame-navigate"]) {
+			expect(prevented(eventName, `${DEV}/`)).toBe(false);
+			expect(prevented(eventName, "https://example.com/")).toBe(true);
+		}
+		expect(prevented("will-redirect", `${DEV}/`)).toBe(true);
+		expect(prevented("will-attach-webview", `${DEV}/`)).toBe(true);
+	});
+
 	it("denies every new window", () => {
-		const { open } = fakeContents();
+		const { open } = fakeContents(DEV);
 		expect(open("https://example.com/")).toEqual({ action: "deny" });
 		expect(open(APP_URL)).toEqual({ action: "deny" });
+		expect(open(`${DEV}/`)).toEqual({ action: "deny" });
 	});
 });

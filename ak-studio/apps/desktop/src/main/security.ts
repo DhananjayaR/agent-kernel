@@ -115,10 +115,36 @@ export function denyAllPermissions(session: Session): void {
 	session.setPermissionCheckHandler(() => false);
 }
 
-/** Navigation, redirects, new windows and webviews are all refused. External links are not opened in P1a. */
-export function hardenWebContents(contents: WebContents): void {
-	contents.on("will-navigate", (event) => event.preventDefault());
-	contents.on("will-frame-navigate", (event) => event.preventDefault());
+/**
+ * Whether the page may navigate to `rawUrl`. Never in production (a page-initiated reload counts as a
+ * navigation, and the app has no use for one). In development, only within the dev server's origin, so Vite's
+ * full-page reload works.
+ */
+export function isNavigationAllowed(
+	rawUrl: string,
+	devServerUrl?: string,
+): boolean {
+	if (!devServerUrl) return false;
+	try {
+		return new URL(rawUrl).origin === new URL(devServerUrl).origin;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Navigation (except, in development, within the dev server), redirects, new windows and webviews are refused.
+ * External links are not opened in P1a.
+ */
+export function hardenWebContents(
+	contents: WebContents,
+	devServerUrl?: string,
+): void {
+	const guard = (event: { url: string; preventDefault(): void }): void => {
+		if (!isNavigationAllowed(event.url, devServerUrl)) event.preventDefault();
+	};
+	contents.on("will-navigate", guard);
+	contents.on("will-frame-navigate", guard);
 	contents.on("will-redirect", (event) => event.preventDefault());
 	contents.on("will-attach-webview", (event) => event.preventDefault());
 	contents.setWindowOpenHandler(() => ({ action: "deny" }));
