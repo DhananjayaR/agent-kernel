@@ -17,7 +17,7 @@ Status values: Not started, Design, In progress, In review, Done.
 
 | Phase | Business aspect | Issue milestone | Status | Design signed off | Doc |
 |---|---|---|---|---|---|
-| P0 | Technology selection | Before 1 | In review (spikes ran on Linux; record drafted; Windows and macOS deferred by the owner; spike S5 added, its second half not run) | n/a | [P0](P0-technology-selection.md) |
+| P0 | Technology selection | Before 1 | In review (spikes ran on Linux; record drafted; Windows and macOS deferred by the owner; spike S5 added; no turn has run on a subscription yet) | n/a | [P0](P0-technology-selection.md) |
 | P1a | App foundation: workspace, shell, bridge, design system | Before 1 | Not started | No | [P1a](P1a-app-foundation.md) |
 | P1b | Data and feature layer, shared patterns, Studio skills | Before 1 | Not started | No | [P1b](P1b-data-layer-and-patterns.md) |
 | P2 | Open a project and know its Agent Kernel version | 1 | Not started | No | [P2](P2-project-and-kernel-version.md) |
@@ -32,7 +32,7 @@ Status values: Not started, Design, In progress, In review, Done.
 | P11 | The remaining targets | 6 | Not started | n/a | [outline](later-phases.md#p11--the-remaining-targets) |
 | P12 | Packaging and release | 7 | Not started | No | [outline](later-phases.md#p12--packaging-and-release) |
 
-**Next action:** owner review of the [P0 decision record](P0-technology-selection.md#decision-record), and the owner's go-ahead to run the second half of spike S5 on a signed-in Claude Code. Then the P1a design gate. Anthropic's confirmation of the coding-agent design is needed before P6, not before P1a. Windows and macOS are deferred.
+**Next action:** owner review of the [P0 decision record](P0-technology-selection.md#decision-record), and one live turn of spike S5 on a working Claude Code sign-in (the spike machine's had expired). Then the P1a design gate. Anthropic's confirmation of the coding-agent design is needed before P6, not before P1a. Windows and macOS are deferred.
 
 P0 to P3 (including P1a and P1b) are detailed and can be picked up as written. P4 to P12 are outlines; each is detailed when the phase
 before it is close to done.
@@ -119,7 +119,7 @@ Detail: [P2](P2-project-and-kernel-version.md).
 | # | Decision | Needed by | Notes |
 |---|---|---|---|
 | 1 | Owner review of the rest of the P0 decision record. D8 (state, data, routing) was not exercised by any spike; D11 (Electron policy) was not tested. Windows and macOS are deferred by the owner | End of P0 | [P0 decision record](P0-technology-selection.md#decision-record) |
-| 1e | Coding agent (D14): the Studio uses the user's own signed-in Claude Code (decided 24 Nov 2026) and, on our reading of Anthropic's rules, holds no credential. Open: the owner's confirmation of that reading; Anthropic's confirmation that a third-party app may do this; the owner's go-ahead to run the second half of S5 on a signed-in machine; whether the SDK works against the user's installation | End of P0 for the spike; before P6 starts for Anthropic | [S5](research/spike-s5-coding-agent.md), [architecture](architecture.md#the-coding-agent-and-the-users-claude-code) |
+| 1e | Coding agent (D14): the Studio uses the user's own signed-in Claude Code (decided 24 Nov 2026) and, on our reading of Anthropic's rules, holds no credential. Open: the owner's confirmation of that reading; Anthropic's confirmation that a third-party app may do this; a live turn on a working sign-in (the spike machine's had expired; the mechanics ran); what a user with only the Claude desktop app, who has no `claude` command, is told | End of P0 for the spike; before P6 starts for Anthropic | [S5](research/spike-s5-coding-agent.md), [architecture](architecture.md#the-coding-agent-and-the-users-claude-code) |
 | 1c | Canvas keyboard model: Tab reaches the first node only after all edges; `edgesFocusable={false}` fixes it but loses edge keyboard access | P3 design gate | [S4](research/spike-s4-canvas-code.md) |
 | 1d | CodeMirror cold open missed 200 ms (360 to 382 ms); try preload on idle. Also needs a person: side-by-side look against Spectrum 2, screen-reader pass, canvas and glass/solid on a real GPU | P1a design gate | [P0 exit criteria](P0-technology-selection.md#exit-criteria) |
 | 2 | Studio primary colour: the briefs say blue, the current brand tokens say orange | P1a design gate | [design-process.md](design-process.md) |

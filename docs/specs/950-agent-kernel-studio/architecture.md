@@ -218,8 +218,9 @@ confirm: the Studio therefore runs that Claude Code and never takes, stores or p
 
 Spike [S5](research/spike-s5-coding-agent.md) tested the earlier design, on Linux, with no real credential.
 Its results on the adapter, approvals, errors and the untrusted folder still apply. Its results on the key
-store and the isolated environment are superseded. **Nothing in the new design has run yet**; each rule below
-says what it rests on.
+store and the isolated environment are superseded. The spike's second half (24 November, Linux) ran the
+mechanics of the new design. **No turn has run on a subscription:** the sign-in on the spike machine had
+expired. Each rule below says what it rests on.
 
 ```mermaid
 flowchart LR
@@ -268,19 +269,27 @@ flowchart LR
   fake and another agent can be added later. (Verified in S5.)
 - **The user's installation, not a bundled one.** The adapter finds the user's `claude` executable and points
   the SDK at it (`pathToClaudeCodeExecutable`). The Studio does not ship or modify the executable, which
-  also removes about 380 MB per platform from the installer. **Not run:** whether the SDK installs without its
-  bundled executable, and whether SDK 0.3.330 works with whatever Claude Code version the user has. If
-  either fails, the adapter drives the executable's own non-interactive mode instead; the interface above
-  does not change.
+  also takes the bundled executable out of the installer (767 MB down to 404 MB unpacked on Linux) and removes
+  the earlier asar workaround. (Verified in S5: the SDK installs and runs without its bundled executable.)
+  Version skew is barely tested: SDK 0.3.330 met Claude Code 2.1.330, its own version, and reached the
+  sign-in error against 2.1.321. `agent.status` enforces a lowest supported version.
+- **Finding it.** The adapter looks on `PATH`, then in the documented install locations, then at a path the
+  user can set. A user who has only the Claude desktop app has no `claude` command: the desktop app keeps a
+  private copy, which the Studio must not use. That user sees "not installed". (Found on the spike machine.)
+- **No SDK session store.** The SDK's `sessionStore` resume path reads Claude Code's credential file, or the
+  macOS Keychain, inside the host process. The adapter must not use it; a boundary test forbids the option.
 - **The user's environment.** An app started from a desktop launcher does not get the terminal's `PATH` or
-  exported variables, so finding `claude` and its environment must be tested from the packaged app started
-  that way (not run). The agent runs with the user's home, configuration folder and environment, so
+  exported variables; the install-location lookup is what finds `claude` there. (Verified in S5 by starting
+  the packaged app with a minimal environment; a real launcher start is not run.) The agent runs with the user's home, configuration folder and environment, so
   the sign-in, git identity, `uv` cache and cloud credentials are present. The user's own Claude Code
   settings, hooks and MCP servers load, as they would in a terminal. The isolated environment of the earlier
   design is dropped: it existed to keep a local sign-in out, which is now the opposite of the goal.
 - **Status before use.** `agent.status` reports one of: not installed, installed but too old, not signed in,
-  ready (with the version and the credential source). **Not run:** how to detect sign-in without starting a
-  turn; the command must come from Claude Code's documentation, not from memory.
+  ready (with the version and the credential source). It comes from `claude auth status`, which prints JSON
+  and exits 1 when not signed in. (Verified in S5.) Limits found: it reports a set `ANTHROPIC_API_KEY` as
+  signed in without checking it; its JSON cannot tell an expired sign-in from none; its text output can, but
+  contains the user's email and organisation, so the Studio does not parse it. The JSON for a working
+  subscription was not seen.
 - **Permission mode is explicit.** The adapter always passes `permissionMode: "default"`. Left out, the SDK
   may choose a mode in which a model approves tool calls and the user is never asked. (From the SDK
   documentation; the approval path ran only against a fake.)
@@ -301,9 +310,12 @@ must not be a quieter way to run its code.
   project is opened with the agent, the Studio lists the hooks and pre-allowed tools it found and asks; only
   then does it load them. The user's own settings are theirs and load without a question.
 - Agent Kernel's own instructions are wanted: `ak skill install --assistant claude` writes them to
-  `.claude/commands`. **S5 did not test that location.** It tested a skill under `.claude/skills/`, which was
-  listed, and the same setting also loaded the project's hooks. P6 must check that the `ak` output loads, and
-  find how to load it without hooks, or fall back to the confirmation above.
+  `.claude/commands`, and they load as commands with project settings on. (Verified in S5.)
+- **No clean switch exists yet.** Turning all hooks off keeps the project's commands but also stops the
+  user's own plugin hooks; leaving project settings out drops the commands too. (Verified in S5.) P6 must
+  find a per-folder way to hold back only the project's hooks, or fall back to the confirmation above.
+- **The turns are the user's sessions.** Their plugins, plugin hooks and MCP servers load, and Claude Code
+  writes its transcripts and state to the user's own configuration folder, as from a terminal. (Observed in S5.)
 
 **Sessions, turns and approvals**
 
@@ -325,8 +337,8 @@ must not be a quieter way to run its code.
 
 - Failures map to catalog codes: `agent.notInstalled`, `agent.notSignedIn` (also when the sign-in is
   rejected or expired), `agent.busy`, `agent.failed`. Authentication is detected from the SDK's error field,
-  not from message text alone. (The error shape was verified in S5 with a wrong API key; a rejected
-  subscription sign-in is not run.)
+  not from message text alone. (Verified in S5 with a wrong API key and with an expired subscription
+  sign-in; both arrive as the same error.)
 - **Naming.** The Studio's own feature is "Claude Agent"; the Studio never calls itself or its feature
   "Claude Code". It does name Claude Code where it means the user's installed program: "Claude Code is not
   installed", "Sign in to Claude Code". Raw agent text is never shown as the message; it may appear only in
