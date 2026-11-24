@@ -272,7 +272,7 @@ flowchart LR
   also takes the bundled executable out of the installer (767 MB down to 404 MB unpacked on Linux) and removes
   the earlier asar workaround. (Verified in S5: the SDK installs and runs without its bundled executable.)
   Version skew is barely tested: SDK 0.3.330 met Claude Code 2.1.330, its own version, and reached the
-  sign-in error against 2.1.321. `agent.status` enforces a lowest supported version.
+  sign-in error against 2.1.321. `agent.status` enforces a lowest supported version. The install locations in the spike were written from memory and must be checked against the documentation.
 - **Finding it.** The adapter looks on `PATH`, then in the documented install locations, then at a path the
   user can set. A user who has only the Claude desktop app has no `claude` command: the desktop app keeps a
   private copy, which the Studio must not use. That user sees "not installed". (Found on the spike machine.)

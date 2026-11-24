@@ -10,7 +10,7 @@
 >   the packaging finding about `pathToClaudeCodeExecutable`, and that a project hook runs unprompted.
 > - **No longer the design:** the key store, the write-only command, the environment built from nothing
 >   (which proved a local sign-in is kept *out*, now the opposite of the goal), and the bundled executable.
-> - **Not run:** anything on the new design. See Task 8 in [P0-plan.md](../P0-plan.md).
+> - **The new design:** see "Second half" at the end of this note. Its mechanics ran; no turn ran on a subscription.
 > - The policy paragraph near the end reflects the 23 November reading; the architecture has the 24 November one.
 
 ## Result
@@ -243,3 +243,135 @@ pnpm 12.4.1.
 - A `resume` that carries a real conversation (keyless resume ran).
 - The installer (AppImage or deb) with the SDK, and its size.
 - The encrypted-file path with a real OS keyring: only the fake ran; this machine is `basic_text`.
+
+## Second half (24 November 2026): the user's own Claude Code
+
+**Ran on:** Linux (WSL2) only. **Design under test (D14):** the Studio drives the user's own installed, signed-in
+Claude Code through the Claude Agent SDK, and holds no credential itself. The key store, `agent.key.*` and the
+password field described above are deleted.
+
+### Result
+
+**Mechanics pass; the live subscription half was not evidenced.** The machine's Claude Code sign-in had expired, so
+no turn ran on a subscription.
+- **What passed:**
+  - finding the executable, from both a terminal-style and a launcher-style environment;
+  - `agent.status` from `claude auth status`;
+  - SDK 0.3.330 driving an external Claude Code through `pathToClaudeCodeExecutable`, with no isolated home or
+    config folder;
+  - a dummy `ANTHROPIC_API_KEY` shown as the credential in use, failing cleanly;
+  - no credential file opened by the Electron main process (weaker check, no `strace`);
+  - project commands from `ak skill install` loading, also with hooks off.
+- **Not run, because the sign-in had expired:** streaming text, approve, deny, interrupt, usage and cost on a
+  subscription.
+- **Re-run:** the owner signs in a Claude Code CLI on the machine, then runs `scripts/s5b-live-probe.mjs` as its
+  header describes.
+
+**Important facts about this machine:**
+- **`claude` is not installed:** there is no `claude` on `PATH` or in any install location. The only Claude Code
+  executable is the Claude desktop app's own copy, `~/.claude/remote/ccd-cli/2.1.330-3cc8a8679c34` (`--version`:
+  `2.1.330 (Claude Code)`). The spike used it through the spike-only override `SPIKE_CLAUDE_PATH`. So "find the
+  installation" genuinely returned "not installed" here. A user who has only the desktop app has no `claude`
+  command.
+- **The sign-in had expired:** the on-disk sign-in is not usable by the CLI. `claude auth status` reports
+  `loggedIn: false`, and the one subscription turn failed to authenticate (details below). Why it expired is not
+  known: finding out would mean reading the credential file, which the spike does not do.
+- **Versions:** compatibility is evidenced only for the same version, SDK 0.3.330 (bundled CLI 2.1.330) with CLI
+  2.1.330. One dummy-key turn against the older 2.1.321 copy also got through `init` to the authentication error,
+  so this is init and error-path evidence only.
+
+### Test-launcher environment scrub (spike only, not product behaviour)
+
+These checks ran from inside a Claude Code session. Its environment carries 35 `CLAUDE_*` variables and
+`ANTHROPIC_BASE_URL` that belong to that session, not to a user. Any of them reaching the agent would void the
+result. So the spike's test launcher (`tests/agent.electron.spec.ts`, `scrubbedEnv`) and the probe
+(`scripts/s5b-live-probe.mjs`) drop every `CLAUDE_*` and `ANTHROPIC_*` variable, and `CLAUDECODE`, before starting
+the app or the CLI. The dummy-key runs add `ANTHROPIC_API_KEY` back after the scrub.
+
+The product does **not** do this. `sdkAdapter.agentEnv()` passes the app's environment on unchanged, including a
+user's own `ANTHROPIC_API_KEY`. Claude Code ranks that key above the subscription, and the Studio shows which one is
+in use.
+
+### Criterion table
+
+| Criterion | Result | Evidence (command, then what was observed) |
+|---|---|---|
+| Step 1: key path removed; `agent.status { state, version?, credentialSource? }`; the secret-field test stays | Pass | `keyStore.ts` and its test are deleted, and `agent.key.*` is gone from the contract, handlers, `index.ts` and the screen. `tests/contract.test.ts` still fails on any output field named `key`, `apiKey` or `token`, and now also asserts that `agent.status` has exactly `state`, `version` and `credentialSource`, and that no `agent.key*` operation exists. `tests/handlers.test.ts`: an attached agent leaking `token` in `status()`, or `key` in an event, has the field stripped; `agent.key.set` is an unknown operation. The screen has no password input (asserted in both agent specs). |
+| Step 2: resolve `claude` on `PATH`, then the install locations; read its version | Pass (stub) | `sdkAdapter.test.ts`, with stubs on a temporary `PATH`: found via `PATH`; none found (`undefined`); a non-executable file is skipped; `~/.local/bin/claude` is found when `PATH` is only `/usr/bin:/bin`; `SPIKE_CLAUDE_PATH` wins, and a missing override falls through. The version is parsed from `--version` (`9.8.7 (Claude Code)` from the stub, `2.1.330` from the real CLI). The install locations (`~/.local/bin/claude`, `~/.claude/local/claude`, `/opt/homebrew/bin/claude`, `/usr/local/bin/claude`; on Windows `%USERPROFILE%\.local\bin\claude.exe`) are from the setup docs as known to the author and were not re-checked against the docs. |
+| Step 2: packaged app from a desktop launcher (no terminal `PATH` or exports) | Pass, simulated | `pnpm build:unpack`, then `SPIKE_PACKAGED_EXE=release/linux-unpacked/app SPIKE_LAUNCHER_SIM=1 xvfb-run -a pnpm exec playwright test tests/agent.electron.spec.ts -g launcher`. The app was started with only `DISPLAY HOME PATH(/usr/bin:/bin) SPIKE_USER_DATA XAUTHORITY`, with `isPackaged` true. Status: `Claude Code: not installed. Install Claude Code, then check again.` This is correct for this machine. With `SPIKE_CLAUDE_PATH` also passed: `Claude Code 2.1.330: not signed in. Run "claude auth login" in a terminal, then check again.` Without `XAUTHORITY`, Electron did not start ("The platform failed to initialize"); a real desktop session provides it. A real `.desktop` launcher was not used. |
+| Step 3: SDK against the external executable, with the user's env (no isolated home or config, no credential added) | Pass (protocol level) | `sdkAdapter.test.ts`: the real SDK starts a stub `claude` found on `PATH`, and the stub records env NAMES. The names include a planted `SPIKE_LEAK_SENTINEL` and `HOME`. `ANTHROPIC_API_KEY` and `CLAUDE_CONFIG_DIR` are present only if the parent had them. Live, the init messages reported `claude_code_version 2.1.330` and the user's real plugins, so the real `~/.claude` was in use. |
+| Step 3: the SDK installs with its optional executable packages omitted | Pass | In a scratch folder, `npm i --omit=optional --ignore-scripts @anthropic-ai/claude-agent-sdk@0.3.330`: no platform package installed, and `node_modules` was 66 MB. Driving the external 2.1.330 from that copy with a dummy key gave `init` (`apiKeySource ANTHROPIC_API_KEY`, `claude_code_version 2.1.330`), then `authentication_failed`. Without `pathToClaudeCodeExecutable`, that copy throws `Native CLI binary for linux-x64 not found. Reinstall … without --omit=optional, or set options.pathToClaudeCodeExecutable.` before spawning anything. |
+| Step 3: package without the bundled executable | Pass | `electron-builder.yml` now leaves out `node_modules/@anthropic-ai/claude-agent-sdk-*/**`, and the first half's `asarUnpack` is gone. `release/linux-unpacked` is 404 MB, down from 767 MB. `app.asar` is 136 MB and holds only `@anthropic-ai/claude-agent-sdk` (checked with `@electron/asar listPackage`); there is no `app.asar.unpacked`. |
+| Step 3 fallback: drive the CLI's streaming mode directly | Not needed | The SDK worked. For the record, `claude --help` (2.1.330) has `-p/--print`, `--output-format stream-json`, `--input-format stream-json`, `--include-partial-messages`, `--permission-mode`, `--permission-prompt-tool`, `--model`, `--resume`, `--setting-sources`, `--settings` and `--bare`. |
+| Step 4: signed in or not, without a turn | Pass, with a gap | **Command:** `claude auth status` (JSON by default; `--json` and `--text`). **Not signed in:** exit 1, and the JSON still printed, with field names `loggedIn authMethod apiProvider analyticsDisabled projectsDirectory configDirectory loginExpiresAt consoleProfileSignInOffered`; values `loggedIn false`, `authMethod none`, `loginExpiresAt null`. The same with an empty `CLAUDE_CONFIG_DIR`. **With `ANTHROPIC_API_KEY` set:** exit 0, `loggedIn true`, `authMethod api_key`, plus an `apiKeySource` field (`ANTHROPIC_API_KEY`). The key is not validated: a dummy key reads as signed in. **Gap:** JSON cannot tell "expired" from "never signed in"; both are as above. `--text` can: `Login: Expired — log in again` against `Not logged in. Run claude auth login to authenticate.` `--text` also prints the account's email and organisation, so the Studio must not show or log it raw. **Not observed:** the JSON of a working subscription sign-in. The mapping `loggedIn true` → `ready` with `credentialSource = apiKeySource ?? authMethod` is tested against an assumed shape. **Mapping:** no executable → `notInstalled`; `loggedIn` not `true` → `notSignedIn`; otherwise `ready`. Stdout is parsed whatever the exit code; email and organisation fields are never read. |
+| Step 5: live turn on the subscription (streaming, approve, deny, interrupt, usage) | **Fail: no usable sign-in; the rest Not run** | `SPIKE_CLAUDE_PATH=… node scripts/s5b-live-probe.mjs <scratch> "Reply with the single word: ok"` (scrubbed env, `model: haiku`). `init` arrived with `apiKeySource none` and `model claude-haiku-5-5`. Then `assistant.error authentication_failed`, with the text "Failed to authenticate: this login reached its time limit and cannot be renewed. Run `claude auth login` to sign in again". Then `result { subtype success, is_error true, terminal_reason api_error, total_cost_usd 0 }` with zero usage, after 149 ms. The credential file's modification time did not change (stat only). `apiKeySource none` is also the documented value for a working claude.ai sign-in, so `init` cannot tell a working subscription from a broken one. Streaming, approve, deny, interrupt, usage, and whether a subscription turn reports a non-zero `total_cost_usd` were **not run**. The scripted-adapter unit tests do not stand in for them. |
+| Step 5: a dummy `ANTHROPIC_API_KEY` is shown as in use, and the turn fails cleanly | Pass (built and packaged) | `SPIKE_LIVE=1 SPIKE_CLAUDE_PATH=… xvfb-run -a pnpm exec playwright test tests/agent.electron.spec.ts -g live`, once built and once packaged. Status line: `Claude Code 2.1.330: ready, credential source ANTHROPIC_API_KEY (the API key in ANTHROPIC_API_KEY is in use, not your Claude subscription)`. Event list: `[init] … credential source ANTHROPIC_API_KEY (API key from the environment, not the subscription), model claude-haiku-5-5`, then `[error] agent.auth: Invalid API key · Fix external API key`, then `[result] not ok, cost $0.0000`. It returned to `idle` after about 3.2 to 3.8 s. There were no text events, and the dummy key was not on the page. |
+| Step 6: the Electron main process opens no credential file during a turn | Pass, **weaker check** (`strace` is not installed) | `/proc/<main pid>/fd` was sampled every 2 ms during the stub spec and both live dummy-key turns (1808 and 2020 samples). No descriptor pointed at a `credentials`, `keychain` or `keyring` path. An inotify watch on the `~/.claude` directory (it never opens the files) was quiet for 20 s with nothing running. During the live turn it saw `.credentials.json` opened 20 times. inotify cannot say which process opened it, so a control was run under the same watch, with the real `HOME` and no real CLI: the SDK test (the real SDK in-process against a stub child) and the packaged app's launcher simulation with a stub `claude`. That gave zero opens of anything in `~/.claude`. So the 20 opens came from the real child `claude` (`auth status` and the turn), as expected. A grep of `src/main` and the built `out/main` for `credentials|keychain|keytar|safeStorage|oauth` finds only the `credentialSource` field name. **But the SDK's own JavaScript, which runs inside the main process, can read the credential:** the `sessionStore` resume path (alpha) reads `~/.claude/.credentials.json`, and the macOS Keychain via `security find-generic-password`, then copies it, minus the refresh token, into a temporary config folder. The spike does not pass `sessionStore`, so that path did not run. The product must not use it. |
+| Step 7: `ak skill install --assistant claude` loads; and without the folder's hooks | Pass | `uv run --project ak-py ak skill install --assistant claude` in a scratch folder installed 6 entries as `.claude/commands/<name>/SKILL.md`. With a harmless project `SessionStart` hook that appends to a log, three dummy-key turns ran. **Default sources:** the six `ak-*` names appear in `init.slash_commands`, not in `skills`, and the project hook ran once. **`settingSources ['user']`:** no `ak-*` commands, and the hook did not run. **Default sources plus `settings: { disableAllHooks: true }`** (the flag layer): all six `ak-*` commands load, and the hook did not run. Note that this also stopped the user's plugin hooks (0 hook messages against 8). So the project's commands can load without its hooks. Whether the model uses them needs a working sign-in and was not run. |
+| Fact: the user's own settings load into the Studio's turns | Observed | With default `settingSources`, `init.plugins` listed 14 plugins: the 9 in the user's `enabledPlugins`, plus 5 others. The source of those 5 was not identified; they are likely the desktop app's. One of them was absent from all five probe turns that had a dummy key (13 plugins); the two Electron dummy-key turns did not record plugins. Three `SessionStart` hooks came from plugins (the user's `settings.json` has no `hooks`); with the scratch folder's project hook, four ran (`['user']`: 3, default: 4, from the Step 7 runs). One of the user's MCP servers was listed as `pending`; its source was not checked. Two skills appeared only with both project settings and hooks on; their source was not identified. |
+
+### Findings for the architecture (D14)
+
+- **A desktop-app-only user has no `claude` command.** The Claude desktop app keeps its own versioned copy under
+  `~/.claude/remote/ccd-cli/`, which is neither on `PATH` nor in an install location. `agent.status` must say
+  `notInstalled` and point to the Claude Code installer. Using the desktop app's private copy would tie the Studio
+  to another product's internals.
+- **Launchers:** a desktop-launcher start gets no terminal `PATH`. The install-location fallback
+  (`~/.local/bin/claude` first) is meant to make a native-installer user work there; this rests on a unit test with a stub, and the locations were written from memory, not checked against the documentation. `SPIKE_CLAUDE_PATH` is a spike-only
+  override. The product would want a user setting instead.
+- **Status:**
+  - `claude auth status` exits 1 when not signed in, and its JSON still has to be read.
+  - It reports a set `ANTHROPIC_API_KEY` as signed in without validating it.
+  - JSON cannot tell "expired" from "never signed in". Show one "not signed in, run `claude auth login`" state, or
+    parse `--text` for the expiry, which means handling text that contains the email and organisation.
+  - The working-subscription JSON is unobserved.
+- **Credential precedence is visible:** both `agent.status.credentialSource` and `init.apiKeySource` report
+  `ANTHROPIC_API_KEY` when that variable is set. The Studio shows it as "the API key … is in use, not your Claude
+  subscription". `init.apiKeySource` is `none` for a sign-in (working or not), so `agent.status` is the place to
+  distinguish states.
+- **Auth errors:** an expired sign-in arrives as `assistant.error: authentication_failed`, the same as a bad key.
+  `agent.auth` catches both. The CLI's own text tells the user to run `claude auth login`; the Studio should say
+  the same in its own words.
+- **Packaging:** the SDK's bundled executable is not needed and is now left out (767 MB down to 404 MB unpacked on
+  Linux). `pathToClaudeCodeExecutable` is now always the resolved user executable. The first half's asar workaround
+  goes away.
+- **Version skew:** the Studio's SDK will meet whatever CLI version the user has. Only 2.1.330 to 2.1.330 was
+  shown, plus init and error against 2.1.321. P1 needs a version floor checked at `agent.status` time.
+- **No credential in the app:** true of the spike's own code, and the contract test keeps it so. The SDK's
+  `sessionStore` resume path reads the credential file or Keychain inside the host process, so the product must not
+  use `sessionStore`.
+- **The user's settings load:** plugins, plugin hooks, MCP servers and skills all load. That matches "the user's own
+  Claude Code", but it means the Studio's turns are as heavy, and run the same third-party hooks, as the user's
+  terminal sessions.
+- **A project's hooks:** `settings: { disableAllHooks: true }` stops the folder's hooks while keeping its commands,
+  but it also stops the user's own plugin hooks. `settingSources` without `'project'` drops the commands too. A
+  per-folder "trust this folder's hooks" choice is still the open design point.
+- **Side effects outside the app:** turns run against the real `~/.claude`, so the CLI writes session transcripts
+  and state there, as the user's own sessions do.
+
+### Not run
+
+- Every live subscription check: streaming text, approve, deny, interrupt, usage, and whether `total_cost_usd` is
+  non-zero on a subscription. The sign-in on this machine had expired, and signing in was out of bounds for the
+  spike.
+- The JSON of `claude auth status` for a working subscription sign-in.
+- `strace` of the main process (not installed). The fd sampling, inotify and grep checks stand in for it, and are
+  weaker.
+- A real `.desktop` launcher start. It was simulated with a minimal environment.
+- Windows and macOS (the install locations, and the Keychain behaviour of `claude auth status`).
+- Re-checking the brief's documentation facts (credential precedence, bare mode, Anthropic's rules) against the
+  live docs.
+
+### Checks run (second half)
+
+- **vitest:** `pnpm test`: 4 files, 36 tests passed.
+- **Typecheck:** `pnpm run typecheck`: exit 0.
+- **dependency-cruiser:** `pnpm depcruise`: no violations (93 modules, 203 dependencies). `pnpm depcruise:selftest`:
+  OK.
+- **Biome:** clean on the files this half rewrote. `handlers.ts`, `contract.ts` and `handlers.test.ts` keep their
+  older format findings, which predate this half.
+- **Playwright:** `xvfb-run -a pnpm exec playwright test`, with the dev servers up: 38 passed, 2 skipped. The 2 are
+  the gated live and launcher cases, which were run separately as above.
+- **Live turns:** 8 in total. One was on the subscription sign-in, and it failed to authenticate. Seven used a
+  dummy key: built app, packaged app, the optional-free SDK copy, CLI 2.1.321, and three for Step 7. All seven
+  failed at authentication. None produced model output or usage.
