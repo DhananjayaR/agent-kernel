@@ -16,6 +16,9 @@ the top bar, tabs, bottom panel and status bar, in dark and light. The component
 Storybook. CI builds and tests it on Windows, macOS and Linux and produces an unsigned installer for each.
 There is no project feature yet.
 
+**Linux first.** Windows and macOS are deferred by the owner (23 November 2026), so the three-system items
+below are written and configured but marked Deferred until they can run ([plan](P1a-plan.md), ruling 1).
+
 ## Scope
 
 **In**
@@ -147,12 +150,14 @@ in the status bar where P2 shows the version.
 ## Verification
 
 - [ ] `pnpm install` then `pnpm dev` opens the app on all three operating systems, from a clean clone.
+      (Linux now; Windows and macOS deferred.)
 - [ ] The renderer opens in a browser with the mock transport.
 - [ ] The lint rule catches an `electron` import in the renderer.
 - [ ] Contract test passes; a missing handler fails it.
 - [ ] End-to-end smoke test: the app starts, each tab opens, the theme switches.
 - [ ] Every story passes the accessibility check and the [UX checklist](design-process.md).
-- [ ] CI is green on three operating systems and uploads three installers.
+- [ ] CI is green on three operating systems and uploads three installers. (Deferred: needs push access
+      and the owner's go-ahead for Windows and macOS.)
 - [ ] A class from Tailwind's default palette (`text-blue-500`) fails the build.
 
 ## Open decisions
