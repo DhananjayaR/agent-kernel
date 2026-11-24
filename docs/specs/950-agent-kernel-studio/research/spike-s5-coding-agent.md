@@ -1,6 +1,6 @@
-# Spike S5: A coding agent driven with the user's own key (Claude Agent SDK from the Electron main process)
+# Spike S5: The coding agent (pasted key, superseded; the user's own Claude Code)
 
-**Date:** 2026-11-23  **Ran on:** Linux (WSL2) only  **Time spent:** under 1 day  **Decision it feeds:** D14
+**Date:** 23 and 24 Nov 2026  **Ran on:** Linux (WSL2) only  **Time spent:** under 1 day  **Decision it feeds:** D14
 
 > **Superseded in part, 24 November 2026.** This spike tested a design in which the user pastes an API key
 > into the Studio. The owner has since settled that the Studio uses the user's own Claude Code, already
@@ -52,13 +52,13 @@ The changes from the brief:
 | Step 6a: keyless turn in development ends in an authentication error | **Pass** | `xvfb-run -a pnpm exec playwright test tests/agent.electron.spec.ts`, built app, `isPackaged false`: 1 passed. Events: `init … key source ANTHROPIC_API_KEY, model claude-opus-5-5`, then `[error] agent.auth: Invalid API key · Fix external API key`, then `[result] not ok, cost $0.0000`. Auth error after about 3.8 s. No text events and no ok result. The page HTML does not contain the key. The isolated config dir under userData was written to (`.claude.json, backups, plugins, projects, sessions`). The same spec then runs a second turn in the same folder (it resumes: same session id, `agent.auth` again) and a third in another folder (new session id, `agent.auth`). |
 | Step 6b: the same from the packaged app (`electron-builder --dir`) | **Pass, with `pathToClaudeCodeExecutable`** | Run with `SPIKE_PACKAGED_EXE=release/linux-unpacked/app`, `isPackaged true`. **With the SDK's own resolution** (`SPIKE_AGENT_EXE=bundled`): `[error] agent.failed: spawn ENOTDIR`, because the SDK resolves the executable inside `app.asar`. **With the override** (default; `unpackedExecutablePath()` rewrites `app.asar/` to `app.asar.unpacked/`): the same three-turn spec as 6a passed. electron-builder 26.18.0 had already unpacked the executable without being told; `asarUnpack` makes that explicit. The override is the part that was required. These runs used the final code: rebuilt and repackaged after the last main-process change. |
 | The key does not reach logs or the agent's files (keyless runs) | Pass (as far as checked) | `grep -rlF sk-ant-invalid` over every test userData dir, including the agent's own `config/` (session `.jsonl`, `.claude.json`): no hits. The main process logs nothing from the agent. CLI stderr reaches the renderer only as masked `log` events. |
-| Step 7, live: streaming text from the model | Not run — needs a key | |
-| Step 7, live: approve a tool call | Not run — needs a key | |
-| Step 7, live: deny a tool call | Not run — needs a key | |
-| Step 7, live: interrupt a running turn | Not run — needs a key | |
-| Step 7, live: cost on the result | Not run — needs a key | The keyless result carried `total_cost_usd: 0`, so the field is wired, but a non-zero cost has not been seen. |
-| Step 7, live: does `env` run by the agent's shell tool show the key? | Not run — needs a key | Unverified. The key is in the subprocess env as `ANTHROPIC_API_KEY`; expect the Bash tool's children to inherit it unless the CLI scrubs it. |
-| Step 7, live: does a skill under the scratch folder's `.claude/` load? | Not run — needs a key | Keyless observation: yes, it is listed. With `.claude/skills/spike-probe/SKILL.md` in the third turn's folder, `init.skills` began with `spike-probe`. Whether the model then uses it needs a key. The other 18 names (`deep-research`, `design`, …) appear even with an empty isolated config, so they ship with the CLI. |
+| Step 7, live: streaming text from the model | Not run (cancelled 24 Nov 2026: design superseded) | |
+| Step 7, live: approve a tool call | Not run (cancelled 24 Nov 2026: design superseded) | |
+| Step 7, live: deny a tool call | Not run (cancelled 24 Nov 2026: design superseded) | |
+| Step 7, live: interrupt a running turn | Not run (cancelled 24 Nov 2026: design superseded) | |
+| Step 7, live: cost on the result | Not run (cancelled 24 Nov 2026: design superseded) | The keyless result carried `total_cost_usd: 0`, so the field is wired, but a non-zero cost has not been seen. |
+| Step 7, live: does `env` run by the agent's shell tool show the key? | Not run (cancelled 24 Nov 2026: design superseded) | Unverified. The key is in the subprocess env as `ANTHROPIC_API_KEY`; expect the Bash tool's children to inherit it unless the CLI scrubs it. |
+| Step 7, live: does a skill under the scratch folder's `.claude/` load? | Not run (cancelled 24 Nov 2026: design superseded) | Keyless observation: yes, it is listed. With `.claude/skills/spike-probe/SKILL.md` in the third turn's folder, `init.skills` began with `spike-probe`. Whether the model then uses it needs a key. The other 18 names (`deep-research`, `design`, …) appear even with an empty isolated config, so they ship with the CLI. |
 | Keyless observation: a project hook runs and sees the key | **Observed (a risk)** | The third turn's folder has a `SessionStart` hook that writes only env names to a file. It ran with no prompt, from both the built and the packaged app. It saw `ANTHROPIC_API_KEY` among `AI_AGENT ANTHROPIC_API_KEY CLAUDECODE CLAUDE_AGENT_SDK_VERSION CLAUDE_CODE_CHILD_NOTES_DIR CLAUDE_CODE_CHILD_SESSION CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_MESSAGING_SOCKET CLAUDE_CODE_MESSAGING_TOKEN CLAUDE_CODE_SESSION_ATTENDED CLAUDE_CODE_SESSION_ID CLAUDE_CONFIG_DIR CLAUDE_ENV_FILE CLAUDE_PID CLAUDE_PROJECT_DIR COREPACK_ENABLE_AUTO_PIN HOME NoDefaultCurrentDirectoryInExePath PATH PWD`. |
 | Windows, macOS | Not run | Windows needs more env than `PATH` and `HOME`: the adapter adds `USERPROFILE` (isolated) and `SystemRoot`, but this is untested. macOS keeps a signed-in session in the Keychain, not under HOME, so isolation there is unverified. The `sdkAdapter` env test is skipped on Windows (it uses an `sh` stub). |
 
@@ -114,7 +114,7 @@ if isolation had failed, it would have spent the machine's sign-in.
   with a fixed in-memory password, which amounts to obfuscation.
 - **Deprecated APIs:** in Electron 45, `encryptString`, `decryptString` and `isEncryptionAvailable` are marked
   deprecated in favour of `encryptStringAsync`, `decryptStringAsync` and `isAsyncEncryptionAvailable`. The spike
-  uses the sync ones the brief names; P1 should use the async ones.
+  uses the sync ones the brief names; P1a should use the async ones.
 - **Contract shape:** the contract gained an `output` schema per request and a `chunk` schema per stream; before
   this it had only inputs. That was needed for the "no key in outputs" test, and the handlers now parse outputs.
   `orpc-router.ts` needed `handlers.subscribe<StreamChunk>` for the now-generic `subscribe`.
@@ -255,7 +255,7 @@ password field described above are deleted.
 **Mechanics pass; the live subscription half was not evidenced.** The machine's Claude Code sign-in had expired, so
 no turn ran on a subscription.
 - **What passed:**
-  - finding the executable, from both a terminal-style and a launcher-style environment;
+  - the lookup logic (stub tests on `PATH` and the install locations); from a simulated launcher, a correct "not installed" on this machine; the real CLI was reached only through the spike override;
   - `agent.status` from `claude auth status`;
   - SDK 0.3.330 driving an external Claude Code through `pathToClaudeCodeExecutable`, with no isolated home or
     config folder;
@@ -269,7 +269,7 @@ no turn ran on a subscription.
 
 **Important facts about this machine:**
 - **`claude` is not installed:** there is no `claude` on `PATH` or in any install location. The only Claude Code
-  executable is the Claude desktop app's own copy, `~/.claude/remote/ccd-cli/2.1.330-3cc8a8679c34` (`--version`:
+  executable is the Claude desktop app's own copy, `~/.claude/remote/ccd-cli/<version>-<build>` (`--version`:
   `2.1.330 (Claude Code)`). The spike used it through the spike-only override `SPIKE_CLAUDE_PATH`. So "find the
   installation" genuinely returned "not installed" here. A user who has only the desktop app has no `claude`
   command.
@@ -336,7 +336,7 @@ in use.
   Linux). `pathToClaudeCodeExecutable` is now always the resolved user executable. The first half's asar workaround
   goes away.
 - **Version skew:** the Studio's SDK will meet whatever CLI version the user has. Only 2.1.330 to 2.1.330 was
-  shown, plus init and error against 2.1.321. P1 needs a version floor checked at `agent.status` time.
+  shown, plus init and error against 2.1.321. P6 (`agent.status`) needs a version floor.
 - **No credential in the app:** true of the spike's own code, and the contract test keeps it so. The SDK's
   `sessionStore` resume path reads the credential file or Keychain inside the host process, so the product must not
   use `sessionStore`.

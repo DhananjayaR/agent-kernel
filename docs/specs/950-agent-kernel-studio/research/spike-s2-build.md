@@ -13,8 +13,8 @@ separate parser because of TypeScript 7, and the template's ESLint cannot run on
 | Criterion | Result | Evidence |
 |---|---|---|
 | One command builds and runs on Linux | Pass | `pnpm build` (typecheck + `electron-vite build`) then `pnpm exec playwright test tests/smoke.electron.spec.ts` under `xvfb-run -a`: 1 passed (about 0.7 s). Cold `electron-vite build` about 1.0 s, renderer HMR about 58 ms, main restart about 131 ms (only with `electron-vite dev --watch`): Task 1, scripted. |
-| One command builds and runs on Windows | Not run — pending the owner's approval to push the spike branch | No Windows machine; CI would be the only route. |
-| One command builds and runs on macOS | Not run — pending the owner's approval to push the spike branch | Same. |
+| One command builds and runs on Windows | Deferred by the owner (23 Nov 2026); Linux only for now | No Windows machine; CI would be the only route. |
+| One command builds and runs on macOS | Deferred by the owner (23 Nov 2026); Linux only for now | Same. |
 | CI green on all three | Not run — workflow written, not executed | `.github/workflows/studio-spike.yml` parses as YAML (`yaml.safe_load`, 11 steps); `actionlint` is not installed. Never run on a runner. |
 | Installer produced | Pass on Linux only | AppImage 144 MB and deb 112 MB under `release/`; NSIS and dmg not built. |
 | Packaged app starts | Pass on Linux (scripted); install via the installer: not done — needs a person | Playwright `_electron` with `executablePath` on `release/linux-unpacked/app` and on the AppImage (`APPIMAGE_EXTRACT_AND_RUN=1`), under `xvfb-run -a`: `app.isPackaged` true, Bridge then Echo gives `{"text":"hi"}`. The deb was inspected (`dpkg-deb -I`) but not installed. |
@@ -64,7 +64,7 @@ separate parser because of TypeScript 7, and the template's ESLint cannot run on
   (alongside the existing `@orpc/*` entries from the S3 bridge spike). It must stay while that version is that recent, and is a supply-chain policy exception to review.
 - **depcruise self-test:** see D13 below; `tests/depcruise-fixture/` and `scripts/depcruise-selftest.mjs`. Note dependency-cruiser auto-detects
   swc when `@swc/core` is installed even if `parser: 'swc'` is removed; the silent pass happens when `@swc/core` is absent.
-- **Nothing was pushed**, so the three jobs have not run; no Windows or macOS results exist.
+- **Nothing was pushed**, so the three jobs have not run; no Windows or macOS results exist (deferred by the owner, 23 Nov 2026).
 
 ## Versions that worked
 
@@ -78,9 +78,10 @@ renderer unminified by default (Task 4: Code chunk 1,185 kB vs 599 kB minified).
 
 ## Recommendation for the decision record
 
-- **D3 (bundler):** electron-vite confirmed on Linux, no blocker (sandboxed preload, TypeScript 7, packaging all worked); Electron Forge fallback not needed. Keep the Windows/macOS rows open until CI has run.
+- **D3 (bundler):** electron-vite confirmed on Linux, no blocker (sandboxed preload, TypeScript 7, packaging all worked); Electron Forge fallback not needed. Windows and macOS were deferred by the owner (23 Nov 2026); the CI workflow is written but has never run.
 - **D4 (packaging):** electron-builder 26.18.0 confirmed on Linux (AppImage and deb, packaged app starts and the bridge answers); NSIS and dmg unverified; signing deferred to P12; set `maintainer`/`author` email and `desktopName`.
-- **D9 (component development):** Storybook 10.6.8 with `@storybook/react-vite` works with Tailwind 4 tokens at no extra cost beyond importing `app.css`; adopt.
-- **D10 (lint and format):** choose Biome 2.6.8 over ESLint now: typescript-eslint cannot load under TypeScript 7.0 (the template `pnpm lint` fails), Biome checked all TS and TSX files; tune its config (tabs and quotes, Tailwind CSS directives, a11y rules) in P0 and keep Prettier or Biome format as one formatter.
-- **D11 (test runners):** vitest for unit tests (runs on every OS in CI), Playwright for browser and Electron specs; one Electron smoke test belongs in the three-OS job; the Linux-only and timing-sensitive specs need guards (`pgrep`, timing budgets) before moving to CI.
+- **D9 (tests and design review):** Storybook 10.6.8 with `@storybook/react-vite` works with Tailwind 4 tokens at no extra cost beyond importing `app.css`; adopt.
+- **D10 (lint and format):** choose Biome 2.6.8 over ESLint now: typescript-eslint cannot load under TypeScript 7.0 (the template `pnpm lint` fails), Biome checked all TS and TSX files; tune its config (tabs and quotes, Tailwind CSS directives, a11y rules) in P1a and keep Prettier or Biome format as one formatter.
+- **D9 (test runners):** vitest for unit tests (runs on every OS in CI), Playwright for browser and Electron specs; one Electron smoke test belongs in the three-OS job; the Linux-only and timing-sensitive specs need guards (`pgrep`, timing budgets) before moving to CI.
+- **D11 (Electron version policy):** the spike only ran on Electron 45.4.1.
 - **D13 (boundaries):** **Under TypeScript 7, without the swc parser (`@swc/core` plus `parser: 'swc'`) the check passes silently — it finds no violations at all (0 modules cruised), and CI stays green.** The boundary check must always ship with a self-test: `pnpm depcruise:selftest` runs the same rules on `tests/depcruise-fixture/` (a renderer file importing `node:fs`) and passes only if depcruise exits non-zero with `renderer-no-electron`; it is a CI step after the real check. With the fixture and `@swc/core` present it passes; with `@swc/core` removed it fails (verified). dependency-cruiser 18.9.0 then enforces renderer-no-electron and renderer-no-main; revisit when TypeScript is 7.1 or later.

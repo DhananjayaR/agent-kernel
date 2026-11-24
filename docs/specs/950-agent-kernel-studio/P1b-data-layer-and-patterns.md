@@ -40,7 +40,7 @@ Before building:
 - [ ] Review [architecture.md](architecture.md). Record the approval, and any change, in the README decision
       log.
 - [ ] Review [conventions-and-skills.md](conventions-and-skills.md). Same.
-- [ ] Add the form library and validator to the P0 decision record (D12).
+- [ ] Confirm D12 (strict Ajv, precompiled) still holds.
 
 ## Design gate
 

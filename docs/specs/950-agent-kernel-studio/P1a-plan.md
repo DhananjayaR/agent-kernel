@@ -51,7 +51,7 @@ dependency-cruiser, electron-builder, pnpm 12, Node 24.
 Recorded here and in the ledger; each says what it costs if wrong.
 
 1. **Linux only.** P1a's outcome and verification ask for Windows, macOS and green CI on three systems. The owner
-   deferred Windows and macOS, and the branch cannot be pushed yet (the account has read access only). So the
+   deferred Windows and macOS, and the branch cannot be pushed yet (no write access at the time of writing). So the
    three-system workflow is written and parsed but not executed, and every Windows, macOS and CI row is marked
    **Deferred**, not Pass. Cost if wrong: one CI run and its fixes once pushing is possible.
 2. **Branch.** App code goes on `feature/950-studio-p1a`, created from the plan branch

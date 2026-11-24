@@ -14,7 +14,7 @@ closer call than the brief expected (see the recommendation).
 | Criterion | Result | Evidence |
 |---|---|---|
 | Renderer code identical on both transports | Pass | One copy each of `src/renderer/src/bridge/contract.ts` and `src/renderer/src/spikes/BridgeSpike.tsx`, used by both runs (no second file, no build flag). `getTransport()` picks at runtime: `window.bridge` (exposed by the preload) means Electron IPC, otherwise `createWsTransport('ws://localhost:5181')`. The screen prints which one it got; `tests/bridge.spec.ts` sees `transport: websocket`, `tests/bridge.electron.spec.ts` sees `transport: electron-ipc`. Both specs call the same helpers in `tests/bridge-checks.ts`. |
-| Cancel stops the process on all three systems | Linux only: Pass. Windows and macOS: not run, pending CI | Linux: vitest `streams lines in batches and stops the process on cancel` (3 passed); Playwright on both transports (table below). `taskkill /T /F` (Windows) and `process.kill(-pid)` on macOS are untested. |
+| Cancel stops the process on all three systems | Linux only: Pass. Windows and macOS: deferred by the owner (23 Nov 2026) | Linux: vitest `streams lines in batches and stops the process on cancel` (3 passed); Playwright on both transports (table below). `taskkill /T /F` (Windows) and `process.kill(-pid)` on macOS are untested. |
 | A 10,000-line burst does not freeze the window | Pass on Linux | Both transports: count reached 10000, worst frame 17 ms (limit 100) in headless Chromium and in Electron under xvfb. A person should still watch it on a real display. |
 
 ### Step 10, scripted (Linux, WSL2). "Children" counts live `node -e` stream processes with `pgrep`.
@@ -28,7 +28,7 @@ closer call than the brief expected (see the recommendation).
 | Reload the page mid-stream | n/a | `page.reload()`: 0 children, and the reloaded page echoes again. Without the navigation hook in `main/index.ts` the same test fails (1 child left), so the hook is needed. |
 | Preload exposes only `bridge` | n/a | `window.electron` and `window.api` are `undefined`, `window.bridge` is an object |
 
-Windows: not run, pending CI. macOS: not run, pending CI. Windows and macOS Task Manager/Activity Monitor checks: not done, need a person.
+Windows and macOS: deferred by the owner (23 Nov 2026); Linux only for now. The CI workflow is written but has never run. Windows and macOS Task Manager/Activity Monitor checks: not done, need a person.
 
 Process-tree kill: the spike's child has no grandchildren, so the vitest test does not prove tree kill. Separately (a throwaway script, not in the
 repo) a detached `node` that spawned `sleep 61` was killed with `process.kill(-pid, 'SIGTERM')`: grandchild count 1 before, 0 after. That is
@@ -88,6 +88,8 @@ electron-vite 6.0.0, vite 8.3.8, typescript 7.0.2, @playwright/test 1.65.1, Node
 
 ## Recommendation for the decision record
 
+Decided 23 Nov 2026 by the owner: in-house contract, not oRPC (P0 D5). The text below is the spike's recommendation at the time.
+
 D5: the in-house contract (op id, zod schema, `request`/`subscribe`) is the leading option, with oRPC as the named alternative. This is a
 judgment call, not a settled result: the brief's rule ("if any answer is no, in-house") did not trigger, because all three oRPC answers
 were yes, and the decision record should present D5 as open. What leans it in-house, from what was observed: the bridge is 150 lines
@@ -108,7 +110,7 @@ operation count is known; either way keep `handlers.ts` transport-free.
 Test portability: `tests/bridge-checks.ts` counts children with `pgrep -fc`, which does not exist on macOS (no `-c`) or Windows, so the bridge
 Playwright specs (`bridge*.spec.ts`, `orpc*.spec.ts`) are Linux-only as written. Task 5's CI needs a portable process counter or must skip
 them on other systems; the vitest cancel test (`tests/handlers.test.ts`, via `runningProcessCount`) is the cross-platform check. Windows and
-macOS cancel remain unverified until Task 5's CI runs it there.
+macOS cancel remain unverified; the owner deferred both systems on 23 Nov 2026.
 
 D8: nothing observed argues against Zustand, TanStack Query or TanStack Router; none of them was exercised here. Recommend them as listed. One
 note for the stream UI: the screen holds only a count; a real log view should append batches to a store outside React state and render

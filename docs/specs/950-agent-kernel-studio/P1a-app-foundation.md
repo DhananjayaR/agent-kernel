@@ -5,7 +5,7 @@
 | Status | Started 24 November 2026. [Execution plan](P1a-plan.md); design gate at step 3 (options), waiting for the owner |
 | Business aspect | The Studio exists: it builds locally, opens a window, and looks like Agent Kernel |
 | Issue milestone | Before milestone 1 |
-| Depends on | [P0](P0-technology-selection.md). The stack and pinned versions are in its [decision record](P0-technology-selection.md#decision-record), which is in owner review: only D1a, D5 and D12 are approved so far. Windows and macOS were never run; CI on three systems must pass before this phase relies on those results. |
+| Depends on | [P0](P0-technology-selection.md). The stack and pinned versions are in its [decision record](P0-technology-selection.md#decision-record), which is in owner review: the choices of Vite and shadcn/ui were the owner's from the start, and D1a, D5 and D12 were approved after the spikes; everything else is pending. Windows and macOS were never run; CI on three systems must pass before this phase relies on those results. |
 | Unlocks | [P1b](P1b-data-layer-and-patterns.md); P12 reuses the build pipeline |
 | Screens | The desktop shell (top bar, tabs, bottom panel, status bar) and the component library in Storybook |
 

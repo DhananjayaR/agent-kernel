@@ -8,7 +8,7 @@
 | Depends on | Nothing |
 | Unlocks | P1a |
 | Screens | None. The spikes build throwaway screens only. |
-| Evidence | [research/tech-stack-evaluation.md](research/tech-stack-evaluation.md); spike notes [S1](research/spike-s1-components.md), [S2](research/spike-s2-build.md), [S3](research/spike-s3-bridge.md), [S4](research/spike-s4-canvas-code.md) |
+| Evidence | [research/tech-stack-evaluation.md](research/tech-stack-evaluation.md); spike notes [S1](research/spike-s1-components.md), [S2](research/spike-s2-build.md), [S3](research/spike-s3-bridge.md), [S4](research/spike-s4-canvas-code.md), [S5](research/spike-s5-coding-agent.md) |
 | Execution plan | [P0-plan.md](P0-plan.md): task-by-task steps for the spikes |
 
 ## Outcome
@@ -46,14 +46,14 @@ setup works and pin versions.
 | D2 | Styling | Tailwind CSS 4; plain CSS modules | **Decided: Tailwind CSS 4** (it comes with shadcn/ui), tokens in `@theme` | S1 |
 | D3 | Bundler and development loop | electron-vite (Vite 8); Rsbuild and Rspack with own glue; Electron Forge with Vite | **Decided: Vite.** Through electron-vite, provisionally; Electron Forge's Vite plugin is the fallback | S2 |
 | D4 | Packaging | electron-builder; Electron Forge makers | electron-builder | S2 |
-| D5 | Typed bridge | Own zod contract with a `Transport` interface; oRPC; tRPC | Own contract; adopt oRPC if it streams | S3 |
+| D5 | Typed bridge | Own zod contract with a `Transport` interface; oRPC; tRPC | **Decided (owner, 23 Nov 2026):** in-house contract, not oRPC | S3 |
 | D6 | Canvas | React Flow 13 or 12; others | React Flow with dagre | S4 |
 | D7 | Code viewer | CodeMirror 6; Monaco | CodeMirror 6 | S4 |
 | D8 | State, data, routing | Zustand, TanStack Query, TanStack Router; alternatives | As listed | S3 |
 | D9 | Tests and design review | Vitest, Playwright, Storybook | As listed | S2 |
 | D10 | Workspace and tooling | pnpm, Biome, TypeScript 7 or 6 | pnpm, Biome, TypeScript 7 | S2 |
 | D11 | Electron version policy | Latest stable; how often to upgrade | Latest stable at P1a start, upgrade each Electron major | S2 |
-| D12 | Forms and client-side validation | React Hook Form or TanStack Form; a JSON-schema validator (Ajv) or schemas converted to zod | React Hook Form with a JSON-schema validator, because config forms are generated from the kernel's JSON schema | S1 |
+| D12 | Forms and client-side validation | React Hook Form or TanStack Form; a JSON-schema validator (Ajv) or schemas converted to zod | **Decided (owner, 23 Nov 2026):** React Hook Form with strict Ajv, precompiled, because config forms are generated from the kernel's JSON schema | S1 |
 | D13 | Architecture checks | dependency-cruiser; Biome plugins or scripts for custom checks | dependency-cruiser plus small scripts | S2 |
 | D14 | Coding agent | Claude Agent SDK in the main process; the Claude Code CLI's streaming mode; the Agent Client Protocol | Claude Agent SDK driving the user's own installed, signed-in Claude Code; the Studio holds no credential | S5 |
 
@@ -140,7 +140,7 @@ a 10,000-line burst does not freeze the window.
 
 ### S4 · Canvas and code (D6, D7). Two days.
 
-- [ ] React Flow: 300 custom nodes (the spike used the briefs' glass style; nodes are solid in the app), pan and zoom stay smooth; auto-layout runs off the
+- [ ] React Flow: 300 custom nodes (the spike used the briefs' glass style; nodes are solid by default in the app, a judgment from S4), pan and zoom stay smooth; auto-layout runs off the
       main thread.
 - [ ] Decide React Flow 13 or the 12 pin.
 - [ ] CodeMirror: a 2,000-line Python file with highlighting, a side-by-side diff, YAML with inline errors from
@@ -179,15 +179,15 @@ sign-in had expired, so the live-turn item did not run.
 
 - [ ] (partly: found through `PATH` and an override; from a simulated launcher only "not installed" was seen, and the install-location lookup passed a stub test only) The adapter finds the user's `claude` executable and reads its version, in development and from the
       packaged app started from a desktop launcher (which does not get the terminal's `PATH`).
-- [x] (same version only) The SDK runs against that executable (`pathToClaudeCodeExecutable`), and installs without its own
+- [x] (same version only; reached `init` and the authentication error, no turn completed) The SDK drives that executable (`pathToClaudeCodeExecutable`), and installs without its own
       bundled one. If not, drive the executable's non-interactive mode directly.
-- [x] (working-subscription output not seen) Status without a turn: not installed, not signed in, ready, and the credential source. The command
+- [x] ("ready" seen only with an API key, not a subscription) Status without a turn: not installed, not signed in, ready, and the credential source. The command
       comes from Claude Code's documentation.
 - [ ] (**not run: the sign-in had expired**) A real turn on the sign-in streams; approve and deny both work; interrupt stops it; usage is reported;
       the agent reports a subscription source, not an API key.
 - [x] With `ANTHROPIC_API_KEY` set in the environment, the Studio shows that the key, not the subscription,
       is in use.
-- [x] (weaker check: `strace` was not installed) The Studio's process never reads a credential file or keychain entry (checked by tracing file opens).
+- [ ] (partly: `/proc/<pid>/fd` sampled every 2 ms, inotify and a grep; no `strace`, so a short open could be missed) The Studio's process never reads a credential file or keychain entry (checked by tracing file opens).
 - [x] (they load; they cannot yet load without also stopping the user's own hooks) Whether project settings load the files `ak skill install --assistant claude` writes
       (`.claude/commands`), and whether they can load without the project's hooks.
 
@@ -197,17 +197,18 @@ Code. Anthropic's confirmation that this use is allowed is not a P0 criterion: i
 
 ## Decision record
 
-Each row is also copied to the README decision log. All spike evidence is from Linux (WSL2) only. Every
-Windows and macOS item is **Deferred — Linux only for now**. Dates are the spike date. Approval is
-"Pending owner review" on every row except the three the owner decided on 23 November 2026 (D1a, D5 and
-D12).
+Rows that changed from provisional, or that the owner decided, are copied to the README decision log. All spike evidence is from Linux (WSL2) only. Every
+Windows and macOS item is **Deferred — Linux only for now**. Dates are the spike date. The choices of Vite and
+shadcn/ui, and the Spectrum 2 style, were the owner's from the start (23 November 2026, before P0 ran).
+D1a, D5 and D12 were approved by the owner after the spikes. Everything else, including versions and
+details, is "Pending owner review".
 
 | # | Decision | Chosen | Version pinned | Spike note | Date | Approved by |
 |---|---|---|---|---|---|---|
-| D1 | Component library | shadcn/ui on the React Aria base, restyled to resemble React Spectrum (Spectrum 2). shadcn/ui and the Spectrum 2 style were chosen by the owner earlier; the React Aria base is confirmed on Linux. We own `tree.tsx` (not in the shadcn registry) and a virtualised `table.tsx`. Two other libraries: splitter and toasts | shadcn 4.23.0 (style `aria-nova`), react-aria-components 1.22.1, cn 0.5.2, class-variance-authority 0.7.1, lucide-react 1.77.0, react-resizable-panels 4.24.1, sonner 2.0.8 | [S1](research/spike-s1-components.md) | 23 Nov 2026 | Pending owner review |
+| D1 | Component library | shadcn/ui on the React Aria base, restyled to resemble React Spectrum (Spectrum 2). shadcn/ui and the Spectrum 2 style were chosen by the owner earlier; the React Aria base is confirmed on Linux. We own `tree.tsx` (not in the shadcn registry) and a virtualised `table.tsx`. Two other libraries: splitter and toasts | shadcn 4.23.0 (style `aria-nova`), react-aria-components 1.22.1, cn 0.5.2, class-variance-authority 0.7.1, lucide-react 1.77.0, react-resizable-panels 4.24.1, sonner 2.0.8 | [S1](research/spike-s1-components.md) | 23 Nov 2026 | shadcn/ui and the Spectrum 2 style: Dhananjaya Rajasinghe (23 Nov 2026); versions and the React Aria base pending owner review |
 | D1a | Floating layers (menus, popovers, drawers, modals, toasts) | **Solid, as in Spectrum 2, not glass.** Decided in P0. Matches the Spectrum 2 style reference. S1 also found the brief's light-mode glass fill gave 2.67:1 title contrast and needed its own fill | n/a | [S1](research/spike-s1-components.md) | 23 Nov 2026 | Dhananjaya Rajasinghe |
-| D2 | Styling | Tailwind CSS 4, tokens in `@theme`, default colour palette removed, shadcn's semantic names mapped onto the Agent Kernel tokens. Needs a `cn` config kept in step with the tokens | tailwindcss 4.3.5, @tailwindcss/vite 4.3.5, tw-animate-css 1.4.0, @fontsource-variable/archivo 5.3.0, @fontsource/jetbrains-mono 5.3.0 | [S1](research/spike-s1-components.md) | 23 Nov 2026 | Pending owner review |
-| D3 | Bundler and development loop | Vite through electron-vite. No blocker on Linux; Electron Forge fallback not needed. Cold `electron-vite build` about 1.0 s, renderer hot reload about 58 ms, main restart about 131 ms. Windows and macOS: Deferred — Linux only for now | electron-vite 6.0.0, vite 8.3.8 | [S2](research/spike-s2-build.md) | 23 Nov 2026 | Pending owner review |
+| D2 | Styling | Tailwind CSS 4, tokens in `@theme`, default colour palette removed, shadcn's semantic names mapped onto the Agent Kernel tokens. Needs a `cn` config kept in step with the tokens | tailwindcss 4.3.5, @tailwindcss/vite 4.3.5, tw-animate-css 1.4.0, @fontsource-variable/archivo 5.3.0, @fontsource/jetbrains-mono 5.3.0 | [S1](research/spike-s1-components.md) | 23 Nov 2026 | Tailwind CSS 4 (it comes with shadcn/ui): Dhananjaya Rajasinghe (23 Nov 2026); versions and details pending owner review |
+| D3 | Bundler and development loop | Vite through electron-vite. No blocker on Linux; Electron Forge fallback not needed. Cold `electron-vite build` about 1.0 s, renderer hot reload about 58 ms, main restart about 131 ms. Windows and macOS: Deferred — Linux only for now | electron-vite 6.0.0, vite 8.3.8 | [S2](research/spike-s2-build.md) | 23 Nov 2026 | Vite: Dhananjaya Rajasinghe (23 Nov 2026); versions and electron-vite details pending owner review |
 | D4 | Packaging | electron-builder. AppImage and deb built and the packaged app starts on Linux. NSIS and dmg installers: Deferred — Linux only for now. Installing from an installer: not done, needs a person. Signing is P12 | electron-builder 26.18.0 | [S2](research/spike-s2-build.md) | 23 Nov 2026 | Pending owner review |
 | D5 | Typed bridge | **The in-house zod contract with the `Transport` interface, not oRPC.** Reason from S3: the same renderer code runs over Electron IPC and WebSocket, and the in-house IPC checks the sender on every message; oRPC's Electron path has no sender check. oRPC 1.16.5 also streamed, aborted and ran over WebSocket, so the choice is on those grounds, not on a failed test. Keep `handlers.ts` transport-free | zod 4.6.7; ws 8.23.0 (development WebSocket server only). oRPC 1.16.5 tried, not adopted | [S3](research/spike-s3-bridge.md) | 23 Nov 2026 | Dhananjaya Rajasinghe |
 | D6 | Canvas | React Flow 13 with dagre, layout in a worker. 13 passed; 12 not needed. Costs seen: 183 to 200 ms main-thread stall when 300 nodes mount; worst single frame 50 ms in the 300-node overview. Keyboard model open (see below) | @xyflow/react 13.0.2, @dagrejs/dagre 3.1.3 | [S4](research/spike-s4-canvas-code.md) | 23 Nov 2026 | Pending owner review |
@@ -218,7 +219,7 @@ D12).
 | D11 | Electron version policy | Provisional policy stands (latest stable at P1a start, upgrade each major). No spike tested a policy; the spikes only ran on one version | electron 45.4.1 (version the spikes ran on) | [S2](research/spike-s2-build.md) | 23 Nov 2026 | Pending owner review |
 | D12 | Forms and validation | **Strict validation.** React Hook Form with Ajv, `coerceTypes` off, so a string `"30"` for an integer `ttl` is rejected, in forms and in the YAML editor. Validators stay precompiled with Ajv standalone, because the renderer CSP blocks runtime compile. Generic rendering from the JSON schema plus a per-field override map (Optional sections, enum-like strings). Consequences: the spike validator was generated with `coerceTypes: true`, so it is regenerated; integer form fields convert to numbers on change themselves. Not checked: whether the kernel's own loader coerces | react-hook-form 7.92.0, ajv 8.20.0 (`ajv/dist/2020` and standalone), yaml 2.9.1 | [S1](research/spike-s1-components.md), [S4](research/spike-s4-canvas-code.md) | 23 Nov 2026 | Dhananjaya Rajasinghe |
 | D13 | Architecture checks | dependency-cruiser with the swc parser, plus a self-test as a CI step. **Hazard:** under TypeScript 7, if `@swc/core` is absent, dependency-cruiser passes silently ("1 modules, 0 dependencies") and CI stays green. `pnpm depcruise:selftest` runs the rules on a fixture and fails if the violation is not caught. Revisit at TypeScript 7.1 | dependency-cruiser 18.9.0, @swc/core 1.16.22 | [S2](research/spike-s2-build.md) | 23 Nov 2026 | Pending owner review |
-| D14 | Coding agent | **Revised 24 Nov 2026.** Owner's decision: use the subscription of the Claude Code already on the user's machine. The Studio runs the user's own installed, signed-in Claude Code (normally a subscription) through the Claude Agent SDK, behind one adapter in the main process. The Studio holds no credential, shows no login and does not ship the executable. **Ran on Linux:** the SDK against an external Claude Code (same version only), without its bundled executable (767 MB down to 404 MB unpacked); status from `claude auth status`; the credential source shown; an expired sign-in and a wrong key both map to one error. **Not run:** any turn on a working subscription (streaming, approve, deny, interrupt, usage): the spike machine's sign-in had expired. **Found:** a user with only the Claude desktop app has no `claude` command; the SDK's `sessionStore` appears to read the credential file (from reading its code, not exercised) and must not be used; the spike machine runs Claude Code through the desktop app on a subscription, yet reported "not installed" and "not signed in". **Open:** Anthropic's pages do not state that a third-party app may do this; the owner confirms with Anthropic before P6 starts. That the Studio itself never takes or stores the subscription token is our reading of Anthropic's rules, awaiting the owner's confirmation. S5's results for the earlier pasted-key design (adapter, approvals, error shape, untrusted folder) carry over; its key store and isolated environment do not | @anthropic-ai/claude-agent-sdk 0.3.330 | [S5](research/spike-s5-coding-agent.md) | 24 Nov 2026 | Pending owner review; use of the subscription decided by Dhananjaya Rajasinghe |
+| D14 | Coding agent | **Revised 24 Nov 2026.** Owner's decision: use the subscription of the Claude Code already on the user's machine. The Studio runs the user's own installed, signed-in Claude Code (normally a subscription) through the Claude Agent SDK, behind one adapter in the main process. The Studio holds no credential, shows no login and does not ship the executable. **Ran on Linux:** the SDK against an external Claude Code (same version only), installed without its bundled executable (767 MB down to 404 MB unpacked), reaching `init` and the authentication error; status from `claude auth status`; the credential source shown; an expired sign-in and a wrong key both map to one error. **Not run:** any turn on a working subscription (streaming, approve, deny, interrupt, usage): the spike machine's sign-in had expired. **Found:** a user with only the Claude desktop app has no `claude` command; the SDK's `sessionStore` appears to read the credential file (from reading its code, not exercised) and must not be used; the spike machine runs Claude Code through the desktop app on a subscription, yet reported "not installed" and "not signed in". **Open:** Anthropic's pages do not state that a third-party app may do this; the owner confirms with Anthropic before P6 starts. That the Studio itself never takes or stores the subscription token is our reading of Anthropic's rules, awaiting the owner's confirmation. S5's results for the earlier pasted-key design (adapter, approvals, error shape, untrusted folder) carry over; its key store and isolated environment do not | @anthropic-ai/claude-agent-sdk 0.3.330 | [S5](research/spike-s5-coding-agent.md) | 24 Nov 2026 | Pending owner review; use of the subscription decided by Dhananjaya Rajasinghe |
 
 **Where a spike changed a provisional choice.** D5 was "own contract; adopt oRPC if it streams". oRPC
 streamed, so the rule did not trigger; the owner chose the in-house contract on the sender-check and
@@ -249,7 +250,7 @@ match the provisional choice.
 - [ ] S3 The bridge. Ran on Linux; cancel on Windows and macOS not run
 - [ ] S4 Canvas and code. Ran on Linux, software-rendered; cold-open target missed; real-GPU check not done
 - [ ] S5 Coding agent. The pasted-key half ran on Linux and is superseded; the mechanics of the user's-own-Claude-Code half ran; a turn on a working subscription has not
-- [ ] Decision record complete and approved. Drafted; D1a, D5 and D12 approved 23 Nov 2026; the rest pending owner review
+- [ ] Decision record complete and approved. Drafted; the owner chose Vite and shadcn/ui (and the Spectrum 2 style) on 23 Nov 2026 before P0 ran; D1a, D5 and D12 approved after the spikes; the rest pending owner review
 - [ ] Spike code deleted or archived outside `ak-studio/`. Left on branch `spike/950-studio-p0` until P1a starts
 
 ## Exit criteria
@@ -258,7 +259,7 @@ match the provisional choice.
   spike exercised and has no pinned version, and D11, which pins only the version the spikes ran on.
 - Each choice has a spike note in `research/`. **Met.**
 - Any constraint that could not be met is written down with its consequence. **Below.**
-- Owner approval of the record. **Open** for every row except D1a, D5 and D12.
+- Owner approval of the record. **Open** for every row except D1a, D5 and D12, and for the versions and details under the owner's choices of Vite, shadcn/ui and Tailwind.
 
 ### Constraints, as shown by the spikes
 
@@ -294,8 +295,8 @@ match the provisional choice.
 - A side-by-side visual check that the components read as the same family as Spectrum 2 (the pass is by
   measurement only).
 - A screen-reader pass (NVDA, VoiceOver or Orca).
-- Canvas smoothness, and glass against solid on canvas nodes, on a real GPU display. The software-rendered
-  runs cannot show `backdrop-filter` cost.
+- Canvas smoothness on a real GPU display. The software-rendered runs cannot show `backdrop-filter` cost.
+  Canvas nodes: solid by default (judgment, S4); a GPU comparison only if glass nodes are reconsidered.
 - CodeMirror preload on idle (or on hover) to meet the 200 ms cold-open target. Measured cold open was 360 to
   382 ms; the remedy was not tried.
 - Installing from an installer; watching the 10,000-line burst on a real display; closing a window

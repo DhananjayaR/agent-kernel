@@ -32,7 +32,7 @@ Status values: Not started, Design, In progress, In review, Done.
 | P11 | The remaining targets | 6 | Not started | n/a | [outline](later-phases.md#p11--the-remaining-targets) |
 | P12 | Packaging and release | 7 | Not started | No | [outline](later-phases.md#p12--packaging-and-release) |
 
-**Next action:** owner review of the [P0 decision record](P0-technology-selection.md#decision-record), and one live turn of spike S5 on a working Claude Code sign-in (the spike machine's had expired). Then the P1a design gate. Anthropic's confirmation of the coding-agent design is needed before P6, not before P1a. Windows and macOS are deferred.
+**Next action:** owner review of the [P0 decision record](P0-technology-selection.md#decision-record), the open P1a design-gate decision (waiting for the owner), and one live turn of spike S5 on a working Claude Code sign-in (the spike machine's had expired). Anthropic's confirmation of the coding-agent design is needed before P6, not before P1a. Windows and macOS are deferred.
 
 P0 to P3 (including P1a and P1b) are detailed and can be picked up as written. P4 to P12 are outlines; each is detailed when the phase
 before it is close to done.
@@ -44,7 +44,7 @@ before it is close to done.
    before its UI is built. The existing briefs and design canvas are unapproved input: use them as a starting
    sketch, and do not reopen the requirements in the issue.
 3. **Build.** Work through the phase's work packages. Tick them in the phase doc.
-4. **Verify.** Run the phase's verification list on all three operating systems.
+4. **Verify.** Run the phase's verification list on all three operating systems (Windows and macOS deferred by the owner; Linux only until further notice).
 5. **Close.** Set the status here to Done, add decisions to the log below, and detail the next phase.
 
 ## Order and dependencies
@@ -111,9 +111,9 @@ Detail: [P2](P2-project-and-kernel-version.md).
 | 23 Nov 2026 | Changed from provisional: the architecture check is dependency-cruiser with the swc parser and a CI self-test, because without `@swc/core` it passes silently under TypeScript 7. Pending owner review | [P0](P0-technology-selection.md) D13, [S2](research/spike-s2-build.md) |
 | 23 Nov 2026 | Changed from provisional: ESLint is dropped, Biome lints, because typescript-eslint cannot load under TypeScript 7.0. Pending owner review | [P0](P0-technology-selection.md) D10, [S2](research/spike-s2-build.md) |
 | 23 Nov 2026 | Windows and macOS are deferred; Phase 0 evidence is from Linux. Decided by Dhananjaya Rajasinghe | [P0](P0-technology-selection.md#exit-criteria) |
-| 23 Nov 2026 | New requirement: the Studio takes a key from the user and drives Claude with it to build agents. Spike S5 and decision D14 added to P0; the Claude Agent SDK runs in the main process and holds the key there. Replaces "the app never stores credentials" | [architecture](architecture.md#the-coding-agent-and-the-users-claude-code), [P6](later-phases.md#p6--build-with-ai) |
+| 23 Nov 2026 | New requirement: the Studio takes a key from the user and drives Claude with it to build agents. Spike S5 and decision D14 added to P0; the Claude Agent SDK runs in the main process and holds the key there. Replaces "the app never stores credentials". (Superseded 24 Nov 2026; see the next row) | [architecture](architecture.md#the-coding-agent-and-the-users-claude-code), [P6](later-phases.md#p6--build-with-ai) |
 | 24 Nov 2026 | The coding agent uses the user's own Claude Code, already installed and signed in with a subscription. Decided by Dhananjaya Rajasinghe. Replaces the pasted-key design of 23 Nov. That the Studio itself never takes or stores the subscription token is our reading of Anthropic's rules, awaiting the owner's confirmation; under it, "the app never stores credentials" stands again. Mechanics ran on 24 Nov; no turn has run on a subscription; needs Anthropic's confirmation before P6 | [architecture](architecture.md#the-coding-agent-and-the-users-claude-code), [P0](P0-technology-selection.md) D14 |
-| 24 Nov 2026 | P1a started at the owner's request. The P0 record is still in review (only D1a, D5, D12 approved); P1a builds on the drafted rows and is Linux only, with the three-system CI written but not executed | [P1a-plan.md](P1a-plan.md) |
+| 24 Nov 2026 | P1a started at the owner's request. The P0 record is still in review (the choices of Vite and shadcn/ui were the owner's from the start; D1a, D5 and D12 were approved after the spikes; everything else is pending); P1a builds on the drafted rows and is Linux only, with the three-system CI written but not executed | [P1a-plan.md](P1a-plan.md) |
 
 ## Open decisions
 
@@ -122,7 +122,7 @@ Detail: [P2](P2-project-and-kernel-version.md).
 | 1 | Owner review of the rest of the P0 decision record. D8 (state, data, routing) was not exercised by any spike; D11 (Electron policy) was not tested. Windows and macOS are deferred by the owner | End of P0 | [P0 decision record](P0-technology-selection.md#decision-record) |
 | 1e | Coding agent (D14): the Studio uses the user's own signed-in Claude Code (decided 24 Nov 2026) and, on our reading of Anthropic's rules, holds no credential. Open: the owner's confirmation of that reading; Anthropic's confirmation that a third-party app may do this; a live turn on a working sign-in (the spike machine's had expired; the mechanics ran); what a user with only the Claude desktop app is told: the spike machine is one, and it reported "not installed" and "not signed in", so such a user may have to install and sign in to Claude Code separately | End of P0 for the spike; before P6 starts for Anthropic | [S5](research/spike-s5-coding-agent.md), [architecture](architecture.md#the-coding-agent-and-the-users-claude-code) |
 | 1c | Canvas keyboard model: Tab reaches the first node only after all edges; `edgesFocusable={false}` fixes it but loses edge keyboard access | P3 design gate | [S4](research/spike-s4-canvas-code.md) |
-| 1d | CodeMirror cold open missed 200 ms (360 to 382 ms); try preload on idle. Also needs a person: side-by-side look against Spectrum 2, screen-reader pass, canvas and glass/solid on a real GPU | P1a design gate | [P0 exit criteria](P0-technology-selection.md#exit-criteria) |
+| 1d | CodeMirror cold open missed 200 ms (360 to 382 ms); try preload on idle. Also needs a person: side-by-side look against Spectrum 2, screen-reader pass, canvas smoothness on a real GPU (nodes are solid by default; compare glass only if reconsidered) | P1a design gate | [P0 exit criteria](P0-technology-selection.md#exit-criteria) |
 | 2 | Studio primary colour: the briefs say blue, the current brand tokens say orange | P1a design gate | [design-process.md](design-process.md) |
 | 3 | Product name and app identifier | P1a (working name is fine until P12) | The repository is now branded Open Agent Kernel |
 | 4 | Supported floor version | P2 | |

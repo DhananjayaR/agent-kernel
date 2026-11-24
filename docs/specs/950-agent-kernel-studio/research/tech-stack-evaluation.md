@@ -5,7 +5,7 @@ npm registry on that date unless a link is given. Items marked _unverified_ coul
 primary source. [P0](../P0-technology-selection.md) turns this into decisions by running spikes.
 
 **Decided after this research (23 November 2026):** Vite as the bundler and shadcn/ui with Tailwind as the
-component library. The comparisons below are kept as the record of why.
+component library. Later decided in P0 (23 Nov): in-house bridge, not oRPC (D5); strict validation (D12); solid floating layers (D1a). The comparisons below are kept as the record of why.
 
 ## What the stack must do
 

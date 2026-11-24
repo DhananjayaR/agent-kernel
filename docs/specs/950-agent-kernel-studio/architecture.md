@@ -270,7 +270,7 @@ flowchart LR
 - **The user's installation, not a bundled one.** The adapter finds the user's `claude` executable and points
   the SDK at it (`pathToClaudeCodeExecutable`). The Studio does not ship or modify the executable, which
   also takes the bundled executable out of the installer (767 MB down to 404 MB unpacked on Linux) and removes
-  the earlier asar workaround. (Verified in S5: the SDK installs and runs without its bundled executable.)
+  the earlier asar workaround. (Verified in S5: the SDK installs without its bundled executable and reaches `init` and the authentication error against an external Claude Code.)
   Version skew is barely tested: SDK 0.3.330 met Claude Code 2.1.330, its own version, and reached the
   sign-in error against 2.1.321. `agent.status` enforces a lowest supported version. The install locations in the spike were written from memory and must be checked against the documentation.
 - **Finding it.** The adapter looks on `PATH`, then in the documented install locations, then at a path the

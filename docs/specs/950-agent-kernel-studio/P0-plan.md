@@ -4,7 +4,7 @@
 > superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for
 > tracking.
 
-**Goal:** Run the four P0 spikes, record what was found, and fill the P0 decision record with pinned versions.
+**Goal:** Run the five P0 spikes (S1 to S5), record what was found, and fill the P0 decision record with pinned versions.
 
 **Architecture:** One throwaway Electron app, `ak-studio-spikes/app`, built with electron-vite. Each spike adds
 one screen to it. Spike code lives on its own branch and is never merged; only the findings notes and the
@@ -41,7 +41,7 @@ contradict: [architecture.md](architecture.md).
 - **Several of these tools are newer than the examples below were written against.** If a command or API does
   not behave as written, read its `--help` or docs, make the smallest change that works, and **record the
   difference in the spike note**. A difference is a finding, not a failure.
-- **Time boxes** from the spec: S1 three days, S2 two days, S3 two days, S4 two days. An overrun is recorded
+- **Time boxes** from the spec: S1 three days, S2 two days, S3 two days, S4 two days, S5 under one day. An overrun is recorded
   and counts against the candidate.
 - **Every task ends with a findings note** in `docs/specs/950-agent-kernel-studio/research/`, in this shape:
 
@@ -80,6 +80,7 @@ ak-studio-spikes/                 on branch spike/950-studio-p0 only
     tests/                        Vitest and Playwright
 docs/specs/950-agent-kernel-studio/research/
   spike-s1-components.md  spike-s2-build.md  spike-s3-bridge.md  spike-s4-canvas-code.md
+  spike-s5-coding-agent.md
 .github/workflows/studio-spike.yml   on the spike branch only
 ```
 
@@ -995,6 +996,8 @@ It is unsigned; signing is P12.
 
 - [ ] **Step 6: CI on three operating systems**
 
+Deferred by the owner, 23 Nov 2026: not pushed, not run. The workflow is written; it has never run.
+
 `.github/workflows/studio-spike.yml`, at the repository root on the spike branch:
 
 ```yaml
@@ -1064,7 +1067,7 @@ git commit -m "docs(spike): S2 findings" && git push
   `docs/specs/950-agent-kernel-studio/P1a-app-foundation.md` (stack names)
 
 **Interfaces:**
-- Consumes: the four spike notes.
+- Consumes: the five spike notes.
 - Produces: a complete, approved decision record on the plan branch.
 
 - [ ] **Step 1: Bring the notes back to the plan branch**
@@ -1075,11 +1078,11 @@ git checkout spike/950-studio-p0 -- docs/specs/950-agent-kernel-studio/research
 git status --short
 ```
 
-Expected: only the four `spike-s*.md` files are new. Nothing under `ak-studio-spikes/`.
+Expected: only the five `spike-s*.md` files are new. Nothing under `ak-studio-spikes/`.
 
 - [ ] **Step 2: Fill the decision record**
 
-In `P0-technology-selection.md`, complete every row D1 to D13 of the "Decision record" table: the choice, the
+In `P0-technology-selection.md`, complete every row D1 to D14 of the "Decision record" table: the choice, the
 exact pinned version that worked, a link to the spike note, the date. Where a spike disagreed with the
 provisional choice, the spike wins; say so in one line under the table.
 
@@ -1096,7 +1099,7 @@ approver and date in the table.
 - [ ] **Step 5: Update the tracker and the next phase**
 
 - `README.md`: set P0 to Done; add one decision-log row per decision that changed from provisional; remove
-  open decisions 1 and 1a; set "Next action" to the P1a design gate.
+  open decisions 1, 1e, 1c and 1d; set "Next action" to the P1a design gate.
 - `P1a-app-foundation.md`: replace the "provisional choices" sentence in "Depends on" with a link to the
   decision record, and correct any stack name or version in the work packages.
 - `P0-technology-selection.md`: tick the checklist; set Status to Done.
@@ -1115,6 +1118,8 @@ git push origin --delete spike/950-studio-p0 && git branch -D spike/950-studio-p
 ```
 
 ---
+
+Note: the checkboxes in this plan are not used for status. Task 7 and Task 8 say in their prose which steps ran.
 
 ### Task 7: Coding agent, pasted-key design (S5 first half, D14) — superseded
 

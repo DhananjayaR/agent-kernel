@@ -73,7 +73,7 @@ Component names are working names until the P1a design gate.
   the command palette; a clash fails a test.
 - **Composite widgets have a written keyboard model.** The canvas, the tree, the data table and the trace
   view each document how arrow keys, Tab, Enter and Escape behave, and have a scripted keyboard test. For the
-  canvas: Tab moves between nodes in reading order, arrows move to connected nodes, Enter opens the inspector,
+  canvas (target; the tab-order design is open decision 1c, settled at the P3 design gate): Tab moves between nodes in reading order, arrows move to connected nodes, Enter opens the inspector,
   and every drag action has a keyboard or menu equivalent.
 - **Focus:** moves into a modal or drawer when it opens and back to its trigger when it closes. Never lost to
   the page body.

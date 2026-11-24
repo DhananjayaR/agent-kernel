@@ -239,3 +239,4 @@ electron 45.4.1, electron-vite 6.0.0, vite 8.3.8, typescript 7.0.2, React 19.3.0
   rendering plus a per-field override map for unions/Optional sections and enum-like strings.
 - Design gate inputs: solid and glass floating layers are both built; glass needs a separate light-mode
   fill to stay readable.
+- Decided 23 Nov 2026: D12 strict (`coerceTypes` off, validator regenerated); D1a solid floating layers.

@@ -128,7 +128,7 @@ requests as cards; sees what changed on the canvas and in a diff; accepts or rev
 
 - One agent-neutral coding-agent interface: start a session, send a prompt, stream events, relay permission
   requests, report changed files. The Claude Agent SDK, driving the user's own Claude Code, is its only
-  adapter ([architecture](architecture.md#the-coding-agent-and-the-users-claude-code), decided in P0 as D14).
+  adapter ([architecture](architecture.md#the-coding-agent-and-the-users-claude-code), D14 in the P0 record: use of the subscription decided; the row is pending review).
 - Checkpoint before each turn: git when the folder is a repository, the app's own snapshot otherwise. Accept
   and revert belong to the app, not to the adapter.
 - The agent's commands appear in the Commands panel, marked as the agent's.

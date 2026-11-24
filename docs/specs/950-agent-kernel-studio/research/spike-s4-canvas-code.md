@@ -113,7 +113,7 @@ Before the lazy split the renderer was one 4,016 kB (unminified) chunk.
 keyboard model exists out of the box. The costs seen: a 183 to 200 ms main-thread stall when 300 nodes mount, and a worst single frame of 50 ms during pan and
 zoom of the 300-node overview. Dagre is sufficient at this size; it was not tried above 300 nodes or with nested groups. On `backdrop-filter`, this spike
 has no result: software rendering cannot show GPU blur cost and 300 full-size nodes never share a viewport. Defaulting canvas nodes to solid
-(`--color-surface`) until a person compares the "glass nodes" toggle on real hardware is a judgment, not a measured finding. Plan for:
+(`--color-surface`) is a judgment, not a measured finding; a GPU comparison of the "glass nodes" toggle is owed only if glass nodes are reconsidered. Plan for:
 controlled-state boilerplate (`useNodesState`), `forceColorMode` tied to the app theme, tab order (299 edge stops before the first node; `edgesFocusable={false}`
 fixes that but removes keyboard access to edges), and the mount stall. Pin 13.0.x exactly; it is seven days old.
 
@@ -122,6 +122,6 @@ diff, and linting accepts a custom Ajv + YAML source. Nothing was missing, but f
 for the merge view, `linter` `delay`, and filtering `anyOf` noise from pydantic-style schemas. The `yaml` package is needed alongside it. Budget about 0.6 MB
 (196 kB gzipped) of minified renderer JS for the Code screen. Opening the Code tab cold in the built app took 360 to 382 ms against the brief's 200 ms (warm 22 to
 27 ms), so lazy-loading alone is not enough: add a preload when idle or when the pointer is over the Code tab (not tried in this spike, so it is an untested remedy).
-Decision still open for the form work, not settled here: the precompiled validator is generated with `coerceTypes: true`, which made `ttl: "30"` pass without an
+Decided 23 Nov 2026: strict (`coerceTypes` off), P0 D12; the validator is regenerated. What the spike found: the precompiled validator is generated with `coerceTypes: true`, which made `ttl: "30"` pass without an
 error. Studio has to choose between strict validation in the editor (what the user sees matches what is on disk) and coercing the way the kernel's own loader does (not checked in this spike),
 and regenerate the validator accordingly.
