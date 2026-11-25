@@ -5,7 +5,7 @@
 		"ignoreUnknown": false,
 		"includes": ["**", "!**/tools/depcruise-selftest/fixture"]
 	},
-	"formatter": { "enabled": true, "indentStyle": "tab" },
+	"formatter": { "enabled": true, "indentStyle": "tab", "lineEnding": "lf" },
 	"linter": { "enabled": true, "rules": { "preset": "recommended" } },
 	"javascript": { "formatter": { "quoteStyle": "double" } },
 	"css": { "parser": { "tailwindDirectives": true } },

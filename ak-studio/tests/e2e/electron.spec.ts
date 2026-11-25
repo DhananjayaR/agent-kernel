@@ -23,10 +23,14 @@ type WithHooks = { __akStudioTestHooks?: StudioTestHooks };
 interface Studio {
 	app: ElectronApplication;
 	page: Page;
-	close(): Promise<void>;
 }
 
-async function launchStudio(): Promise<Studio> {
+/**
+ * Launches the built app with a fresh data folder, runs `body`, then closes the app and removes the folder. The
+ * folder is removed even if the launch, the body or `app.close()` throws; removal retries, since on Windows the
+ * app's child processes can hold files for a moment after close.
+ */
+async function withStudio(body: (studio: Studio) => Promise<void>) {
 	const desktopDir = resolve(test.info().project.testDir, "../../apps/desktop");
 	const mainEntry = join(desktopDir, "out/main/index.js");
 	if (!existsSync(mainEntry)) {
@@ -38,7 +42,6 @@ async function launchStudio(): Promise<Studio> {
 	const executablePath = createRequire(join(desktopDir, "package.json"))(
 		"electron",
 	) as string;
-	const userDataDir = mkdtempSync(join(tmpdir(), "ak-studio-e2e-"));
 	const env: Record<string, string> = {};
 	for (const [key, value] of Object.entries(process.env)) {
 		if (value !== undefined && key !== "ELECTRON_RENDERER_URL")
@@ -46,24 +49,34 @@ async function launchStudio(): Promise<Studio> {
 	}
 	env.AK_STUDIO_TEST_HOOKS = "1";
 
-	const app = await electron.launch({
-		executablePath,
-		args: [desktopDir, `--user-data-dir=${userDataDir}`],
-		cwd: desktopDir,
-		env,
-		// No emulation (null is Playwright's "no override"): prefers-color-scheme comes from Electron's nativeTheme,
-		// which follows the stored preference.
-		colorScheme: null,
-	});
-	const page = await app.firstWindow();
-	return {
-		app,
-		page,
-		async close() {
-			await app.close();
-			rmSync(userDataDir, { recursive: true, force: true });
-		},
-	};
+	let userDataDir: string | undefined;
+	let app: ElectronApplication | undefined;
+	try {
+		userDataDir = mkdtempSync(join(tmpdir(), "ak-studio-e2e-"));
+		app = await electron.launch({
+			executablePath,
+			args: [desktopDir, `--user-data-dir=${userDataDir}`],
+			cwd: desktopDir,
+			env,
+			// No emulation (null is Playwright's "no override"): prefers-color-scheme comes from Electron's
+			// nativeTheme, which follows the stored preference.
+			colorScheme: null,
+		});
+		await body({ app, page: await app.firstWindow() });
+	} finally {
+		try {
+			await app?.close();
+		} finally {
+			if (userDataDir) {
+				rmSync(userDataDir, {
+					recursive: true,
+					force: true,
+					maxRetries: 5,
+					retryDelay: 200,
+				});
+			}
+		}
+	}
 }
 
 /** The request gate's cancelled-request counter and newest URLs, read in main. */
@@ -81,9 +94,7 @@ function cancelledRequests(
 }
 
 test("built app starts and shows the version from the real main process", async () => {
-	const studio = await launchStudio();
-	try {
-		const { page, app } = studio;
+	await withStudio(async ({ app, page }) => {
 		const main = await app.evaluate(({ app }) => ({
 			version: app.getVersion(),
 			platform: process.platform,
@@ -92,15 +103,11 @@ test("built app starts and shows the version from the real main process", async 
 		await expect(page.getByTestId("version")).toHaveText(main.version);
 		await expect(page.getByTestId("platform")).toHaveText(main.platform);
 		expect(page.url()).toBe("app://studio/");
-	} finally {
-		await studio.close();
-	}
+	});
 });
 
 test("theme switch reaches the main process", async () => {
-	const studio = await launchStudio();
-	try {
-		const { page, app } = studio;
+	await withStudio(async ({ app, page }) => {
 		const html = page.locator("html");
 		const select = page.getByTestId("theme");
 		await expect(page.getByTestId("stored-theme")).toHaveText("system");
@@ -115,33 +122,25 @@ test("theme switch reaches the main process", async () => {
 			}));
 			expect(native).toEqual({ source: theme, dark: theme === "dark" });
 		}
-	} finally {
-		await studio.close();
-	}
+	});
 });
 
 // The request gate sits on Chromium's network stack (session.webRequest): it sees the renderer's requests and
 // main's `net` requests, not Node networking (`fetch`, `http`, `net` modules) in the main process.
 test("makes no network request (Chromium requests only; Node networking in main is not covered)", async () => {
-	const studio = await launchStudio();
-	try {
-		const { page } = studio;
+	await withStudio(async ({ app, page }) => {
 		await expect(page.getByTestId("version")).not.toBeEmpty();
 		await page.getByTestId("theme").selectOption("dark");
 		await expect(page.getByTestId("stored-theme")).toHaveText("dark");
 		// Fonts and the rest of the page have loaded.
 		await page.evaluate(() => document.fonts.ready.then(() => undefined));
 		// Read last, after everything the page does at start and on a theme switch.
-		expect(await cancelledRequests(studio.app)).toEqual({ count: 0, urls: [] });
-	} finally {
-		await studio.close();
-	}
+		expect(await cancelledRequests(app)).toEqual({ count: 0, urls: [] });
+	});
 });
 
 test("the request gate counts a refused request (so a zero count means something)", async () => {
-	const studio = await launchStudio();
-	try {
-		const { app, page } = studio;
+	await withStudio(async ({ app, page }) => {
 		await expect(page.getByTestId("version")).not.toBeEmpty();
 		const outcome = await app.evaluate(async ({ net }) => {
 			try {
@@ -156,7 +155,5 @@ test("the request gate counts a refused request (so a zero count means something
 			count: 1,
 			urls: ["https://example.invalid/"],
 		});
-	} finally {
-		await studio.close();
-	}
+	});
 });

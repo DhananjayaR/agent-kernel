@@ -1,0 +1,3 @@
+# LF everywhere, also on Windows checkouts (core.autocrlf=true on GitHub's Windows runners): Biome's formatter
+# expects LF, and tests compare text fixtures byte for byte. Git still detects binary files (text=auto).
+* text=auto eol=lf

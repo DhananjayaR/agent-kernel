@@ -106,6 +106,27 @@ export function resolveDevServerUrl(
 	return envValue;
 }
 
+/**
+ * Chromium switches that open the DevTools protocol to other processes. No Electron fuse covers them, and the
+ * endpoint takes connections without authentication, so a packaged build refuses to start with either.
+ */
+export const REFUSED_PACKAGED_SWITCHES = [
+	"remote-debugging-port",
+	"remote-debugging-pipe",
+] as const;
+
+/**
+ * The first refused switch present on a packaged build's command line, or undefined. Unpackaged builds accept
+ * them (Playwright drives those). `hasSwitch` is `app.commandLine.hasSwitch`.
+ */
+export function refusedPackagedSwitch(
+	isPackaged: boolean,
+	hasSwitch: (name: string) => boolean,
+): string | undefined {
+	if (!isPackaged) return undefined;
+	return REFUSED_PACKAGED_SWITCHES.find((name) => hasSwitch(name));
+}
+
 /** Scheme and host only, for logs: full URLs can carry paths and query strings that do not belong in a log. */
 export function describeOrigin(rawUrl: string): string {
 	try {

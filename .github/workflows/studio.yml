@@ -43,9 +43,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          # The token is not left in .git/config while dependency install scripts and tests run.
+          persist-credentials: false
 
       - name: Set up pnpm (version from ak-studio/package.json packageManager)
-        uses: pnpm/action-setup@v6
+        # Third-party action: pinned to a commit.
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
           package_json_file: ak-studio/package.json
 
@@ -88,7 +92,12 @@ jobs:
       # verified on a runner: remove this step if the e2e tests pass without it.
       - name: Allow Electron's user-namespace sandbox (Linux)
         if: runner.os == 'Linux'
-        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+        run: |
+          if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          else
+            echo "kernel.apparmor_restrict_unprivileged_userns not present: nothing to change"
+          fi
 
       # Builds the app, then runs Playwright's browser and Electron projects (under xvfb-run -a on Linux).
       - name: End-to-end tests

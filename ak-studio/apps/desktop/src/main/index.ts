@@ -25,6 +25,7 @@ import {
 	installDevCspHeader,
 	installRequestGate,
 	RequestGate,
+	refusedPackagedSwitch,
 	resolveDevServerUrl,
 } from "./security";
 import { AppService, PREFERENCES_FILE } from "./services/AppService";
@@ -48,16 +49,28 @@ declare global {
 	var __akStudioTestHooks: StudioTestHooks | undefined;
 }
 
+// A packaged build refuses the remote-debugging switches (the DevTools protocol, unauthenticated; no fuse covers
+// it). Checked first and synchronously, so the app exits (below, before the single-instance lock) before
+// Chromium opens the port.
+let startupError: string | undefined;
+const refusedSwitch = refusedPackagedSwitch(app.isPackaged, (name) =>
+	app.commandLine.hasSwitch(name),
+);
+if (refusedSwitch) {
+	startupError = `--${refusedSwitch} is not accepted by a packaged build`;
+}
+
 // The electron-vite dev server: trusted only in unpackaged builds, and only on a loopback host.
 let devServerUrl: string | undefined;
-let startupError: string | undefined;
-try {
-	devServerUrl = resolveDevServerUrl(
-		app.isPackaged,
-		process.env.ELECTRON_RENDERER_URL,
-	);
-} catch (err) {
-	startupError = err instanceof Error ? err.message : String(err);
+if (!startupError) {
+	try {
+		devServerUrl = resolveDevServerUrl(
+			app.isPackaged,
+			process.env.ELECTRON_RENDERER_URL,
+		);
+	} catch (err) {
+		startupError = err instanceof Error ? err.message : String(err);
+	}
 }
 
 // Unpackaged builds get their own name and data folder, so `pnpm dev` and an installed app share neither data
@@ -120,6 +133,9 @@ function createWindow(): BrowserWindow {
 	win.once("ready-to-show", () => {
 		if (state.isMaximized) win.maximize();
 		win.show();
+		// One line on stdout: the packaged-build check (README, Linux results) waits for it, since a packaged
+		// build cannot be driven by Playwright or CDP.
+		console.log("[studio] window shown");
 	});
 	win.on("closed", () => {
 		if (mainWindow === win) mainWindow = null;

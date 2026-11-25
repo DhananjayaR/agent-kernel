@@ -12,7 +12,9 @@ import {
 	isNavigationAllowed,
 	isRequestAllowed,
 	MAX_RECORDED_URLS,
+	REFUSED_PACKAGED_SWITCHES,
 	RequestGate,
+	refusedPackagedSwitch,
 	resolveDevServerUrl,
 } from "./security";
 
@@ -145,6 +147,45 @@ describe("isLoopbackDevServerUrl / resolveDevServerUrl", () => {
 		expect(resolveDevServerUrl(true, "http://localhost:5173")).toBeUndefined();
 		expect(resolveDevServerUrl(false, undefined)).toBeUndefined();
 		expect(resolveDevServerUrl(false, "")).toBeUndefined();
+	});
+});
+
+describe("refusedPackagedSwitch", () => {
+	const only =
+		(...present: string[]) =>
+		(name: string) =>
+			present.includes(name);
+
+	it("refuses each remote-debugging switch in a packaged build", () => {
+		expect(REFUSED_PACKAGED_SWITCHES).toEqual([
+			"remote-debugging-port",
+			"remote-debugging-pipe",
+		]);
+		for (const name of REFUSED_PACKAGED_SWITCHES) {
+			expect(refusedPackagedSwitch(true, only(name))).toBe(name);
+		}
+		expect(
+			refusedPackagedSwitch(
+				true,
+				only("remote-debugging-pipe", "remote-debugging-port"),
+			),
+		).toBe("remote-debugging-port");
+	});
+
+	it("accepts a packaged build without them", () => {
+		expect(refusedPackagedSwitch(true, only())).toBeUndefined();
+		expect(
+			refusedPackagedSwitch(true, only("user-data-dir", "inspect")),
+		).toBeUndefined();
+	});
+
+	it("never refuses in an unpackaged build (Playwright drives those)", () => {
+		expect(
+			refusedPackagedSwitch(
+				false,
+				only("remote-debugging-port", "remote-debugging-pipe"),
+			),
+		).toBeUndefined();
 	});
 });
 

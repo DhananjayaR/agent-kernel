@@ -38,6 +38,11 @@ maximised state are kept in `window-state.json` in the app's data folder. Unpack
 covers Chromium's network stack only, not Node networking in the main process. Unpackaged builds run as
 "Agent Kernel Studio (dev)" with their own data folder and single-instance lock, and accept
 `ELECTRON_RENDERER_URL` only on `localhost`, `127.0.0.1` or `[::1]` (otherwise they refuse to start).
+Packaged builds refuse to start with `--remote-debugging-port` or `--remote-debugging-pipe` (checked first, before
+the single-instance lock; one line on stderr, exit code 1): the DevTools protocol takes local connections without
+authentication and would let any local process drive the app, and no Electron fuse covers these Chromium
+switches. Unpackaged builds accept them, so Playwright can drive the e2e tests. Once the window is shown, main
+prints `[studio] window shown` on stdout.
 
 Boundary rules live in `.dependency-cruiser.cjs`: the renderer and `packages/ui` import no `electron` or Node
 built-in; `packages/contract` imports only `zod`; `packages/ui` imports neither `apps/*` nor
@@ -84,30 +89,35 @@ asar holds `out/` and `package.json` only (the contract and zod are bundled into
 package time: `RunAsNode`, `EnableNodeOptionsEnvironmentVariable`, `EnableNodeCliInspectArguments` and
 `GrantFileProtocolExtraPrivileges` off; `EnableCookieEncryption`, `OnlyLoadAppFromAsar` and
 `EnableEmbeddedAsarIntegrityValidation` (macOS and Windows only; no effect on Linux) on. So
-`ELECTRON_RUN_AS_NODE`, `NODE_OPTIONS` and `--inspect` do nothing to a packaged app, and Playwright cannot drive
-one (it needs `--inspect`): the Electron e2e tests run against the unpackaged build. The AppImage needs FUSE 2
+`ELECTRON_RUN_AS_NODE`, `NODE_OPTIONS` and `--inspect` do nothing to a packaged app, and with the
+remote-debugging switches refused, nothing can drive one (Playwright needs `--inspect`): the Electron e2e tests run
+against the unpackaged build, and the packaged checks below wait for the `[studio] window shown` line. The AppImage needs FUSE 2
 (`libfuse2`); without it, run it with `--appimage-extract-and-run`.
 
 **CI** (`.github/workflows/studio.yml`). On pull requests and pushes to `develop` that touch `ak-studio/**`, on
 Ubuntu, Windows and macOS: install, Playwright's Chromium, lint, typecheck, depcruise and its self-test, unit
 tests, Storybook build and accessibility run, e2e, package, and the installer uploaded as a workflow artifact.
-The Python `Test` and `Code Quality` workflows ignore changes under `ak-studio/**`.
+The Python `Test` and `Code Quality` workflows ignore changes under `ak-studio/**`. No status check is required
+on `develop` today; if `Test` or `Code Quality` ever becomes a required check, a Studio-only PR would wait forever
+for a run that never starts, and needs a different approach (for example a job that always runs and skips its
+steps). `ak-studio/.gitattributes` keeps LF line endings on Windows checkouts, which Biome expects.
 
 **Linux results (P1a, 25 November 2026).** Measured on Linux (WSL2, x64), Node 24.22.1, pnpm 12.4.1.
 
-| Check                                                                | Linux                                                                                 | Windows                 | macOS                   | CI                      |
-| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------- | ----------------------- | ----------------------- |
-| `pnpm lint` (Biome, check-palette)                                   | Pass                                                                                  | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
-| `pnpm typecheck`                                                     | Pass                                                                                  | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
-| `pnpm depcruise`                                                     | Pass: 80 modules, 174 dependencies, no violations                                     | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
-| `pnpm depcruise:selftest`                                            | Pass: 13 expected violations found                                                    | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
-| `pnpm test`                                                          | Pass: 214 unit tests (contract 32, desktop 134, ui 11, renderer 37), check-palette 39 | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
-| `pnpm build-storybook`                                               | Pass                                                                                  | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
-| `pnpm test:storybook`                                                | Pass: 6 (3 stories, dark and light), no axe violation                                 | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
-| `pnpm test:e2e`                                                      | Pass: 6 (browser 2, Electron 4) in about 3 s, no display (xvfb-run -a)                | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
-| `pnpm package`                                                       | Pass: AppImage 126,422,064 bytes (120.6 MiB); `linux-unpacked/` 276 MiB; about 17 s   | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
-| Packaged app starts                                                  | Pass: AppImage and `linux-unpacked/` show version, platform and the IPC bridge        | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
-| Fuses (`ELECTRON_RUN_AS_NODE=1 ... -e`, `NODE_OPTIONS`, `--inspect`) | Pass: none takes effect; the app starts as itself                                     | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| Check                                                                | Linux                                                                                         | Windows                 | macOS                   | CI                      |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------- | ----------------------- | ----------------------- |
+| `pnpm lint` (Biome, check-palette)                                   | Pass                                                                                          | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm typecheck`                                                     | Pass                                                                                          | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm depcruise`                                                     | Pass: 80 modules, 174 dependencies, no violations                                             | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm depcruise:selftest`                                            | Pass: 13 expected violations found                                                            | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm test`                                                          | Pass: 217 unit tests (contract 32, desktop 137, ui 11, renderer 37), check-palette 39         | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm build-storybook`                                               | Pass                                                                                          | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm test:storybook`                                                | Pass: 6 (3 stories, dark and light), no axe violation                                         | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm test:e2e`                                                      | Pass: 6 (browser 2, Electron 4) in about 3 s, no display (xvfb-run -a)                        | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm package`                                                       | Pass: AppImage 126,422,053 bytes (120.6 MiB); `linux-unpacked/` 276 MiB; about 12 to 17 s     | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| Packaged app starts                                                  | Pass: AppImage and `linux-unpacked/` print `[studio] window shown`, no load or start-up error | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| Fuses (`ELECTRON_RUN_AS_NODE=1 ... -e`, `NODE_OPTIONS`, `--inspect`) | Pass: none takes effect; the app starts as itself                                             | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| Packaged `--remote-debugging-port` / `--remote-debugging-pipe`       | Pass: exit code 1 with one stderr line; the port never accepted a connection                  | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
 
 Windows, macOS and the CI workflow were deferred by the owner for P1a (no push access yet): `studio.yml` was
 parsed, not run. Unverified until it runs: the Linux runner's `apparmor_restrict_unprivileged_userns` step, the
