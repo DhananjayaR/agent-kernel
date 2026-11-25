@@ -5,14 +5,11 @@
 //
 // Read-only (P3's config forms): React Aria's Select has no read-only mode, so `isReadOnly` renders the field as
 // a read-only Input showing the selected option's text: focusable and selectable, never opens, same label,
-// help text and look as every other read-only field.
+// help text, error, required state and look as every other read-only field. Under `name` it submits the
+// selected key (a hidden input), as the editable Select does. The option is found by React Aria's key rule
+// (lib/collection.ts), so static options need an `id`.
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
-import {
-	Children,
-	isValidElement,
-	type ReactElement,
-	type ReactNode,
-} from "react";
+import type { ReactNode } from "react";
 import {
 	Select as AriaSelect,
 	type SelectProps as AriaSelectProps,
@@ -24,6 +21,7 @@ import {
 	Popover,
 	SelectValue,
 } from "react-aria-components";
+import { collectionItemText } from "../lib/collection";
 import { fieldBoxColours, fieldValueColour } from "../lib/state";
 import {
 	fieldBox,
@@ -49,27 +47,6 @@ export type SelectProps<T extends object> = Omit<
 		className?: string;
 	};
 
-/** The text of the option whose id is `key`, from static `SelectItem`s or from `items` and the render function. */
-function optionText<T extends object>(
-	children: SelectProps<T>["children"],
-	items: Iterable<T> | undefined,
-	key: Key | null | undefined,
-): string | undefined {
-	if (key === null || key === undefined) return undefined;
-	const elements: ReactNode[] =
-		typeof children === "function"
-			? [...(items ?? [])].map((item) => children(item))
-			: Children.toArray(children);
-	for (const element of elements) {
-		if (!isValidElement(element)) continue;
-		const { id, children: text } = (
-			element as ReactElement<{ id?: Key; children?: unknown }>
-		).props;
-		if (id === key && typeof text === "string") return text;
-	}
-	return undefined;
-}
-
 export function Select<T extends object>({
 	label,
 	description,
@@ -81,23 +58,34 @@ export function Select<T extends object>({
 	...props
 }: SelectProps<T>) {
 	if (isReadOnly) {
-		const value = optionText(
-			children,
-			items,
-			props.selectedKey ?? props.defaultSelectedKey,
-		);
+		const key = props.selectedKey ?? props.defaultSelectedKey;
+		const value = collectionItemText(children, items, key);
 		return (
-			<Input
-				label={label as string}
-				aria-label={props["aria-label"]}
-				aria-labelledby={props["aria-labelledby"]}
-				description={description}
-				placeholder={props.placeholder}
-				value={value ?? ""}
-				isReadOnly
-				isDisabled={props.isDisabled}
-				className={className}
-			/>
+			<>
+				<Input
+					label={label as string}
+					aria-label={props["aria-label"]}
+					aria-labelledby={props["aria-labelledby"]}
+					description={description}
+					errorMessage={errorMessage}
+					placeholder={props.placeholder}
+					value={value ?? ""}
+					isReadOnly
+					isDisabled={props.isDisabled}
+					isInvalid={props.isInvalid}
+					isRequired={props.isRequired}
+					className={className}
+				/>
+				{/* The editable Select submits the selected key under `name`; so does the read-only one. */}
+				{props.name && key !== null && key !== undefined ? (
+					<input
+						type="hidden"
+						name={props.name}
+						form={props.form}
+						value={String(key)}
+					/>
+				) : null}
+			</>
 		);
 	}
 
@@ -165,6 +153,10 @@ export type SelectItemProps = Omit<
 	ListBoxItemProps,
 	"children" | "className"
 > & {
+	/**
+	 * The option's key. Give it on static options: `selectedKey` and the read-only field match on it. With
+	 * `items`, it defaults (as in React Aria) to the data object's `key`, then its `id`.
+	 */
 	id?: Key;
 	children: string;
 };

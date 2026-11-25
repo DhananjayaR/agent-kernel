@@ -156,6 +156,80 @@ export const ReadOnly: Story = {
 	},
 };
 
+/**
+ * Read-only keeps the field's invalid, required and error state, and submits the selected key (not its text)
+ * under `name`, as the editable Select does.
+ */
+export const ReadOnlyInvalidRequired: Story = {
+	args: {
+		isReadOnly: true,
+		isRequired: true,
+		isInvalid: true,
+		name: "session_store",
+		errorMessage: "Redis is not installed in this environment.",
+	},
+	render: (args) => (
+		<form aria-label="Config">
+			<SessionStores {...args} />
+		</form>
+	),
+	play: async ({ canvasElement }) => {
+		const field = within(canvasElement).getByRole("textbox", {
+			name: /Session store/,
+		});
+		await expect(field).toHaveValue("Redis");
+		await expect(field).toHaveAttribute("readonly");
+		await expect(field).toHaveAttribute("aria-invalid", "true");
+		await expect(field).toBeRequired();
+		await expect(field).not.toHaveAttribute("name");
+		await expectTokenColour(
+			field,
+			"border-top-color",
+			"border-text-status-danger",
+		);
+		await expect(
+			within(canvasElement).getByText(
+				"Redis is not installed in this environment.",
+			),
+		).toBeVisible();
+		const form = canvasElement.querySelector("form") as HTMLFormElement;
+		await expect(new FormData(form).get("session_store")).toBe("redis");
+	},
+};
+
+const stores = [
+	{ id: "in-memory", name: "In memory" },
+	{ id: "redis", name: "Redis" },
+	{ id: "dynamodb", name: "DynamoDB" },
+];
+
+/** Read-only with `items` and options without an explicit `id`: the key comes from each item's `id`. */
+export const ReadOnlyFromItems: Story = {
+	args: { isReadOnly: true, defaultSelectedKey: "dynamodb" },
+	render: (args) => (
+		<Select {...args} items={stores}>
+			{(store: (typeof stores)[number]) => (
+				<SelectItem>{store.name}</SelectItem>
+			)}
+		</Select>
+	),
+	play: async ({ canvasElement }) => {
+		const field = within(canvasElement).getByRole("textbox", {
+			name: "Session store",
+		});
+		await expect(field).toHaveValue("DynamoDB");
+	},
+};
+
+/** The same `items` editable: React Aria keys them the same way, so both views agree. */
+export const FromItems: Story = {
+	args: { defaultSelectedKey: "dynamodb" },
+	render: ReadOnlyFromItems.render,
+	play: async ({ canvasElement }) => {
+		await expect(trigger(canvasElement)).toHaveTextContent("DynamoDB");
+	},
+};
+
 export const Open: Story = {
 	render: (args) => (
 		<div className="flex flex-col gap-4">
