@@ -91,7 +91,14 @@ export type ToastRegionProps = {
 /**
  * F6 and Shift+F6 from the notifications region go back to where focus was before it entered, when there is no
  * other landmark to go to. React Aria cycles F6 through its own landmarks only; with the region as the only one,
- * it would wrap to itself, so its wrap event (`react-aria-landmark-navigation`, cancelable) is taken here.
+ * it would wrap to itself, so its wrap event (`react-aria-landmark-navigation`, cancelable) is taken here. The
+ * event is cancelled only when focus really moved: if the opener can no longer take focus (disabled, made inert),
+ * React Aria's own wrap runs, so F6 never goes dead.
+ *
+ * Depends on react-aria 3.53.1 internals (shipped with react-aria-components 1.22.1, pinned in package.json):
+ * the event's name, that it is dispatched cancelable and bubbling on the focused element only when F6 would wrap
+ * past the last or first landmark, and that a cancelled event stops React Aria's own navigation
+ * (`LandmarkManager.getNextLandmark`, `private/landmark/useLandmark.mjs`). Check these again on any upgrade.
  */
 function useLandmarkReturn(regionRef: RefObject<HTMLDivElement | null>) {
 	useEffect(() => {
@@ -106,8 +113,8 @@ function useLandmarkReturn(regionRef: RefObject<HTMLDivElement | null>) {
 		};
 		const onWrap = (e: Event) => {
 			if (!inRegion(e.target) || !returnTo?.isConnected) return;
-			e.preventDefault();
 			returnTo.focus();
+			if (document.activeElement === returnTo) e.preventDefault();
 		};
 		document.addEventListener("focusin", onFocusIn);
 		document.addEventListener("react-aria-landmark-navigation", onWrap);

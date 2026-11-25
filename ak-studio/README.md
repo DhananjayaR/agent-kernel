@@ -132,7 +132,9 @@ the owner's change): sonner injects a global stylesheet whose base toast rule, a
 400 ms transitions, absolute positioning and a fixed width. A toast reports background work
 (`notifyBackgroundResult`): a job that finished, or one that needs an answer (`info` with a "Show" action, which
 never times out; the owning tab's badge carries it too). F6 reaches the toast region, and F6 or Shift+F6 there goes
-back to where focus was. ContextMenu wraps a region (a Tree or DataTable) and opens for the row under the pointer
+back to where focus was (when that element can still take focus; otherwise React Aria's own wrap runs). That return
+hook depends on react-aria 3.53.1 internals under the 1.22.1 pin (the cancelable `react-aria-landmark-navigation`
+wrap event; see `useLandmarkReturn` in `toast.tsx`): check it on any upgrade. ContextMenu wraps a region (a Tree or DataTable) and opens for the row under the pointer
 (which takes focus) or the focused row (Shift+F10, the ContextMenu key); the row is marked while the menu is open
 (`menu-target`), and focus returns to it. ResizablePanels (react-resizable-panels 4.24.1, P0 D1) never stores
 anything: `defaultLayout` restores a layout and `onLayoutChange` reports the one to remember; a disabled handle

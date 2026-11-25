@@ -137,6 +137,37 @@ export const Keyboard: Story = {
 	},
 };
 
+/**
+ * The opener cannot take focus any more (here it was disabled while focus was in the region): Shift+F6 leaves
+ * React Aria's own wrap in charge instead of cancelling it, so F6 is never dead; focus stays in the region.
+ */
+export const UnfocusableOpener: Story = {
+	play: async ({ canvasElement }) => {
+		const before = within(canvasElement).getByRole("button", {
+			name: "Before the toasts",
+		}) as HTMLButtonElement;
+		await tabTo(before);
+		const { region } = await toasts();
+		await userEvent.keyboard("{F6}");
+		await waitFor(() => expect(region).toHaveFocus());
+		before.disabled = true;
+		// Runs after the hook's listener on document (window is the last stop of a bubbling event).
+		const wraps: boolean[] = [];
+		const record = (e: Event) => wraps.push(e.defaultPrevented);
+		window.addEventListener("react-aria-landmark-navigation", record);
+		try {
+			await userEvent.keyboard("{Shift>}{F6}{/Shift}");
+			await waitFor(() => expect(wraps).toHaveLength(1));
+			await expect(wraps[0]).toBe(false);
+			await expect(before).not.toHaveFocus();
+			await expect(region.contains(document.activeElement)).toBe(true);
+		} finally {
+			window.removeEventListener("react-aria-landmark-navigation", record);
+			before.disabled = false;
+		}
+	},
+};
+
 /** A toast shown before a modal opens stays visible above the modal's scrim. */
 export const AboveAModal: Story = {
 	args: { results: [tones[1] as BackgroundResult] },
