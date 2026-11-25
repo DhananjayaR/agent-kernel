@@ -2,7 +2,14 @@
 // process. Started with AK_STUDIO_TEST_HOOKS=1 so main exposes the request gate's counter, and with a fresh
 // --user-data-dir per test. Production and packaged builds have no hooks, and packaged builds lack the --inspect
 // support Playwright needs.
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -27,11 +34,15 @@ interface Studio {
 }
 
 /**
- * Launches the built app with a fresh data folder, runs `body`, then closes the app and removes the folder. The
- * folder is removed even if the launch, the body or `app.close()` throws; removal retries, since on Windows the
- * app's child processes can hold files for a moment after close.
+ * Launches the built app, runs `body`, then closes the app. With no `userDataDir` it uses a fresh data folder and
+ * removes it afterwards, even if the launch, the body or `app.close()` throws; removal retries, since on Windows the
+ * app's child processes can hold files for a moment after close. A caller that passes `userDataDir` (a restart
+ * test) owns the folder.
  */
-async function withStudio(body: (studio: Studio) => Promise<void>) {
+async function withStudio(
+	body: (studio: Studio) => Promise<void>,
+	options: { userDataDir?: string } = {},
+) {
 	const desktopDir = resolve(test.info().project.testDir, "../../apps/desktop");
 	const mainEntry = join(desktopDir, "out/main/index.js");
 	if (!existsSync(mainEntry)) {
@@ -50,10 +61,11 @@ async function withStudio(body: (studio: Studio) => Promise<void>) {
 	}
 	env.AK_STUDIO_TEST_HOOKS = "1";
 
-	let userDataDir: string | undefined;
+	const ownFolder = options.userDataDir === undefined;
+	let userDataDir = options.userDataDir;
 	let app: ElectronApplication | undefined;
 	try {
-		userDataDir = mkdtempSync(join(tmpdir(), "ak-studio-e2e-"));
+		userDataDir ??= mkdtempSync(join(tmpdir(), "ak-studio-e2e-"));
 		app = await electron.launch({
 			executablePath,
 			args: [desktopDir, `--user-data-dir=${userDataDir}`],
@@ -68,16 +80,45 @@ async function withStudio(body: (studio: Studio) => Promise<void>) {
 		try {
 			await app?.close();
 		} finally {
-			if (userDataDir) {
-				rmSync(userDataDir, {
-					recursive: true,
-					force: true,
-					maxRetries: 5,
-					retryDelay: 200,
-				});
-			}
+			if (ownFolder && userDataDir) removeFolder(userDataDir);
 		}
 	}
+}
+
+function removeFolder(dir: string): void {
+	rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+}
+
+/** A data folder shared by several launches (a restart), removed afterwards. */
+async function withDataFolder(body: (dir: string) => Promise<void>) {
+	const dir = mkdtempSync(join(tmpdir(), "ak-studio-e2e-"));
+	try {
+		await body(dir);
+	} finally {
+		removeFolder(dir);
+	}
+}
+
+/** The stored preferences (apps/desktop/src/main/services/AppService.ts, PREFERENCES_FILE). */
+function readPreferences(dir: string): unknown {
+	try {
+		return JSON.parse(readFileSync(join(dir, "preferences.json"), "utf8"));
+	} catch {
+		return undefined;
+	}
+}
+
+/** The Studio's version in the status bar. */
+const appVersion = (page: Page) =>
+	page.locator('[data-slot="app-version-number"]');
+
+/** Opens settings and picks a theme there (the settings modal's segmented control). */
+async function chooseTheme(page: Page, theme: "System" | "Dark" | "Light") {
+	const dialog = page.getByRole("dialog", { name: "Settings" });
+	if (!(await dialog.isVisible()))
+		await page.getByRole("button", { name: "Settings" }).click();
+	await dialog.getByRole("radio", { name: theme }).click();
+	await expect(dialog.getByRole("radio", { name: theme })).toBeChecked();
 }
 
 /** The request gate's cancelled-request counter and newest URLs, read in main. */
@@ -97,35 +138,156 @@ function cancelledRequests(
 	});
 }
 
-test("built app starts and shows the version from the real main process", async () => {
+test("built app starts and shows the shell with the version from the real main process", async () => {
 	await withStudio(async ({ app, page }) => {
-		const main = await app.evaluate(({ app }) => ({
-			version: app.getVersion(),
-			platform: process.platform,
-		}));
-		await expect(page.getByTestId("bridge")).toHaveText("ipc");
-		await expect(page.getByTestId("version")).toHaveText(main.version);
-		await expect(page.getByTestId("platform")).toHaveText(main.platform);
-		expect(page.url()).toBe("app://studio/");
+		const main = await app.evaluate(({ app }) => app.getVersion());
+		// The real version (the mock would say 0.0.0-mock), so the renderer is on the IPC bridge.
+		await expect(appVersion(page)).toHaveText(main);
+		expect(page.url()).toBe("app://studio/#/canvas");
+		await expect(page.getByRole("banner")).toBeVisible();
+		await expect(page.getByText("No project open")).toBeVisible();
+		await expect(page.getByRole("region", { name: "Panel" })).toBeVisible();
 	});
 });
 
-test("theme switch reaches the main process", async () => {
+test("each tab opens its empty state, naming the phase that fills it", async () => {
+	await withStudio(async ({ page }) => {
+		const tabs = [
+			["Canvas", "canvas", /P3/],
+			["Code", "code", /P3/],
+			["Config", "config", /P3/],
+			["Test & trace", "test-trace", /P8.*P9/],
+			["Deploy", "deploy", /P10/],
+		] as const;
+		for (const [name, path, phase] of tabs) {
+			await page.getByRole("tab", { name }).click();
+			expect(page.url()).toBe(`app://studio/#/${path}`);
+			const panel = page.getByRole("tabpanel", { name });
+			await expect(
+				panel.getByRole("heading", { name, level: 2 }),
+			).toBeVisible();
+			await expect(panel).toContainText(phase);
+		}
+	});
+});
+
+test("the theme switches from the settings modal and reaches the main process", async () => {
 	await withStudio(async ({ app, page }) => {
 		const html = page.locator("html");
-		const select = page.getByTestId("theme");
-		await expect(page.getByTestId("stored-theme")).toHaveText("system");
-
-		for (const theme of ["dark", "light"] as const) {
-			await select.selectOption(theme);
-			await expect(page.getByTestId("stored-theme")).toHaveText(theme);
-			await expect(html).toHaveAttribute("data-theme", theme);
-			const native = await app.evaluate(({ nativeTheme }) => ({
+		await expect(appVersion(page)).not.toBeEmpty();
+		for (const theme of ["Dark", "Light"] as const) {
+			await chooseTheme(page, theme);
+			const value = theme.toLowerCase();
+			await expect(html).toHaveAttribute("data-theme", value);
+			const native = await app.evaluate(({ BrowserWindow, nativeTheme }) => ({
 				source: nativeTheme.themeSource,
 				dark: nativeTheme.shouldUseDarkColors,
+				background: BrowserWindow.getAllWindows()[0]
+					?.getBackgroundColor()
+					.toLowerCase(),
 			}));
-			expect(native).toEqual({ source: theme, dark: theme === "dark" });
+			expect(native).toEqual({
+				source: value,
+				dark: value === "dark",
+				background: value === "dark" ? "#011428" : "#ffffff",
+			});
 		}
+	});
+});
+
+// The window's background before the renderer paints (no white flash): the stored theme's surface colour, read
+// from a preferences file written before the launch. `system` follows the OS (nativeTheme).
+test("the window opens with the stored theme's background colour", async () => {
+	for (const theme of ["dark", "light", "system"] as const) {
+		await withDataFolder(async (dir) => {
+			mkdirSync(dir, { recursive: true });
+			writeFileSync(join(dir, "preferences.json"), JSON.stringify({ theme }));
+			await withStudio(
+				async ({ app }) => {
+					const window = await app.evaluate(
+						({ BrowserWindow, nativeTheme }) => ({
+							background: BrowserWindow.getAllWindows()[0]
+								?.getBackgroundColor()
+								.toLowerCase(),
+							dark: nativeTheme.shouldUseDarkColors,
+						}),
+					);
+					const dark = theme === "system" ? window.dark : theme === "dark";
+					expect(window.background).toBe(dark ? "#011428" : "#ffffff");
+				},
+				{ userDataDir: dir },
+			);
+		});
+	}
+});
+
+test("the bottom panel's open state and height persist across a restart", async () => {
+	await withDataFolder(async (dir) => {
+		await withStudio(
+			async ({ page }) => {
+				const panel = page.locator('[data-panel][id="bottom-panel"]');
+				await expect(panel).toHaveJSProperty("offsetHeight", 240);
+				// Taller from the keyboard (the handle's window splitter keys), then hidden with its toggle.
+				await page.getByRole("separator", { name: "Resize the panel" }).focus();
+				await page.keyboard.press("ArrowUp");
+				await expect
+					.poll(() => readPreferences(dir))
+					.toMatchObject({ layout: { bottomPanel: { open: true } } });
+				const stored = readPreferences(dir) as {
+					layout: { bottomPanel: { height: number } };
+				};
+				expect(stored.layout.bottomPanel.height).toBeGreaterThan(240);
+				await page.getByRole("button", { name: "Hide the panel" }).click();
+				// Wait for the write before quitting, or it races the close.
+				await expect
+					.poll(() => readPreferences(dir))
+					.toMatchObject({ layout: { bottomPanel: { open: false } } });
+			},
+			{ userDataDir: dir },
+		);
+		const { height } = (
+			readPreferences(dir) as { layout: { bottomPanel: { height: number } } }
+		).layout.bottomPanel;
+		await withStudio(
+			async ({ page }) => {
+				const panel = page.locator('[data-panel][id="bottom-panel"]');
+				const show = page.getByRole("button", { name: "Show the panel" });
+				await expect(show).toBeVisible();
+				await expect(panel).toHaveJSProperty("offsetHeight", 48);
+				await show.click();
+				await expect
+					.poll(() => panel.evaluate((el) => el.getBoundingClientRect().height))
+					.toBeCloseTo(height, 0);
+			},
+			{ userDataDir: dir },
+		);
+	});
+});
+
+test("holds at 1100 px: the top bar in one row, no horizontal scroll", async () => {
+	await withStudio(async ({ app, page }) => {
+		await expect(appVersion(page)).not.toBeEmpty();
+		await app.evaluate(({ BrowserWindow }) => {
+			BrowserWindow.getAllWindows()[0]?.setContentSize(1100, 720);
+		});
+		await expect.poll(() => page.evaluate(() => window.innerWidth)).toBe(1100);
+		const layout = await page.evaluate(() => {
+			const bar = document.querySelector(
+				'[data-slot="top-bar"]',
+			) as HTMLElement;
+			return {
+				scrollWidth: document.documentElement.scrollWidth,
+				barHeight: bar.getBoundingClientRect().height,
+				barScroll: bar.scrollWidth - bar.clientWidth,
+				compact: bar.hasAttribute("data-compact"),
+			};
+		});
+		expect(layout).toEqual({
+			scrollWidth: 1100,
+			barHeight: 48,
+			barScroll: 0,
+			compact: false,
+		});
 	});
 });
 
@@ -133,9 +295,9 @@ test("theme switch reaches the main process", async () => {
 // main's `net` requests, not Node networking (`fetch`, `http`, `net` modules) in the main process.
 test("makes no network request (Chromium requests only; Node networking in main is not covered)", async () => {
 	await withStudio(async ({ app, page }) => {
-		await expect(page.getByTestId("version")).not.toBeEmpty();
-		await page.getByTestId("theme").selectOption("dark");
-		await expect(page.getByTestId("stored-theme")).toHaveText("dark");
+		await expect(appVersion(page)).not.toBeEmpty();
+		await chooseTheme(page, "Dark");
+		await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 		// Fonts and the rest of the page have loaded.
 		await page.evaluate(() => document.fonts.ready.then(() => undefined));
 		// Read last, after everything the page does at start and on a theme switch.
@@ -157,15 +319,18 @@ test("uses the bundled fonts (UI, heading, mono), loaded from app:// with no CSP
 				);
 			});
 		});
-		await page.reload();
-		await expect(page.getByTestId("version")).not.toBeEmpty();
+		// Load the page again from its root. The test reads where each font came from in the resource timing
+		// entries, and in Electron 45 a reload of `app://studio/#/canvas` left none (not even the script's); loading
+		// the root records them (it redirects to `#/canvas` after).
+		await page.goto("app://studio/");
+		await expect(appVersion(page)).not.toBeEmpty();
 		const fonts = await page.evaluate(async () => {
-			// Each family token on the placeholder page: body text (Inter), the heading (Archivo), the version
-			// number (JetBrains Mono, tabular figures).
+			// Each family token in the shell: body text (Inter), a tab's empty-state heading (Archivo), the
+			// version number in the status bar (JetBrains Mono, tabular figures).
 			const samples = {
 				ui: document.querySelector("main"),
-				heading: document.querySelector("main h1"),
-				mono: document.querySelector('[data-testid="version"]'),
+				heading: document.querySelector("main h2"),
+				mono: document.querySelector('[data-slot="app-version-number"]'),
 			};
 			const used: Record<string, { family: string; numeric: string }> = {};
 			const loaded: { family: string; status: string }[] = [];
@@ -216,7 +381,7 @@ test("uses the bundled fonts (UI, heading, mono), loaded from app:// with no CSP
 
 test("the request gate counts a refused request (so a zero count means something)", async () => {
 	await withStudio(async ({ app, page }) => {
-		await expect(page.getByTestId("version")).not.toBeEmpty();
+		await expect(appVersion(page)).not.toBeEmpty();
 		const outcome = await app.evaluate(async ({ net }) => {
 			try {
 				await net.fetch("https://example.invalid/");

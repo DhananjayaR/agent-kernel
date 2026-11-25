@@ -1,41 +1,128 @@
 // The renderer in a plain browser: no `window.studio`, so it runs on the mock transport.
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 // The mock transport's fixture version (apps/renderer/src/bridge/mockTransport.ts, MOCK_VERSION). Not imported:
 // the renderer's source is not loaded into the test runner.
 const MOCK_VERSION = "0.0.0-mock";
 
-test("renderer on the mock transport shows the version and platform", async ({
+const TABS = [
+	["Canvas", "canvas", /P3/],
+	["Code", "code", /P3/],
+	["Config", "config", /P3/],
+	["Test & trace", "test-trace", /P8.*P9/],
+	["Deploy", "deploy", /P10/],
+] as const;
+
+const appVersion = (page: Page) =>
+	page.locator('[data-slot="app-version-number"]');
+
+test("the shell renders on the mock transport", async ({ page }) => {
+	await page.goto("/");
+	await expect(page).toHaveURL(/#\/canvas$/);
+	await expect(appVersion(page)).toHaveText(MOCK_VERSION);
+	expect(await page.evaluate(() => "studio" in window)).toBe(false);
+	await expect(page.getByRole("banner")).toBeVisible();
+	await expect(page.getByText("No project open")).toBeVisible();
+	await expect(
+		page.getByRole("tablist", { name: "Project views" }).getByRole("tab"),
+	).toHaveText(TABS.map(([name]) => name));
+	await expect(
+		page.getByRole("button", { name: "Build with AI" }),
+	).toBeVisible();
+	await expect(page.getByRole("region", { name: "Panel" })).toBeVisible();
+	await expect(page.getByRole("contentinfo")).toBeVisible();
+});
+
+test("each tab opens its empty state, naming the phase that fills it", async ({
 	page,
 }) => {
 	await page.goto("/");
-	await expect(page.getByTestId("bridge")).toHaveText("mock");
-	await expect(page.getByTestId("version")).toHaveText(MOCK_VERSION);
-	await expect(page.getByTestId("platform")).toHaveText("browser");
-	expect(await page.evaluate(() => "studio" in window)).toBe(false);
+	for (const [name, path, phase] of TABS) {
+		await page.getByRole("tab", { name }).click();
+		await expect(page).toHaveURL(new RegExp(`#/${path}$`));
+		const panel = page.getByRole("tabpanel", { name });
+		await expect(panel.getByRole("heading", { name, level: 2 })).toBeVisible();
+		await expect(panel).toContainText(phase);
+	}
+	// A tab's address opens it directly; an unknown one opens the canvas.
+	await page.goto("/#/deploy");
+	await expect(page.getByRole("tab", { name: "Deploy" })).toHaveAttribute(
+		"aria-selected",
+		"true",
+	);
+	await page.goto("/#/nowhere");
+	await expect(page).toHaveURL(/#\/canvas$/);
 });
 
-test("theme switch stores the preference and sets data-theme", async ({
+test("the theme switches from the settings modal and sets data-theme", async ({
 	page,
 }) => {
 	await page.emulateMedia({ colorScheme: "light" });
 	await page.goto("/");
 	const html = page.locator("html");
-	const select = page.getByTestId("theme");
-
-	await expect(page.getByTestId("stored-theme")).toHaveText("system");
 	await expect(html).toHaveAttribute("data-theme", "light");
 
-	await select.selectOption("dark");
-	await expect(page.getByTestId("stored-theme")).toHaveText("dark");
+	await page.getByRole("button", { name: "Settings" }).click();
+	const dialog = page.getByRole("dialog", { name: "Settings" });
+	const radio = (name: string) => dialog.getByRole("radio", { name });
+	await expect(radio("System")).toBeChecked();
+
+	await radio("Dark").click();
+	await expect(radio("Dark")).toBeChecked();
 	await expect(html).toHaveAttribute("data-theme", "dark");
 
-	await select.selectOption("light");
-	await expect(page.getByTestId("stored-theme")).toHaveText("light");
+	await radio("Light").click();
 	await expect(html).toHaveAttribute("data-theme", "light");
 
 	// `system` follows prefers-color-scheme again.
-	await select.selectOption("system");
+	await radio("System").click();
 	await page.emulateMedia({ colorScheme: "dark" });
 	await expect(html).toHaveAttribute("data-theme", "dark");
+
+	await page.keyboard.press("Escape");
+	await expect(dialog).toBeHidden();
+	await expect(page.getByRole("button", { name: "Settings" })).toBeFocused();
+});
+
+test("the bottom panel hides and shows with Ctrl+J and its toggle, keeping focus", async ({
+	page,
+}) => {
+	await page.goto("/");
+	const panel = page.locator('[data-panel][id="bottom-panel"]');
+	await expect(panel).toHaveJSProperty("offsetHeight", 240);
+	await page.getByRole("tab", { name: "Commands" }).focus();
+	await page.keyboard.press("Control+j");
+	const show = page.getByRole("button", { name: "Show the panel" });
+	await expect(show).toBeVisible();
+	await expect(panel).toHaveJSProperty("offsetHeight", 48);
+	await show.click();
+	await expect(panel).toHaveJSProperty("offsetHeight", 240);
+	await expect(
+		page.getByRole("button", { name: "Hide the panel" }),
+	).toBeFocused();
+});
+
+test("holds at 1100 px: one row in the top bar, no horizontal scroll", async ({
+	page,
+}) => {
+	await page.setViewportSize({ width: 1100, height: 720 });
+	await page.goto("/");
+	await expect(appVersion(page)).toHaveText(MOCK_VERSION);
+	const layout = await page.evaluate(() => {
+		const bar = document.querySelector('[data-slot="top-bar"]') as HTMLElement;
+		return {
+			innerWidth: window.innerWidth,
+			scrollWidth: document.documentElement.scrollWidth,
+			barHeight: bar.getBoundingClientRect().height,
+			barScroll: bar.scrollWidth - bar.clientWidth,
+			compact: bar.hasAttribute("data-compact"),
+		};
+	});
+	expect(layout).toEqual({
+		innerWidth: 1100,
+		scrollWidth: 1100,
+		barHeight: 48,
+		barScroll: 0,
+		compact: false,
+	});
 });
