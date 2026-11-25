@@ -1,11 +1,10 @@
-// @ak-studio/ui: the Studio's design system. Tokens are in theme.css (imported by the consumer's stylesheet);
-// the components below are the base set approved at the P1a design gate (Task 9), the ones P2 and P3 use.
+// @ak-studio/ui: the Studio's design system. Tokens are in theme.css (imported by the consumer's stylesheet).
+// The components below are the base set proposed for the P1a design gate (Task 9): the ones P2 and P3 use. The
+// "Base component set" sign-off is pending. Exports are in path order (Biome sorts them).
 export const name = "@ak-studio/ui";
 
-// Display
 export { Badge, type BadgeProps } from "./components/badge";
 
-// Controls
 export {
 	Button,
 	type ButtonProps,
@@ -62,3 +61,5 @@ export { Tag, type TagProps } from "./components/tag";
 export { Textarea, type TextareaProps } from "./components/textarea";
 export { Tooltip, type TooltipProps } from "./components/tooltip";
 export { cn } from "./lib/utils";
+export type { CodeBlockStrings, PathChipStrings } from "./strings";
+export { uiStrings } from "./strings";

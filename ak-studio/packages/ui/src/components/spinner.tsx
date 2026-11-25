@@ -1,7 +1,7 @@
 // Spinner: a short wait on something small (a control's pending state, a check that takes a moment). Added with
 // the shadcn CLI (aria-nova), restyled. Its label is required: never a spinner with no label. A long operation
 // is a labelled job (JobProgress, P1b), not a spinner. The label is visible unless `hideLabel`, and is announced
-// through role="status".
+// through role="status". Under reduced motion the icon stays still; the label carries the meaning.
 import { Loader2Icon } from "lucide-react";
 import type { HTMLAttributes } from "react";
 import { cn } from "../lib/utils";
@@ -31,7 +31,7 @@ export function Spinner({
 		>
 			<Loader2Icon
 				aria-hidden="true"
-				className="size-4 shrink-0 animate-spin"
+				className="size-4 shrink-0 animate-spin motion-reduce:animate-none"
 			/>
 			<span className={hideLabel ? "sr-only" : undefined}>{label}</span>
 		</span>

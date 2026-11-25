@@ -1,11 +1,14 @@
 // CodeBlock: a snippet the user reads or copies (the upgrade command a version gate suggests, a config
 // excerpt). Not for a command the app ran: that is a CommandRow (P1b). Written by hand (shadcn has no code
 // block): monospace on the raised surface, a caption row with an optional copy action (a callback: this
-// package makes no clipboard call). The code scrolls sideways and is keyboard-focusable so it can be scrolled.
+// package makes no clipboard call) with a tooltip. The code scrolls sideways; its scroll region is
+// keyboard-focusable and named by the caption. Copy defaults: strings.ts.
 import { CheckIcon, CopyIcon } from "lucide-react";
-import { type HTMLAttributes, useEffect, useState } from "react";
+import { type HTMLAttributes, useEffect, useId, useState } from "react";
 import { cn } from "../lib/utils";
+import { type CodeBlockStrings, uiStrings } from "../strings";
 import { IconButton } from "./button";
+import { Tooltip } from "./tooltip";
 
 const COPIED_MS = 1500;
 
@@ -14,19 +17,24 @@ export type CodeBlockProps = Omit<
 	"children" | "onCopy"
 > & {
 	code: string;
-	/** What the code is ("Upgrade command"); also names the scrollable region. */
+	/** What the code is ("Upgrade command"): the caption, which also names the code's scroll region. */
 	label: string;
 	/** Shows a copy button that calls this with the code. */
 	onCopy?: (code: string) => void;
+	/** Overrides of the default copy (strings.ts). */
+	strings?: Partial<CodeBlockStrings>;
 };
 
 export function CodeBlock({
 	code,
 	label,
 	onCopy,
+	strings,
 	className,
 	...props
 }: CodeBlockProps) {
+	const text = { ...uiStrings.codeBlock, ...strings };
+	const captionId = useId();
 	const [copied, setCopied] = useState(false);
 	useEffect(() => {
 		if (!copied) return;
@@ -43,29 +51,38 @@ export function CodeBlock({
 			)}
 			{...props}
 		>
-			<figcaption className="flex min-h-control-m items-center justify-between gap-2 border-b border-border-default pr-1 pl-edge text-ui-sm text-text-muted">
+			<figcaption
+				id={captionId}
+				className="flex min-h-control-m items-center justify-between gap-2 border-b border-border-default pr-1 pl-edge text-ui-sm text-text-muted"
+			>
 				{label}
 				{onCopy ? (
-					<IconButton
-						aria-label={`Copy ${label.toLowerCase()}`}
-						icon={copied ? <CheckIcon /> : <CopyIcon />}
-						onPress={() => {
-							onCopy(code);
-							setCopied(true);
-						}}
-					/>
+					<Tooltip content={text.copy}>
+						<IconButton
+							aria-label={text.copy}
+							aria-describedby={captionId}
+							icon={copied ? <CheckIcon /> : <CopyIcon />}
+							onPress={() => {
+								onCopy(code);
+								setCopied(true);
+							}}
+						/>
+					</Tooltip>
 				) : null}
 			</figcaption>
-			<pre
+			<section
+				aria-labelledby={captionId}
 				// biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must be reachable by keyboard (WCAG 2.1.1).
 				tabIndex={0}
-				className="overflow-x-auto rounded-b-control p-edge font-mono text-ui-sm text-text outline-none focus-visible:focus-outline"
+				className="overflow-x-auto rounded-b-control outline-none focus-visible:focus-outline"
 			>
-				<code>{code}</code>
-			</pre>
+				<pre className="p-edge font-mono text-ui-sm text-text">
+					<code>{code}</code>
+				</pre>
+			</section>
 			{onCopy ? (
 				<span role="status" className="sr-only">
-					{copied ? `${label} copied` : ""}
+					{copied ? text.copied : ""}
 				</span>
 			) : null}
 		</figure>

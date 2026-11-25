@@ -4,6 +4,7 @@ import {
 	expectFocusRing,
 	expectHeight,
 	expectStyle,
+	expectTokenColour,
 	hover,
 	tabTo,
 } from "../lib/story-checks";
@@ -46,7 +47,10 @@ export const PathOnly: Story = {
 	args: { onReveal: undefined, onCopy: undefined, path: "config.yaml" },
 };
 
-/** A long path is cut at the end; the whole path is in the title. */
+/**
+ * A long path is cut in the middle: the folders shrink with an ellipsis, the file name stays whole. The full
+ * path is the chip's text for assistive technology and the description of each action.
+ */
 export const Truncated: Story = {
 	args: {
 		path: "examples/aws-serverless/openai-langfuse-trace-evaluation/evaluator/opik_evaluator.py",
@@ -56,6 +60,23 @@ export const Truncated: Story = {
 			<PathChip {...args} />
 		</div>
 	),
+	play: async ({ args, canvasElement }) => {
+		const chip = canvasElement.querySelector(
+			"[data-slot=path-chip]",
+		) as HTMLElement;
+		await expect(chip.getBoundingClientRect().width).toBeLessThanOrEqual(480);
+		const name = within(chip).getByText("opik_evaluator.py");
+		const shown = name.getBoundingClientRect();
+		const chipBox = chip.getBoundingClientRect();
+		await expect(shown.right).toBeLessThanOrEqual(chipBox.right);
+		await expect(shown.width).toBeGreaterThan(0);
+		await expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth);
+		const folders = name.previousElementSibling as HTMLElement;
+		await expect(folders.scrollWidth).toBeGreaterThan(folders.clientWidth);
+		await expect(
+			within(chip).getByRole("button", { name: "Copy path" }),
+		).toHaveAccessibleDescription(args.path);
+	},
 };
 
 export const Hover: Story = {
@@ -63,9 +84,14 @@ export const Hover: Story = {
 		const copy = within(canvasElement).getByRole("button", {
 			name: "Copy path",
 		});
-		const before = getComputedStyle(copy).backgroundColor;
+		// React Aria shows a tooltip on hover only in pointer modality (earlier stories may have left keyboard).
+		await userEvent.click(canvasElement);
 		await hover(copy);
-		await expect(getComputedStyle(copy).backgroundColor).not.toBe(before);
+		await expectTokenColour(copy, "background-color", "bg-fill");
+		// The icon-only action shows its label as a tooltip.
+		await expect(
+			await within(document.body).findByRole("tooltip"),
+		).toHaveTextContent("Copy path");
 	},
 };
 

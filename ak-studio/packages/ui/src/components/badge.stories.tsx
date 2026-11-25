@@ -12,7 +12,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Static: a count on something else. Neutral and accent only; a state is a StatusChip. */
+/** Static: a count on something else. One look; a state is a StatusChip. */
 export const Default: Story = {
 	render: (args) => (
 		<div className="flex items-center gap-4">
@@ -22,9 +22,6 @@ export const Default: Story = {
 			<span className="inline-flex items-center gap-text-to-visual">
 				Commands <Badge>128</Badge>
 			</span>
-			<span className="inline-flex items-center gap-text-to-visual">
-				Templates <Badge variant="accent">New</Badge>
-			</span>
 		</div>
 	),
 	play: async ({ canvasElement }) => {
@@ -33,6 +30,6 @@ export const Default: Story = {
 			await expectHeight(badge, 20);
 			await expectStyle(badge, "border-top-left-radius", "9999px");
 		}
-		await expect(badges).toHaveLength(3);
+		await expect(badges).toHaveLength(2);
 	},
 };

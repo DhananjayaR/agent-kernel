@@ -2,7 +2,8 @@
 // version, cannot read a file). Feedback placement: inline for a field, a banner for a view, a toast only for
 // something that finished in the background. Added with the shadcn CLI as `alert` (aria-nova), restyled: raised
 // surface, decorative hairline, a 4 px start edge and an icon in the tone's text colour (never colour alone),
-// title, description, then actions. Errors say what happened and what to do next.
+// title, description, then actions. Errors say what happened and what to do next. It is a live region: role
+// "alert" for danger, "status" otherwise (WCAG 4.1.3), overridable with `role`.
 import {
 	CircleCheckIcon,
 	CircleXIcon,
@@ -39,7 +40,7 @@ const TONES: Record<
 
 export type InlineBannerProps = Omit<
 	HTMLAttributes<HTMLDivElement>,
-	"title"
+	"title" | "role"
 > & {
 	tone?: BannerTone;
 	/** What happened, in one line. */
@@ -48,6 +49,11 @@ export type InlineBannerProps = Omit<
 	children?: ReactNode;
 	/** Buttons for the next step ("Reload", "Open file"). */
 	actions?: ReactNode;
+	/**
+	 * How assistive technology announces the banner when it appears: `alert` (assertive) by default for danger,
+	 * `status` (polite) otherwise. "none" for a banner that must not be announced.
+	 */
+	role?: "alert" | "status" | "none";
 };
 
 export function InlineBanner({
@@ -55,14 +61,17 @@ export function InlineBanner({
 	title,
 	children,
 	actions,
+	role,
 	className,
 	...props
 }: InlineBannerProps) {
 	const { Icon, icon, edge } = TONES[tone];
+	const resolvedRole = role ?? (tone === "danger" ? "alert" : "status");
 	return (
 		<div
 			data-slot="inline-banner"
 			data-tone={tone}
+			role={resolvedRole === "none" ? undefined : resolvedRole}
 			className={cn(
 				"flex flex-wrap items-start gap-3 rounded-control border border-l-4 border-border-default bg-surface-raised py-3 pr-3 pl-edge text-ui text-text",
 				edge,

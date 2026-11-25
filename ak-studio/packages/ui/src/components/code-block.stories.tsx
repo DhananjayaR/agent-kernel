@@ -23,9 +23,13 @@ export const Default: Story = {
 		await expect(getComputedStyle(pre).fontFamily).toContain("JetBrains Mono");
 		await expect(
 			within(canvasElement).getByRole("button", {
-				name: "Copy upgrade command",
+				name: "Copy code",
 			}),
-		).toBeVisible();
+		).toHaveAccessibleDescription("Upgrade command");
+		// The focusable scroll region is named by the caption.
+		await expect(
+			within(canvasElement).getByRole("region", { name: "Upgrade command" }),
+		).toHaveAttribute("tabindex", "0");
 	},
 };
 
@@ -47,9 +51,14 @@ export const Long: Story = {
 export const Hover: Story = {
 	play: async ({ canvasElement }) => {
 		const copy = within(canvasElement).getByRole("button", {
-			name: "Copy upgrade command",
+			name: "Copy code",
 		});
+		// React Aria shows a tooltip on hover only in pointer modality (earlier stories may have left keyboard).
+		await userEvent.click(canvasElement);
 		await hover(copy);
+		await expect(
+			await within(document.body).findByRole("tooltip"),
+		).toHaveTextContent("Copy code");
 	},
 };
 
@@ -57,28 +66,26 @@ export const Hover: Story = {
 export const Focus: Story = {
 	play: async ({ canvasElement }) => {
 		const copy = within(canvasElement).getByRole("button", {
-			name: "Copy upgrade command",
+			name: "Copy code",
 		});
 		await tabTo(copy);
 		await expectFocusRing(copy);
 		await userEvent.tab();
-		const pre = canvasElement.querySelector("pre") as HTMLElement;
-		await expect(pre).toHaveFocus();
-		await expect(getComputedStyle(pre).outlineStyle).toBe("solid");
+		const region = within(canvasElement).getByRole("region", {
+			name: "Upgrade command",
+		});
+		await expect(region).toHaveFocus();
+		await expect(getComputedStyle(region).outlineStyle).toBe("solid");
 	},
 };
 
 export const Copy: Story = {
 	play: async ({ args, canvasElement }) => {
 		const canvas = within(canvasElement);
-		await userEvent.click(
-			canvas.getByRole("button", { name: "Copy upgrade command" }),
-		);
+		await userEvent.click(canvas.getByRole("button", { name: "Copy code" }));
 		await expect(args.onCopy).toHaveBeenCalledWith(args.code);
 		await waitFor(() =>
-			expect(canvas.getByRole("status")).toHaveTextContent(
-				"Upgrade command copied",
-			),
+			expect(canvas.getByRole("status")).toHaveTextContent("Code copied"),
 		);
 	},
 };

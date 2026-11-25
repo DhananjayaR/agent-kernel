@@ -12,35 +12,28 @@ import {
 } from "lucide-react";
 import type { HTMLAttributes } from "react";
 import { cn } from "../lib/utils";
+import { uiStrings } from "../strings";
 
 export type Status = "passed" | "running" | "waiting" | "failed" | "not-set-up";
 
-const STATES: Record<
-	Status,
-	{ label: string; Icon: LucideIcon; iconClass: string }
-> = {
+const STATES: Record<Status, { Icon: LucideIcon; iconClass: string }> = {
 	passed: {
-		label: "Passed",
 		Icon: CircleCheckIcon,
 		iconClass: "text-text-status-success",
 	},
 	running: {
-		label: "Running",
 		Icon: Loader2Icon,
 		iconClass: "animate-spin text-text",
 	},
 	waiting: {
-		label: "Waiting",
 		Icon: Clock3Icon,
 		iconClass: "text-text-status-warning",
 	},
 	failed: {
-		label: "Failed",
 		Icon: CircleXIcon,
 		iconClass: "text-text-status-danger",
 	},
 	"not-set-up": {
-		label: "Not set up",
 		Icon: CircleDashedIcon,
 		iconClass: "text-text-muted",
 	},
@@ -64,7 +57,8 @@ export function StatusChip({
 	className,
 	...props
 }: StatusChipProps) {
-	const { label: defaultLabel, Icon, iconClass } = STATES[status];
+	const { Icon, iconClass } = STATES[status];
+	const defaultLabel = uiStrings.status[status];
 	return (
 		<span
 			data-slot="status-chip"

@@ -59,10 +59,28 @@ export const Default: Story = {
 			),
 		);
 		await expect(icons.size).toBe(4);
+		// Live regions: danger is an alert, the others are status messages.
+		await expect(banners.map((banner) => banner.getAttribute("role"))).toEqual([
+			"status",
+			"status",
+			"alert",
+			"status",
+		]);
 		const danger = banners[2] as HTMLElement;
 		await expect(getComputedStyle(danger).borderLeftWidth).toBe("4px");
 		await expect(getComputedStyle(danger).borderLeftColor).not.toBe(
 			getComputedStyle(danger).borderTopColor,
 		);
+	},
+};
+
+/** A banner shown with the view from the start can opt out of being announced. */
+export const NotAnnounced: Story = {
+	args: { role: "none" },
+	play: async ({ canvasElement }) => {
+		const banner = canvasElement.querySelector(
+			"[data-slot=inline-banner]",
+		) as HTMLElement;
+		await expect(banner).not.toHaveAttribute("role");
 	},
 };
