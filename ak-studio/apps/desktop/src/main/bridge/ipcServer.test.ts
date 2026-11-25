@@ -58,7 +58,9 @@ const ticks = defineStream({
 	event: z.number(),
 });
 
-function setup(options: { devServerUrl?: string } = {}) {
+function setup(
+	options: { devServerUrl?: string; onFirstAnswer?: () => void } = {},
+) {
 	const emitters: Array<(n: number) => void> = [];
 	const stops = vi.fn();
 	const registry = new ServiceRegistry(
@@ -80,6 +82,7 @@ function setup(options: { devServerUrl?: string } = {}) {
 		isAppContents: (c) => appContents.has(c),
 		allowedOrigins: trustedOrigins(options.devServerUrl),
 		log,
+		onFirstAnswer: options.onFirstAnswer,
 	});
 	return { server, app, appContents, emitters, stops, log };
 }
@@ -194,6 +197,23 @@ describe("BridgeServer requests", () => {
 			ok: false,
 			error: { code: ERROR_CODES.forbidden },
 		});
+	});
+
+	it("calls onFirstAnswer once, after the first ok answer only", async () => {
+		const onFirstAnswer = vi.fn();
+		const { server, app } = setup({ onFirstAnswer });
+		await server.request(
+			fakeEvent(app, topFrame("https://evil.example/")),
+			"t.echo",
+			{
+				text: "a",
+			},
+		);
+		await server.request(fakeEvent(app), "t.echo", { text: 1 });
+		expect(onFirstAnswer).not.toHaveBeenCalled();
+		await server.request(fakeEvent(app), "t.echo", { text: "a" });
+		await server.request(fakeEvent(app), "t.echo", { text: "b" });
+		expect(onFirstAnswer).toHaveBeenCalledTimes(1);
 	});
 
 	it("never throws, even if the registry does", async () => {

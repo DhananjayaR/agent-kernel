@@ -28,7 +28,8 @@ import {
 	refusedPackagedSwitch,
 	resolveDevServerUrl,
 } from "./security";
-import { AppService, PREFERENCES_FILE } from "./services/AppService";
+import { PREFERENCES_FILE } from "./services/AppService";
+import { registerServices } from "./services/registerServices";
 import {
 	clampWindowState,
 	MIN_SIZE,
@@ -39,7 +40,7 @@ import {
 
 /**
  * Read-only hooks for the Electron smoke test (Task 7), read with Playwright's `electronApp.evaluate`. Present
- * only in unpackaged builds started with AK_STUDIO_TEST_HOOKS=1.
+ * only in development and e2e builds (`__STUDIO_DEV__`), run unpackaged, started with AK_STUDIO_TEST_HOOKS=1.
  */
 export interface StudioTestHooks {
 	cancelledRequestCount(): number;
@@ -60,9 +61,10 @@ if (refusedSwitch) {
 	startupError = `--${refusedSwitch} is not accepted by a packaged build`;
 }
 
-// The electron-vite dev server: trusted only in unpackaged builds, and only on a loopback host.
+// The electron-vite dev server: trusted only in development and e2e builds (`__STUDIO_DEV__`, set at build time,
+// so the production bundle holds no dev-server path), run unpackaged, and only on a loopback host.
 let devServerUrl: string | undefined;
-if (!startupError) {
+if (__STUDIO_DEV__ && !startupError) {
 	try {
 		devServerUrl = resolveDevServerUrl(
 			app.isPackaged,
@@ -133,8 +135,8 @@ function createWindow(): BrowserWindow {
 	win.once("ready-to-show", () => {
 		if (state.isMaximized) win.maximize();
 		win.show();
-		// One line on stdout: the packaged-build check (README, Linux results) waits for it, since a packaged
-		// build cannot be driven by Playwright or CDP.
+		// One line on stdout: the packaged smoke check (tools/packaged-smoke.mjs) waits for it, and for
+		// "[studio] bridge ready", since a packaged build cannot be driven by Playwright or CDP.
 		console.log("[studio] window shown");
 	});
 	win.on("closed", () => {
@@ -154,21 +156,24 @@ function createWindow(): BrowserWindow {
  */
 function startBridge(): void {
 	const registry = new ServiceRegistry();
-	const appService = new AppService({
-		version: app.getVersion(),
-		platform: process.platform,
-		preferencesFile: join(app.getPath("userData"), PREFERENCES_FILE),
-		onThemeChange: (theme) => {
-			nativeTheme.themeSource = theme;
+	const services = registerServices(registry, {
+		app: {
+			version: app.getVersion(),
+			platform: process.platform,
+			preferencesFile: join(app.getPath("userData"), PREFERENCES_FILE),
+			onThemeChange: (theme) => {
+				nativeTheme.themeSource = theme;
+			},
 		},
 	});
-	nativeTheme.themeSource = appService.theme;
-	registry.register(appService);
+	nativeTheme.themeSource = services.app.theme;
 	registry.start();
 	new BridgeServer({
 		registry,
 		isAppContents: (contents) => appContents.has(contents),
 		allowedOrigins: trustedOrigins(devServerUrl),
+		// The renderer loaded from app:// (or the dev server), its preload works, and main answered it.
+		onFirstAnswer: () => console.log("[studio] bridge ready"),
 	}).install(ipcMain);
 }
 
@@ -210,7 +215,12 @@ function start(): void {
 			app.exit(1);
 			return;
 		}
-		if (!app.isPackaged && process.env.AK_STUDIO_TEST_HOOKS === "1") {
+		// Compiled out of the production build (`__STUDIO_DEV__` false); refused at run time when packaged.
+		if (
+			__STUDIO_DEV__ &&
+			!app.isPackaged &&
+			process.env.AK_STUDIO_TEST_HOOKS === "1"
+		) {
 			globalThis.__akStudioTestHooks = {
 				cancelledRequestCount: () => gate.cancelledCount,
 				cancelledRequestUrls: () => gate.cancelledUrls,

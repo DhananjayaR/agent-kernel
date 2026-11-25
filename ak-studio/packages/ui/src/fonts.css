@@ -2,9 +2,9 @@
  * Bundled fonts (all SIL Open Font License 1.1). The @fontsource packages ship the font files; the bundler
  * emits them next to the CSS, so the app serves them itself and never fetches a font from the network.
  *
- * Which family is used where (UI text, headings, code) waits for the P1a design gate. Until then nothing maps
- * --font-sans, --font-mono or the body font to these families; the variables below only name them, for the
- * token story.
+ * Which family is used where (UI text, headings, code) waits for the P1a design gate. Until then only the
+ * stand-in `--font-ui` token in theme.css (Inter, used by the renderer's placeholder page) maps to one of them;
+ * the variables below name the three families for the token story.
  */
 @import "@fontsource-variable/archivo";
 @import "@fontsource-variable/inter";

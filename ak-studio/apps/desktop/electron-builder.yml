@@ -12,6 +12,11 @@ directories:
 files:
   - out/**
   - package.json
+# The bundled fonts' copyright lines and SIL OFL 1.1 text, next to the app (resources/ on Linux and Windows,
+# Contents/Resources/ on macOS).
+extraResources:
+  - from: resources/THIRD-PARTY-NOTICES.txt
+    to: THIRD-PARTY-NOTICES.txt
 # No native modules: nothing to rebuild.
 npmRebuild: false
 artifactName: ak-studio-${version}-${os}-${arch}.${ext}

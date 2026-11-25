@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { cruise } from "../cruise-lib.mjs";
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
-const EXPECTED_MODULES = 19;
+const EXPECTED_MODULES = 20;
 const expected = [
 	["renderer-ui-no-electron", "apps/renderer/src/violation.ts"], // resolves via fixture node_modules
 	["renderer-ui-no-electron", "apps/renderer/src/required.ts"], // require()
@@ -20,6 +20,7 @@ const expected = [
 	["contract-only-zod", "packages/contract/src/index.ts"],
 	["contract-tests-only-zod-vitest", "packages/contract/src/violation.test.ts"], // node:fs in a test
 	["ui-no-apps-or-contract", "packages/ui/src/index.ts"],
+	["ui-no-apps-or-contract", "packages/ui/.storybook/preview.ts"], // outside src
 	["desktop-is-private", "apps/renderer/src/violation.ts"],
 ];
 // Must NOT be reported: a contract test importing vitest, zod and contract files is allowed, and the

@@ -11,7 +11,7 @@ import {
 } from "@ak-studio/contract";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { AppService } from "../services/AppService";
+import { registerServices } from "../services/registerServices";
 import { ServiceRegistry } from "./registry";
 
 // A test-local contract: the real one declares no stream.
@@ -81,16 +81,17 @@ describe("ServiceRegistry start-up", () => {
 		);
 	});
 
-	it("serves the real contract completely once AppService is registered", () => {
+	it("serves the real contract completely with the app's own services (registerServices, as index.ts)", () => {
 		const registry = new ServiceRegistry();
 		expect(registry.missingHandlers()).toEqual(Object.keys(operations).sort());
-		registry.register(
-			new AppService({
+		const services = registerServices(registry, {
+			app: {
 				version: "1.0.0",
 				platform: "linux",
 				preferencesFile: "/nonexistent/preferences.json",
-			}),
-		);
+			},
+		});
+		expect(services.app.theme).toBe("system");
 		expect(registry.missingHandlers()).toEqual([]);
 		expect(() => registry.start()).not.toThrow();
 		expect(Object.keys(contract.operations)).toContain(appInfo.name);

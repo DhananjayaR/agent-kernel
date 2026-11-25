@@ -4,9 +4,10 @@
 // `pnpm depcruise:selftest` proves the rules can fail and that the parser actually found modules.
 
 // Whole member folders (so .storybook, stories and config files are covered), minus installed and built files.
+const NOT_INSTALLED_OR_BUILT = "(^|/)(node_modules|dist|storybook-static)/";
 const RENDERER_OR_UI = {
 	path: "^(apps/renderer|packages/ui)/",
-	pathNot: "(^|/)(node_modules|dist|storybook-static)/",
+	pathNot: NOT_INSTALLED_OR_BUILT,
 };
 
 // What contract source may import: itself and zod (unresolved or resolved).
@@ -59,9 +60,10 @@ module.exports = {
 		},
 		{
 			name: "ui-no-apps-or-contract",
-			comment: "packages/ui imports neither apps/* nor @ak-studio/contract.",
+			comment:
+				"packages/ui (the whole member: src, .storybook, config files) imports neither apps/* nor @ak-studio/contract.",
 			severity: "error",
-			from: { path: "^packages/ui/src/" },
+			from: { path: "^packages/ui/", pathNot: NOT_INSTALLED_OR_BUILT },
 			to: {
 				path: [
 					"^apps/",

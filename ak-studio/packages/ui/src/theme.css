@@ -56,8 +56,8 @@
 /*
  * No Tailwind default palette: only the role colours exist as colour utilities. The other default scales that
  * would bypass the tokens are removed too (shadows carry their own colours; radius and text sizes have
- * Studio tokens below). Font families are not mapped yet (design gate), so the default family utilities go
- * as well; preflight still falls back to the system font.
+ * Studio tokens below). The default family utilities go as well; the one family token, `--font-ui`, is below
+ * (a stand-in until the design gate); preflight still falls back to the system font elsewhere.
  */
 @theme {
 	--color-*: initial;
@@ -139,6 +139,8 @@
 	--text-heading--line-height: 26px;
 	--font-weight-control: 700; /* Button label */
 	--font-weight-action: 500; /* ActionButton */
+	/* UI text family (`font-ui`): Inter as a stand-in so the app uses a bundled font; the gate picks the families. */
+	--font-ui: "Inter Variable", sans-serif; /* provisional: P1a design gate */
 
 	/* Floating layers are solid (decided in P0); this is the popover shadow, first two layers (L). */
 	--shadow-elevated: 0 4px 12px rgb(0 0 0 / 0.08), 0 2px 6px rgb(0 0 0 / 0.04);

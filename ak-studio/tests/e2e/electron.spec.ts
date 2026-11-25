@@ -139,6 +139,59 @@ test("makes no network request (Chromium requests only; Node networking in main 
 	});
 });
 
+// A font the CSP blocks never reaches the request gate, so a zero count alone would not catch it: this test
+// records `securitypolicyviolation` events from the first script on, and checks where the font file came from.
+test("uses the bundled UI font, loaded from app:// with no CSP violation", async () => {
+	await withStudio(async ({ app, page }) => {
+		// The window loaded before the test could add a listener: add it as an init script, then reload.
+		await page.addInitScript(() => {
+			const w = window as unknown as { __cspViolations: string[] };
+			w.__cspViolations = [];
+			document.addEventListener("securitypolicyviolation", (event) => {
+				w.__cspViolations.push(
+					`${event.effectiveDirective} ${event.blockedURI}`,
+				);
+			});
+		});
+		await page.reload();
+		await expect(page.getByTestId("version")).not.toBeEmpty();
+		const fonts = await page.evaluate(async () => {
+			const main = document.querySelector("main");
+			const family = main ? getComputedStyle(main).fontFamily : "";
+			// The faces needed for the page's own text, loaded (this waits for any load in progress).
+			const loaded = await document.fonts.load(
+				'16px "Inter Variable"',
+				main?.textContent ?? "",
+			);
+			await document.fonts.ready;
+			return {
+				family,
+				loaded: loaded.map((face) => ({
+					family: face.family,
+					status: face.status,
+				})),
+				files: performance
+					.getEntriesByType("resource")
+					.map((entry) => entry.name)
+					.filter((name) => /\.woff2?$/.test(name)),
+				violations: (window as unknown as { __cspViolations: string[] })
+					.__cspViolations,
+			};
+		});
+		expect(fonts.family).toMatch(/^"?Inter Variable"?,/);
+		expect(fonts.loaded.length).toBeGreaterThan(0);
+		for (const face of fonts.loaded) {
+			expect(face).toEqual({ family: "Inter Variable", status: "loaded" });
+		}
+		expect(fonts.files.length).toBeGreaterThan(0);
+		for (const file of fonts.files) {
+			expect(file).toMatch(/^app:\/\/studio\/assets\/inter-[^/]+\.woff2$/);
+		}
+		expect(fonts.violations).toEqual([]);
+		expect(await cancelledRequests(app)).toEqual({ count: 0, urls: [] });
+	});
+});
+
 test("the request gate counts a refused request (so a zero count means something)", async () => {
 	await withStudio(async ({ app, page }) => {
 		await expect(page.getByTestId("version")).not.toBeEmpty();

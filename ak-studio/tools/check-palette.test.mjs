@@ -73,6 +73,7 @@ describe("check-palette", () => {
 		["// fixes (#950)"],
 		["#fade { display: none; }"],
 		["toRgb(color)"],
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: source text under test, not a template.
 		["backgroundColor: `var(--role-${surface})`"],
 	])("allows %s", (text) => {
 		expect(findColourLiterals(text)).toEqual([]);

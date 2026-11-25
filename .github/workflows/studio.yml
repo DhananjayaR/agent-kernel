@@ -1,7 +1,8 @@
 name: Studio
 
 # Agent Kernel Studio (ak-studio/, issue #950): lint, type-check, boundary checks, unit tests, Storybook
-# accessibility run, end-to-end tests and an unsigned installer, on Linux, Windows and macOS.
+# accessibility run, end-to-end tests, and an unsigned installer whose app is started before upload, on Linux,
+# Windows and macOS.
 # P1a: written and parsed, not yet run (Windows, macOS and CI were deferred; see ak-studio/README.md).
 on:
   pull_request:
@@ -67,17 +68,13 @@ jobs:
       - name: Install Playwright's Chromium (Storybook accessibility run and browser e2e)
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Lint (Biome, check-palette)
+      # Biome (warnings fail), check-palette, the boundary rules (depcruise) and their self-test (the check must
+      # be able to fail).
+      - name: Lint (Biome, check-palette, boundary rules and self-test)
         run: pnpm lint
 
       - name: Type-check
         run: pnpm typecheck
-
-      - name: Boundary rules
-        run: pnpm depcruise
-
-      - name: Boundary rules self-test (the check must be able to fail)
-        run: pnpm depcruise:selftest
 
       - name: Unit tests
         run: pnpm test
@@ -99,7 +96,8 @@ jobs:
             echo "kernel.apparmor_restrict_unprivileged_userns not present: nothing to change"
           fi
 
-      # Builds the app, then runs Playwright's browser and Electron projects (under xvfb-run -a on Linux).
+      # Builds the app with its test hooks (the e2e build), then runs Playwright's browser and Electron projects
+      # (under xvfb-run -a on Linux).
       - name: End-to-end tests
         run: pnpm test:e2e
 
@@ -112,9 +110,20 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      # Unsigned: AppImage on Linux, NSIS installer on Windows, dmg on macOS.
+      # Unsigned: AppImage on Linux, NSIS installer on Windows, dmg on macOS. Rebuilds without the test hooks.
       - name: Package
         run: pnpm package
+
+      # Starts the packaged app (Linux: linux-unpacked/ and the AppImage; Windows: win-unpacked/; macOS: the .app),
+      # waits until its window is shown and the bridge has answered, closes it, and checks that it refuses the
+      # remote-debugging switches and ships no test-hook code. The installer is uploaded only if this passes.
+      - name: Packaged app starts (smoke check)
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a pnpm test:packaged
+          else
+            pnpm test:packaged
+          fi
 
       - name: Upload installer
         uses: actions/upload-artifact@v6

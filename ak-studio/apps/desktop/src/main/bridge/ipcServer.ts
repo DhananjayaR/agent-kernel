@@ -38,6 +38,11 @@ export interface BridgeServerOptions {
 	/** Origins a message may come from: see `trustedOrigins`. */
 	allowedOrigins: readonly string[];
 	log?: (message: string) => void;
+	/**
+	 * Called once, after the first request the registry answered with `ok: true`: the renderer has loaded, its
+	 * preload works and main serves it (index.ts prints `[studio] bridge ready` for the packaged smoke check).
+	 */
+	onFirstAnswer?: () => void;
 }
 
 /** The longest subscription id accepted (the preload uses UUIDs). */
@@ -113,6 +118,7 @@ export class BridgeServer {
 	/** Live subscriptions: per window contents, by the renderer's subscription id. */
 	readonly #subs = new Map<WebContents, Map<string, () => void>>();
 	readonly #hooked = new WeakSet<WebContents>();
+	#answered = false;
 
 	constructor(options: BridgeServerOptions) {
 		this.#options = options;
@@ -151,7 +157,12 @@ export class BridgeServer {
 				this.#log(`refused a request: ${refused}`);
 				return fail(forbidden(refused));
 			}
-			return await this.#options.registry.request(op, input);
+			const result = await this.#options.registry.request(op, input);
+			if (result.ok && !this.#answered) {
+				this.#answered = true;
+				this.#options.onFirstAnswer?.();
+			}
+			return result;
 		} catch (err) {
 			return fail(toStudioError(err));
 		}

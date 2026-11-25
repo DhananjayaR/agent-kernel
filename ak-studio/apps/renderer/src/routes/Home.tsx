@@ -25,8 +25,9 @@ export function Home() {
 	});
 
 	return (
-		// One role token (bg-surface) proves the design-system CSS loads; styling waits for the shell (Task 10).
-		<main className="bg-surface">
+		// One colour token (bg-surface) and one font token (font-ui, the bundled Inter) prove the design-system CSS
+		// and the bundled fonts load; styling waits for the shell (Task 10).
+		<main className="bg-surface font-ui">
 			<h1>Agent Kernel Studio</h1>
 			<p>Placeholder page (replaced by the shell in Task 10).</p>
 			{info.isPending && <p>Loading...</p>}
