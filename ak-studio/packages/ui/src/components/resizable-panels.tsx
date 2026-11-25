@@ -7,6 +7,8 @@
 //
 // Sizes are remembered by the caller, not here: `defaultLayout` restores them and `onLayoutChange` reports the
 // layout the person asked for after each resize (pointer released or key pressed), as panel id to percentage.
+// A panel can instead be sized in pixels (`defaultSize`, `minSize`, `collapsedSize` as numbers) and driven through
+// its `panelRef` (collapse, resize, read its size), as the shell's bottom panel is.
 // Panel ids are required so a saved layout maps to the same panels. This component never touches storage.
 //
 // Keyboard (react-resizable-panels, APG window splitter): Tab reaches each handle; ArrowLeft and ArrowRight (or
@@ -17,6 +19,7 @@ import {
 	Group,
 	type Layout,
 	Panel,
+	type PanelImperativeHandle,
 	type PanelProps,
 	Separator,
 } from "react-resizable-panels";
@@ -63,9 +66,12 @@ export function ResizablePanels({
 	);
 }
 
+/** A panel's imperative handle (`collapse`, `expand`, `resize`, `getSize`, `isCollapsed`), from `panelRef`. */
+export type ResizablePanelHandle = PanelImperativeHandle;
+
 export type ResizablePanelProps = Omit<
 	PanelProps,
-	"id" | "className" | "style" | "panelRef" | "elementRef"
+	"id" | "className" | "style" | "elementRef"
 > & {
 	/** Stable id; the key of this panel's size in a remembered layout. */
 	id: string;

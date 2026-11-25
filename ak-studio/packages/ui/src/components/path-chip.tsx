@@ -23,7 +23,7 @@ const COPIED_MS = 1500;
 
 export type PathChipProps = Omit<
 	HTMLAttributes<HTMLSpanElement>,
-	"children"
+	"children" | "onCopy"
 > & {
 	/** The path as the user should read it: relative to the project where it can be. */
 	path: string;

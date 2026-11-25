@@ -20,6 +20,8 @@ type Labelled =
 	| { "aria-label"?: string; "aria-labelledby": string };
 
 export type SegmentedControlProps = Labelled & {
+	/** Help text for the whole group (its id). */
+	"aria-describedby"?: string;
 	selectedKey?: Key;
 	defaultSelectedKey?: Key;
 	onSelectionChange?: (key: Key) => void;

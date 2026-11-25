@@ -1,10 +1,14 @@
 // Button: added with the shadcn CLI (aria-nova, React Aria `Button`), restyled to Spectrum 2 medium.
 // One primary action per view: `primary` for it; everything else is `secondary`, `outline` or `ghost`.
 // `danger` names the thing it destroys ("Destroy deployment") and always shows an icon, so it is never told
-// from `primary` by colour alone (the two hues are close). `IconButton` is the icon-only form; its label is
-// required by type.
+// from `primary` by colour alone (the two hues are close). `ai` is the AI button style, for an action that hands
+// work to the coding agent ("Build with AI") and nothing else: an outline in the AI colour with a sparkle icon
+// (shown when no icon is given), which fills with the AI colour on hover and press. It uses only existing roles:
+// `text-accent-ai` for the label and edge (at least 4.5:1, so also 3:1, on every surface) and `accent-ai` with
+// `on-accent-ai` for the hover fill. It is never the view's primary action. `IconButton` is the icon-only form;
+// its label is required by type.
 import { cva, type VariantProps } from "class-variance-authority";
-import { Loader2Icon, TriangleAlertIcon } from "lucide-react";
+import { Loader2Icon, SparklesIcon, TriangleAlertIcon } from "lucide-react";
 import type { ReactNode, RefAttributes } from "react";
 import {
 	Button as AriaButton,
@@ -34,6 +38,7 @@ const buttonVariants = cva(
 					"bg-transparent text-text data-hovered:bg-fill data-pressed:bg-fill-hover data-disabled:bg-transparent",
 				danger:
 					"bg-status-danger text-on-status-danger data-hovered:bg-status-danger-hover data-pressed:bg-status-danger-hover",
+				ai: "border-text-accent-ai bg-transparent text-text-accent-ai data-hovered:bg-accent-ai data-hovered:text-on-accent-ai data-pressed:bg-accent-ai data-pressed:text-on-accent-ai data-disabled:border-disabled-border data-disabled:bg-transparent",
 			},
 			shape: {
 				// Spectrum 2 Button: pill, 16 px (height / 2) padding, 700.
@@ -63,7 +68,7 @@ type BaseProps = Omit<AriaButtonProps, "children" | "className"> &
 
 export type ButtonProps = BaseProps & {
 	variant?: ButtonVariant;
-	/** Leading icon (lucide-react). `danger` shows a warning icon when none is given. */
+	/** Leading icon (lucide-react). `danger` shows a warning icon and `ai` a sparkle when none is given. */
 	icon?: ReactNode;
 	children: ReactNode;
 };
@@ -91,7 +96,11 @@ export function Button({
 }: ButtonProps) {
 	const leading =
 		icon ??
-		(variant === "danger" ? <TriangleAlertIcon aria-hidden="true" /> : null);
+		(variant === "danger" ? (
+			<TriangleAlertIcon aria-hidden="true" />
+		) : variant === "ai" ? (
+			<SparklesIcon aria-hidden="true" />
+		) : null);
 	return (
 		<AriaButton
 			data-slot="button"
@@ -109,7 +118,7 @@ export function Button({
 export type IconButtonProps = Omit<BaseProps, "aria-label"> & {
 	/** What the button does ("Copy path"); also its accessible name. Required: the button has no text. */
 	"aria-label": string;
-	variant?: Exclude<ButtonVariant, "primary" | "danger">;
+	variant?: Exclude<ButtonVariant, "primary" | "danger" | "ai">;
 	/** The icon (lucide-react), decorative. */
 	icon: ReactNode;
 };

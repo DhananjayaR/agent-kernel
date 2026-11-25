@@ -6,6 +6,7 @@ import {
 	expectDisabledLook,
 	expectFocusRing,
 	expectHeight,
+	expectNonTextContrastOnSurfaces,
 	expectStyle,
 	expectTokenColour,
 	hover,
@@ -87,6 +88,62 @@ export const Hover: Story = {
 	},
 };
 
+/**
+ * The AI style (Build with AI): an outline in the AI colour with a sparkle icon, on every surface. The label and
+ * edge are `text-accent-ai` (4.5:1 on all three surfaces, so the edge also holds 3:1).
+ */
+export const AI: Story = {
+	args: { variant: "ai", children: "Build with AI" },
+	render: (args) => (
+		<div className="flex flex-col gap-3">
+			{(["bg-surface", "bg-surface-raised", "bg-surface-overlay"] as const).map(
+				(surface) => (
+					<div key={surface} className={`${surface} p-3`}>
+						<Button {...args} />
+					</div>
+				),
+			)}
+		</div>
+	),
+	play: async ({ canvasElement }) => {
+		for (const button of within(canvasElement).getAllByRole("button")) {
+			await expectHeight(button, 32);
+			await expectStyle(button, "border-top-width", "2px");
+			await expectStyle(button, "border-top-left-radius", "9999px");
+			await expectTokenColour(button, "color", "text-text-accent-ai");
+			await expectTokenColour(
+				button,
+				"border-top-color",
+				"border-text-accent-ai",
+			);
+			await expectNonTextContrastOnSurfaces(button, "border-top-color");
+			// Never colour alone: the sparkle marks it as the coding agent's.
+			await expect(button.querySelector("svg")).not.toBeNull();
+		}
+	},
+};
+
+/** The AI style, hovered: it fills with the AI colour and the label takes on-accent-ai (4.5:1 on the fill). */
+export const HoverAI: Story = {
+	args: { variant: "ai", children: "Build with AI" },
+	play: async ({ canvasElement }) => {
+		const button = within(canvasElement).getByRole("button");
+		await hover(button);
+		await expectTokenColour(button, "background-color", "bg-accent-ai");
+		await expectTokenColour(button, "color", "text-on-accent-ai");
+	},
+};
+
+/** The AI style with keyboard focus: the 2 px ring outside the AI edge. */
+export const FocusAI: Story = {
+	args: { variant: "ai", children: "Build with AI" },
+	play: async ({ canvasElement }) => {
+		const button = within(canvasElement).getByRole("button");
+		await tabTo(button);
+		await expectFocusRing(button);
+	},
+};
+
 /** Danger, hovered. */
 export const HoverDanger: Story = {
 	args: { variant: "danger", children: "Destroy deployment" },
@@ -153,6 +210,9 @@ export const Disabled: Story = {
 			<Button variant="danger" isDisabled>
 				Destroy deployment
 			</Button>
+			<Button variant="ai" isDisabled>
+				Build with AI
+			</Button>
 			<IconButton aria-label="Copy path" icon={<CopyIcon />} isDisabled />
 		</Row>
 	),
@@ -171,11 +231,13 @@ export const Disabled: Story = {
 				"bg-disabled-fill",
 			);
 		}
-		await expectTokenColour(
-			canvas.getByRole("button", { name: "Check again" }),
-			"border-top-color",
-			"border-disabled-border",
-		);
+		for (const name of ["Check again", "Build with AI"]) {
+			await expectTokenColour(
+				canvas.getByRole("button", { name }),
+				"border-top-color",
+				"border-disabled-border",
+			);
+		}
 	},
 };
 

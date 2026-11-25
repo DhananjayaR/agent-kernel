@@ -38,11 +38,18 @@ const preview: Preview = {
 	decorators: [
 		(Story, context) => {
 			const theme: Theme = context.globals.theme === "light" ? "light" : "dark";
+			// `fullBleed` (the shell stories): the story fills the viewport edge to edge, as the app does, so a
+			// story at 1100 px measures 1100 px.
+			const fullBleed = context.parameters.fullBleed === true;
 			return (
 				<DocumentTheme theme={theme}>
 					<div
 						data-theme={theme}
-						className="min-h-screen bg-surface p-6 text-text"
+						className={
+							fullBleed
+								? "bg-surface text-text"
+								: "min-h-screen bg-surface p-6 text-text"
+						}
 					>
 						<Story />
 					</div>
