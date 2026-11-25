@@ -70,8 +70,7 @@ export const shellStrings = {
 	},
 	themeNotSaved:
 		"Try again. If it keeps failing, check that the app's data folder can be written to.",
-	bridgeError:
-		"Restart the app. If it keeps happening, reinstall Agent Kernel Studio.",
+	bridgeError: "Restart the app. If it keeps happening, reinstall OAK Studio.",
 	/** The bottom panel shortcut as shown on macOS (Ctrl+J elsewhere, the design system's default). */
 	macShortcut: "⌘J",
 } as const;

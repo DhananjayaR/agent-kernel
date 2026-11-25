@@ -2,7 +2,7 @@
 	"name": "ak-studio",
 	"version": "0.0.0",
 	"private": true,
-	"description": "Agent Kernel Studio workspace",
+	"description": "Open Agent Kernel Studio (OAK Studio) workspace",
 	"packageManager": "pnpm@12.4.1",
 	"engines": {
 		"node": "24.22.1"
@@ -23,7 +23,8 @@
 		"depcruise": "node tools/depcruise.mjs",
 		"depcruise:selftest": "node tools/depcruise-selftest/run.mjs",
 		"check-palette": "node tools/check-palette.mjs",
-		"check-palette:test": "vitest run tools/check-palette.test.mjs"
+		"check-palette:test": "vitest run tools/check-palette.test.mjs",
+		"make-app-icon": "node tools/make-app-icon.mjs"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.6.8",

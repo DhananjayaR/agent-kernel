@@ -1,5 +1,5 @@
-Agent Kernel Studio: third-party notices
-========================================
+OAK Studio (Open Agent Kernel Studio): third-party notices
+==========================================================
 
 Fonts bundled with the app. Each is licensed under the SIL Open Font License, Version 1.1, reproduced in full
 below. The font files are shipped unmodified, as published by Fontsource.

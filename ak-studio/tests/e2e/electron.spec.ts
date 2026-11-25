@@ -144,6 +144,14 @@ test("built app starts and shows the shell with the version from the real main p
 		// The real version (the mock would say 0.0.0-mock), so the renderer is on the IPC bridge.
 		await expect(appVersion(page)).toHaveText(main);
 		expect(page.url()).toBe("app://studio/#/canvas");
+		// The display name: the window title, and the app name (unpackaged builds add "(dev)").
+		await expect(page).toHaveTitle("OAK Studio");
+		expect(
+			await app.evaluate(({ app, BrowserWindow }) => [
+				app.getName(),
+				BrowserWindow.getAllWindows()[0]?.getTitle(),
+			]),
+		).toEqual(["OAK Studio (dev)", "OAK Studio"]);
 		await expect(page.getByRole("banner")).toBeVisible();
 		await expect(page.getByText("No project open")).toBeVisible();
 		await expect(page.getByRole("group", { name: "Local run" })).toHaveText(
@@ -153,6 +161,24 @@ test("built app starts and shows the shell with the version from the real main p
 			"Deployment: Not deployed",
 		);
 		await expect(page.getByRole("region", { name: "Panel" })).toBeVisible();
+	});
+});
+
+test("the OAK mark loads from app:// under the production CSP, with no network request", async () => {
+	await withStudio(async ({ app, page }) => {
+		const mark = page
+			.getByRole("banner")
+			.getByRole("img", { name: "OAK Studio" });
+		await expect(mark).toBeVisible();
+		await expect
+			.poll(() => mark.evaluate((img: HTMLImageElement) => img.naturalWidth))
+			.toBeGreaterThan(0);
+		const src = await mark.evaluate((img: HTMLImageElement) => img.currentSrc);
+		expect(src).toMatch(
+			/^app:\/\/studio\/assets\/oak-mark-orange-[\w-]+\.svg$/,
+		);
+		expect(await mark.boundingBox()).toMatchObject({ width: 20, height: 20 });
+		expect((await cancelledRequests(app)).count).toBe(0);
 	});
 });
 

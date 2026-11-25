@@ -1,5 +1,7 @@
-// Application menu: the macOS app menu, then Edit and View everywhere. Developer tools only in unpackaged
-// builds. No Electron value import: see security.ts.
+// Application menu: the macOS app menu, then Edit and View everywhere, and on Linux and Windows a Help menu whose
+// About item names the app (macOS has it in the app menu). The About panel's text is set in index.ts
+// (`app.setAboutPanelOptions`). Developer tools only in unpackaged builds. No Electron value import: see
+// security.ts.
 import type { MenuItemConstructorOptions } from "electron";
 
 export function buildMenuTemplate(options: {
@@ -25,5 +27,13 @@ export function buildMenuTemplate(options: {
 			: []),
 		{ role: "editMenu" },
 		{ label: "View", submenu: view },
+		...(options.platform === "darwin"
+			? []
+			: [
+					{
+						role: "help",
+						submenu: [{ role: "about" }],
+					} satisfies MenuItemConstructorOptions,
+				]),
 	];
 }

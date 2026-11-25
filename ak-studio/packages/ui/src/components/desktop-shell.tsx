@@ -1,15 +1,15 @@
 // DesktopShell: the frame around every screen inside a project (the "shell and tabs" pattern; no left
-// navigation). From top to bottom: the TopBar (project switcher, the five app tabs, then the run control, deploy
-// status, Build with AI and settings), the selected tab's content, the collapsible BottomPanel (Problems, Run log,
+// navigation). From top to bottom: the TopBar (the OAK mark, the project switcher, the five app tabs, then the run
+// control, deploy status, Build with AI and settings), the selected tab's content, the collapsible BottomPanel (Problems, Run log,
 // Commands) and the StatusBar. Presentational: everything it shows comes in through props and slots; the renderer
 // owns the data, the route and the stored layout.
 //
 // Layout: one 48 px top bar row. The project name shrinks first (down to 96 px, with an ellipsis; the full name and
 // path stay in its tooltip and menu), the tabs never shrink, and the controls keep their labels; at 1100 px and
-// wider every label is shown in full (stories `At1100`, `At1440`; at 1100 px the worst case leaves the project 26 px
-// above its minimum). Narrower than that (the window allows 800 px), or when the full form does not fit even so
+// wider every label is shown in full (stories `At1100`, `At1440`; at 1100 px the worst case leaves the project 8 px
+// above its minimum, after the OAK mark). Narrower than that (the window allows 800 px), or when the full form does not fit even so
 // (badges on the tabs, a longer label; story `At1100WithBadges`), the top bar is compact (`TOP_BAR_COMPACT_BELOW`,
-// story `At800Compact`): the tabs sit 16 px apart instead of 24, Build with AI shows its sparkle only (its name in a
+// story `At800Compact`): the tabs sit 16 px apart instead of 24 and the bar's parts 8 px instead of 12, Build with AI shows its sparkle only (its name in a
 // tooltip), the run control drops the port, and the deploy status drops its time. Compact because it overflowed,
 // it tries the full form again when the tabs change (a badge goes) or the bar widens (story `BadgesComeAndGo`).
 // Changing form never remounts a control, so focus stays where it was. Nothing scrolls sideways at any width
@@ -30,6 +30,7 @@ import {
 	useState,
 } from "react";
 import type { Key } from "react-aria-components";
+import oakMark from "../assets/oak-mark-orange.svg";
 import { cn } from "../lib/utils";
 import {
 	type BottomPanelStrings,
@@ -101,11 +102,24 @@ export type TopBarProps = {
 	tabs: ReactNode;
 	/** RunControl, DeployStatus, Build with AI and the settings control, in that order. */
 	actions?: ReactNode;
+	/** Overrides of the default copy (strings.ts): `appName`, the mark's accessible name. */
+	strings?: Partial<ShellStrings>;
 	className?: string;
 };
 
-/** The 48 px top bar (the `banner` landmark). Measures its own width to switch to the compact form. */
-export function TopBar({ project, tabs, actions, className }: TopBarProps) {
+/**
+ * The 48 px top bar (the `banner` landmark). Measures its own width to switch to the compact form. It starts with
+ * the OAK mark (branding/logo-mark/oak-mark-orange.svg, copied byte for byte into src/assets/ and imported as an
+ * asset, never redrawn), 20 px, named "OAK Studio": the app's name in the banner.
+ */
+export function TopBar({
+	project,
+	tabs,
+	actions,
+	strings,
+	className,
+}: TopBarProps) {
+	const text = { ...uiStrings.shell, ...strings };
 	const ref = useRef<HTMLElement>(null);
 	const [compact, setCompact] = useState(false);
 	// When the full top bar last overflowed: the bar's width and the tabs' text (labels and badges) then.
@@ -150,12 +164,23 @@ export function TopBar({ project, tabs, actions, className }: TopBarProps) {
 				data-slot="top-bar"
 				data-compact={compact || undefined}
 				className={cn(
-					"flex h-topbar w-full min-w-0 shrink-0 items-center gap-4 border-b border-border-default bg-surface-raised ps-2 pe-3",
+					"flex h-topbar w-full min-w-0 shrink-0 items-center gap-3 border-b border-border-default bg-surface-raised ps-2 pe-3",
+					compact && "gap-2",
 					className,
 				)}
 			>
-				<div className="flex min-w-24 max-w-64 shrink items-center">
-					{project}
+				{/* The mark (20 px) and a 6 px gap, then the switcher between 96 and 256 px wide. */}
+				<div className="flex min-w-30.5 max-w-70.5 shrink items-center gap-text-to-visual">
+					<img
+						src={oakMark}
+						alt={text.appName}
+						width={20}
+						height={20}
+						draggable={false}
+						data-slot="top-bar-mark"
+						className="size-5 shrink-0"
+					/>
+					<div className="flex min-w-0 flex-1 items-center">{project}</div>
 				</div>
 				<div className="flex h-full shrink-0 items-end">{tabs}</div>
 				{actions ? (
@@ -368,6 +393,7 @@ export function DesktopShell({
 			>
 				<TopBar
 					project={project}
+					strings={strings}
 					tabs={<AppTabList badges={tabBadges} strings={strings} />}
 					actions={actions}
 				/>

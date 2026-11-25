@@ -1,6 +1,25 @@
-# Agent Kernel Studio
+# OAK Studio
 
-Electron desktop app for Agent Kernel (issue #950). pnpm workspace; Node 24.22.1, pnpm 12.4.1.
+Open Agent Kernel Studio (OAK Studio): the Electron desktop app for Open Agent Kernel (OAK) (issue #950). pnpm
+workspace; Node 24.22.1, pnpm 12.4.1.
+
+**Brand.** The source of truth is [`branding/README.md`](../branding/README.md) at the repository root (name
+rules, logos, colours, the website design system) and its SVGs, used as they are (never redrawn or recoloured).
+The display name is "OAK Studio" (window title, menus, About, the `productName`), with the full name "Open Agent
+Kernel Studio" on first mention and in the About panel and the package description; identifiers keep their form
+(`ak-studio/`, `@ak-studio/*`, the `ak-studio` executable, the app id). The palette is already the token palette
+(`packages/ui/src/theme.css`). Interface icons are Tabler outline icons (`@tabler/icons-react`, pinned; Biome's
+`noRestrictedImports` refuses `lucide-react`), 16 px (`size-4`) or 20 px, stroke 2, and always `aria-hidden`
+(Tabler, unlike the lucide it replaced, does not hide them itself): the control around an icon carries the name.
+The top bar starts with the mark, `packages/ui/src/assets/oak-mark-orange.svg`, a byte-for-byte copy of
+`branding/logo-mark/oak-mark-orange.svg` (a unit test compares them; Biome skips the file, so it is never
+reformatted), imported as an asset and emitted as a file, so the app serves it from `app://studio/assets/` under
+the production CSP. The app icon, `apps/desktop/build/icon.png` (1024 x 1024: the orange mark on Prussian Blue
+`#02284F`, the background `branding/README.md` gives for that colourway), is rendered from the same SVG by
+`pnpm make-app-icon` (`tools/make-app-icon.mjs`, Playwright's Chromium); run it again when the mark changes and
+commit the PNG. electron-builder makes the Linux icon sizes, the macOS `.icns` and the Windows `.ico` from it (its
+converter works on Linux too), and main sets it as the window icon on Linux (from `resources/icon.png` when
+packaged).
 
 ```bash
 cd ak-studio
@@ -9,6 +28,7 @@ pnpm lint        # Biome (warnings fail), check-palette, depcruise and its self-
 pnpm typecheck   # tsc -b over all members
 pnpm test        # every member's unit tests (Vitest), then check-palette's own test
 pnpm check-palette        # no default-palette class, arbitrary value or colour literal in apps/renderer, packages/ui
+pnpm make-app-icon        # render apps/desktop/build/icon.png from branding/logo-mark/oak-mark-orange.svg
 pnpm storybook            # Storybook dev server for packages/ui on 127.0.0.1:6006
 pnpm build-storybook      # static Storybook into packages/ui/storybook-static/
 pnpm test:storybook       # every story, dark and light, in headless Chromium with axe (fails on a violation)
@@ -48,8 +68,10 @@ at run time. Development and e2e builds, run unpackaged with `AK_STUDIO_TEST_HOO
 `globalThis.__akStudioTestHooks` in the main process (`cancelledRequestCount()`, `cancelledRequestUrls()`, the
 newest 100) for the Electron smoke test. The count covers Chromium's network stack only, not Node networking in
 the main process. They accept `ELECTRON_RENDERER_URL` only on `localhost`, `127.0.0.1` or `[::1]` (otherwise
-they refuse to start). Every unpackaged build runs as "Agent Kernel Studio (dev)" with its own data folder and
-single-instance lock.
+they refuse to start). Every unpackaged build runs as "OAK Studio (dev)" with its own data folder and
+single-instance lock. The data folder is named after the product name (`<appData>/OAK Studio`, and
+`<appData>/OAK Studio (dev)` unpackaged), so it moved with the rename from "Agent Kernel Studio": window state
+and preferences kept under the old name are not read (nothing was released under it).
 Packaged builds and production builds (`pnpm build`, packaged or not) refuse to start with `--remote-debugging-port`
 or `--remote-debugging-pipe` (checked first, before
 the single-instance lock; one line on stderr, exit code 1): the DevTools protocol takes local connections without
@@ -76,9 +98,16 @@ set per `data-theme` from Agent Kernel's brand (`docs/src/css/custom.css`). Surf
 and `focus-ring` at least 3:1; `border-default` for decorative dividers only. The naming is documented at the top
 of `theme.css`, and the values with their measured ratios in
 `docs/specs/950-agent-kernel-studio/research/p1a-design-gate-options.md` (section 6). Size, radius, spacing and
-type tokens are Spectrum 2 medium, one density (32 px controls, 40 px rows, 14 px base text, 48 px top bar).
+type tokens are Spectrum 2 medium, one density (32 px controls, 40 px rows, 14 px base text, 48 px top bar), in
+OAK's shape (`branding/README.md`, "Shape"): two radii, `rounded-control` (8 px) for every control, rectangular
+(buttons, icon buttons, fields, pickers, the segmented control, tags, badges, status and path chips; no pill
+buttons), and `rounded-card` (16 px) for cards and panels. Popovers and menus (10 px), the dialog (16 px), the
+table frame (6 px) and rows nested in a control (4 px) keep their measured Spectrum 2 radii; `rounded-pill` is left
+for round marks only (the switch, selection edges, the empty state's icon disc).
 `fonts.css` bundles Archivo, Inter and JetBrains Mono through `@fontsource` (served from the app, never fetched):
-`font-ui` (Inter, the page default and button labels), `font-heading` (Archivo, the default for headings),
+`font-ui` (Inter, the page default and every button label but one), `font-heading` (Archivo, the default for
+headings, and the primary button's label in SemiBold, `font-heading font-cta`: "Archivo for headlines and CTA
+buttons"),
 `font-mono` (JetBrains Mono) and `mono-figures` (JetBrains Mono with tabular figures, for durations, counts and
 money). The default theme preference is `system`, which follows the OS and is dark when the OS reports neither
 (`apps/renderer/src/theme.ts`). Chromium reports light when the OS gives no signal (for example bare Linux), so in practice such a machine
@@ -153,7 +182,8 @@ counts a visible shortcut ("Ctrl+E") as label text, while React Aria exposes it 
 
 **Desktop shell** (Task 10, the "Shell layout" row of the design gate, built as its step 4 prototype; the owner
 signs it off from the `Shell/*` stories). Presentational components in `packages/ui`: `DesktopShell` (top bar, the
-selected tab's content as the `main` landmark, the bottom panel, the status bar), `TopBar` and `AppTabList`
+selected tab's content as the `main` landmark, the bottom panel, the status bar), `TopBar` (starting with the
+20 px OAK mark, named "OAK Studio", before the project switcher) and `AppTabList`
 (Canvas, Code, Config, Test & trace, Deploy, as React Aria tabs filling the 48 px bar), `ProjectSwitcher`,
 `RunControl` (stopped, starting, running, failed), `DeployStatus` (not deployed, deployed, applying, failed),
 `BuildWithAIButton` (Button's `ai` variant: an outline in the AI colour with a sparkle, filled with the AI colour on
@@ -161,7 +191,7 @@ hover; existing roles only), `SettingsButton`, `BottomPanel` (Problems, Run log,
 `SettingsModal`. Fixtures and the width checks are in `src/lib/shell-fixtures.tsx`; shell stories render full bleed
 (`parameters.fullBleed`) at a set viewport (`parameters.viewport` and `globals.viewport`, which the Vitest run
 applies), so a story at 1100 px measures 1100 px. The top bar is one row: at 1100 px and wider every label shows in
-full and only the project name gives way (ellipsis, at least 96 px); below 1100 px (the window allows 800), or when the full form does not fit (badges on the tabs; it tries the full form again when the tabs change or the bar widens), it is compact: tabs 16 px apart, Build with AI shows its sparkle (name in a tooltip), the run control drops the port and
+full and only the project name gives way (ellipsis, at least 96 px); below 1100 px (the window allows 800), or when the full form does not fit (badges on the tabs; it tries the full form again when the tabs change or the bar widens), it is compact: tabs 16 px apart and the bar's parts 8 px (12 px in the full form), Build with AI shows its sparkle (name in a tooltip), the run control drops the port and
 the deploy status its time. Nothing scrolls sideways (stories `At1100`, `At1440`, `At800Compact`; e2e at 1100 px);
 below about 1100 px the status bar may cut its last items (its narrow rule is P2's). The bottom panel collapses to
 its tab strip, so its toggle stays put; selecting a panel tab opens it; Mod+J (Ctrl+J, Cmd+J on macOS; declared in
@@ -205,7 +235,9 @@ refused request, and that the page uses the bundled Inter, Archivo and JetBrains
 packages for the current system into `apps/desktop/release/`: an AppImage and `linux-unpacked/` on Linux, an NSIS
 installer on Windows, a dmg on macOS (Windows and macOS are configured, not yet built). Nothing is signed. The
 asar holds `out/` and `package.json` only (the contract and zod are bundled into main, so no `node_modules`).
-`appId` (`ai.yaala.kernel.studio`) and the product name are working names until P12. Electron fuses are flipped at
+The product name is "OAK Studio" and `appId` (`ai.yaala.kernel.studio`) is unchanged; P12 confirms both. The
+icon comes from `build/` (`buildResources`), and `build/icon.png` also ships as `resources/icon.png` for the Linux
+window icon (`pnpm test:packaged` checks it is there). Electron fuses are flipped at
 package time: `RunAsNode`, `EnableNodeOptionsEnvironmentVariable`, `EnableNodeCliInspectArguments` and
 `GrantFileProtocolExtraPrivileges` off; `EnableCookieEncryption`, `OnlyLoadAppFromAsar` and
 `EnableEmbeddedAsarIntegrityValidation` (macOS and Windows only; no effect on Linux) on. So

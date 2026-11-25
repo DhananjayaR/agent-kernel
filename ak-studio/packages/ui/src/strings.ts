@@ -38,6 +38,8 @@ export const uiStrings = {
 	},
 	// The desktop shell (Task 10). The app areas are fixed; their empty states are the app's own copy.
 	shell: {
+		/** The OAK mark's accessible name, at the start of the top bar. */
+		appName: "OAK Studio",
 		tabsLabel: "Project views",
 		canvas: "Canvas",
 		code: "Code",

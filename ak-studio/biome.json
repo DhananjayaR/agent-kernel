@@ -3,7 +3,11 @@
 	"vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
 	"files": {
 		"ignoreUnknown": false,
-		"includes": ["**", "!**/tools/depcruise-selftest/fixture"]
+		"includes": [
+			"**",
+			"!**/tools/depcruise-selftest/fixture",
+			"!**/packages/ui/src/assets/oak-mark-*.svg"
+		]
 	},
 	"formatter": { "enabled": true, "indentStyle": "tab", "lineEnding": "lf" },
 	"linter": {

@@ -80,6 +80,21 @@ if (__STUDIO_DEV__ && !startupError) {
 	}
 }
 
+// The app icon (build/icon.png, from the OAK mark), set on the window on Linux, where the window manager takes the
+// window's own icon; macOS and Windows take the packaged app's icon. Packaged, it is in resources/
+// (electron-builder.yml, extraResources), outside app.asar; unpackaged, it is read from apps/desktop/build/.
+const windowIcon = app.isPackaged
+	? join(process.resourcesPath, "icon.png")
+	: join(import.meta.dirname, "../../build/icon.png");
+
+// The display name is "OAK Studio" (productName); About names the full product.
+app.setAboutPanelOptions({
+	applicationName: "OAK Studio",
+	applicationVersion: app.getVersion(),
+	credits: "Open Agent Kernel Studio",
+	iconPath: windowIcon,
+});
+
 // Unpackaged builds get their own name and data folder, so `pnpm dev` and an installed app share neither data
 // nor the single-instance lock (which is keyed on the data folder). An explicit --user-data-dir still wins.
 if (!app.isPackaged) {
@@ -122,7 +137,8 @@ function createWindow(): BrowserWindow {
 		minWidth: MIN_SIZE.width,
 		minHeight: MIN_SIZE.height,
 		show: false,
-		title: "Agent Kernel Studio",
+		title: "OAK Studio",
+		...(process.platform === "linux" ? { icon: windowIcon } : {}),
 		// The stored theme is already applied (startBridge sets nativeTheme.themeSource first): no white flash.
 		backgroundColor: windowBackground(nativeTheme.shouldUseDarkColors),
 		webPreferences: {

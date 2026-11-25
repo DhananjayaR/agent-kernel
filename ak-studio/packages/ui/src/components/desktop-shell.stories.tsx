@@ -83,6 +83,25 @@ async function expectTopBarHolds(canvasElement: HTMLElement, except?: string) {
 		await expect(r.left).toBeGreaterThanOrEqual(box.left);
 		await expect(r.right).toBeLessThanOrEqual(box.right);
 	}
+	// The OAK mark comes first, before the project switcher: 20 px, named, and loaded.
+	const mark = canvas.getByRole("img", {
+		name: "OAK Studio",
+	}) as HTMLImageElement;
+	await expect(mark.getBoundingClientRect().width).toBe(20);
+	await expect(mark.getBoundingClientRect().height).toBe(20);
+	await waitFor(() => expect(mark.naturalWidth).toBeGreaterThan(0));
+	const switcher = bar.querySelector('[data-slot="project-switcher"]');
+	await expect(
+		switcher &&
+			mark.compareDocumentPosition(switcher) & Node.DOCUMENT_POSITION_FOLLOWING,
+	).toBeTruthy();
+	// Nothing reaches into the bar's end padding.
+	const end = box.right - Number.parseFloat(getComputedStyle(bar).paddingRight);
+	for (const part of bar.children) {
+		await expect(part.getBoundingClientRect().right).toBeLessThanOrEqual(
+			end + 0.5,
+		);
+	}
 	await expectNoSidewaysOverflow(shell(canvasElement), except);
 }
 

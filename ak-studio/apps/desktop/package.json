@@ -1,7 +1,7 @@
 {
 	"name": "@ak-studio/desktop",
-	"productName": "Agent Kernel Studio",
-	"description": "Agent Kernel Studio desktop app (Electron main and preload)",
+	"productName": "OAK Studio",
+	"description": "Open Agent Kernel Studio (OAK Studio) desktop app",
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",

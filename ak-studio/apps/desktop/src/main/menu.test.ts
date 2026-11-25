@@ -10,7 +10,7 @@ function roles(items: MenuItemConstructorOptions[]): string[] {
 }
 
 describe("buildMenuTemplate", () => {
-	it("has the macOS app menu only on macOS, and Edit and View everywhere", () => {
+	it("has the macOS app menu only on macOS, Edit and View everywhere, and Help with About elsewhere", () => {
 		const mac = buildMenuTemplate({ platform: "darwin", isPackaged: true });
 		expect(mac.map((i) => i.role ?? i.label)).toEqual([
 			"appMenu",
@@ -19,7 +19,12 @@ describe("buildMenuTemplate", () => {
 		]);
 		for (const platform of ["linux", "win32"] as const) {
 			const menu = buildMenuTemplate({ platform, isPackaged: true });
-			expect(menu.map((i) => i.role ?? i.label)).toEqual(["editMenu", "View"]);
+			expect(menu.map((i) => i.role ?? i.label)).toEqual([
+				"editMenu",
+				"View",
+				"help",
+			]);
+			expect(roles(menu)).toContain("about");
 		}
 	});
 

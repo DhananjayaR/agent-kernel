@@ -40,6 +40,7 @@ const REFUSAL_LINE = "is not accepted by a packaged or production build";
 /** Strings only main's development and test-hook code holds; the production bundle must not. */
 const DEV_ONLY_STRINGS = ["AK_STUDIO_TEST_HOOKS", "ELECTRON_RENDERER_URL"];
 const NOTICES_FILE = "THIRD-PARTY-NOTICES.txt";
+const ICON_FILE = "icon.png";
 
 const failures = [];
 const fail = (target, message) => {
@@ -369,6 +370,21 @@ function checkContents(target) {
 		pass(`${NOTICES_FILE} ships in resources`);
 	} else {
 		fail(target, `${NOTICES_FILE} missing from ${target.resources}`);
+	}
+	// The window icon main sets on Linux (electron-builder.yml, extraResources).
+	const icon = join(target.resources, ICON_FILE);
+	if (
+		existsSync(icon) &&
+		readFileSync(icon).equals(
+			readFileSync(join(desktopDir, "build", "icon.png")),
+		)
+	) {
+		pass(`${ICON_FILE} (the app icon) ships in resources`);
+	} else {
+		fail(
+			target,
+			`${ICON_FILE} missing from ${target.resources} or not build/icon.png`,
+		);
 	}
 }
 
