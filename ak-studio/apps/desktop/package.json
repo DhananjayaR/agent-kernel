@@ -1,6 +1,7 @@
 {
 	"name": "@ak-studio/desktop",
 	"productName": "Agent Kernel Studio",
+	"description": "Agent Kernel Studio desktop app (Electron main and preload)",
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
@@ -10,12 +11,11 @@
 		"dev": "electron-vite dev",
 		"build": "electron-vite build",
 		"start": "electron .",
-		"test": "vitest run"
-	},
-	"dependencies": {
-		"@ak-studio/contract": "workspace:*"
+		"test": "vitest run",
+		"package": "electron-builder --publish never"
 	},
 	"devDependencies": {
+		"@ak-studio/contract": "workspace:*",
 		"@tailwindcss/vite": "4.3.5",
 		"@types/node": "24.19.2",
 		"@vitejs/plugin-react": "6.3.0",

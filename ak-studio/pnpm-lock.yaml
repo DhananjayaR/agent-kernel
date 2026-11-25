@@ -189,11 +189,10 @@ importers:
         version: 5.1.1(@types/node@24.19.2)(@vitest/browser-playwright@5.1.1)(@vitest/ui@5.1.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0))
 
   apps/desktop:
-    dependencies:
+    devDependencies:
       '@ak-studio/contract':
         specifier: workspace:*
         version: link:../../packages/contract
-    devDependencies:
       '@tailwindcss/vite':
         specifier: 4.3.5
         version: 4.3.5(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0))

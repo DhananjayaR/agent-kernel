@@ -5,6 +5,7 @@
 		{ "path": "packages/kernel-catalog" },
 		{ "path": "packages/ui" },
 		{ "path": "apps/renderer" },
-		{ "path": "apps/desktop" }
+		{ "path": "apps/desktop" },
+		{ "path": "tests" }
 	]
 }
