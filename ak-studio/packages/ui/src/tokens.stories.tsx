@@ -1,7 +1,11 @@
-// Token story: every role colour against every surface, in dark and light, with the WCAG 2 contrast ratio
-// computed here from the values theme.css actually resolves to. The values are provisional (P1a design gate);
-// the story shows where they fall short instead of hiding it. Colour samples are drawn as bars, not text, so
-// the accessibility check judges the story's own labels, which are always `text` on a surface.
+// Token story: every colour pair the design system promises, rendered as it is used, in dark and light, with
+// the WCAG 2 contrast ratio computed here from the values theme.css actually resolves to.
+//
+// - Text: each text role on each surface, and each fill's on-fill text, is drawn as real 14 px text, so the
+//   accessibility check (axe's color-contrast rule, run on every story by `pnpm test:storybook`) judges it in
+//   both themes. The play function also asserts at least 4.5:1 for each.
+// - Non-text: the control border and the focus ring on each surface are drawn as bars (axe does not check
+//   WCAG 1.4.11); the play function asserts at least 3:1. The decorative divider is shown with no minimum.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { expect } from "storybook/test";
@@ -16,17 +20,44 @@ import {
 type Theme = "dark" | "light";
 
 const SURFACES = ["surface", "surface-raised", "surface-overlay"] as const;
-const FOREGROUNDS = [
+const TEXT_ROLES = [
 	"text",
 	"text-muted",
+	"text-accent-primary",
+	"text-accent-ai",
+	"text-status-success",
+	"text-status-warning",
+	"text-status-danger",
+] as const;
+const FILLS = [
 	"accent-primary",
 	"accent-ai",
 	"status-success",
 	"status-warning",
 	"status-danger",
-	"border-default",
 ] as const;
-type Role = (typeof SURFACES)[number] | (typeof FOREGROUNDS)[number];
+const ON_FILLS = FILLS.map((fill) => `on-${fill}` as const);
+const NON_TEXT_ROLES = ["border-control", "focus-ring"] as const;
+const DECORATIVE_ROLES = ["border-default"] as const;
+
+type Role =
+	| (typeof SURFACES)[number]
+	| (typeof TEXT_ROLES)[number]
+	| (typeof FILLS)[number]
+	| (typeof ON_FILLS)[number]
+	| (typeof NON_TEXT_ROLES)[number]
+	| (typeof DECORATIVE_ROLES)[number];
+const ROLES: readonly Role[] = [
+	...SURFACES,
+	...TEXT_ROLES,
+	...FILLS,
+	...ON_FILLS,
+	...NON_TEXT_ROLES,
+	...DECORATIVE_ROLES,
+];
+
+const TEXT_MIN = 4.5;
+const NON_TEXT_MIN = 3;
 
 const GRADE_LABEL: Record<ContrastGrade, string> = {
 	text: "text",
@@ -57,11 +88,79 @@ type Resolved = Partial<Record<Role, { value: string; rgb: Rgb | null }>>;
 function readRoles(el: HTMLElement): Resolved {
 	const style = getComputedStyle(el);
 	const out: Resolved = {};
-	for (const role of [...SURFACES, ...FOREGROUNDS]) {
+	for (const role of ROLES) {
 		const value = style.getPropertyValue(`--role-${role}`).trim();
 		out[role] = { value, rgb: toRgb(value) };
 	}
 	return out;
+}
+
+function ratioOf(roles: Resolved, a: Role, b: Role): number | null {
+	const x = roles[a]?.rgb;
+	const y = roles[b]?.rgb;
+	return x && y ? contrastRatio(x, y) : null;
+}
+
+function describeRatio(ratio: number | null): string {
+	return ratio === null
+		? "n/a"
+		: `${ratio.toFixed(2)}:1 ${GRADE_LABEL[gradeContrast(ratio)]}`;
+}
+
+/** A line's ratio against the 3:1 non-text minimum, or as decorative (no minimum). */
+function describeLineRatio(
+	ratio: number | null,
+	kind: "non-text" | "decorative",
+): string {
+	if (ratio === null) return "n/a";
+	const verdict =
+		kind === "decorative"
+			? "decorative"
+			: ratio >= NON_TEXT_MIN
+				? "meets 3:1"
+				: "below 3:1";
+	return `${ratio.toFixed(2)}:1 ${verdict}`;
+}
+
+/** Data attributes the play function reads: the pair, its kind and its ratio. */
+function pairData(
+	kind: "text" | "non-text" | "decorative",
+	fg: Role,
+	bg: Role,
+	ratio: number | null,
+) {
+	return {
+		"data-pair": kind,
+		"data-fg": fg,
+		"data-bg": bg,
+		"data-ratio": ratio?.toFixed(2) ?? "n/a",
+	};
+}
+
+function SurfaceHeaders({ roles }: { roles: Resolved }) {
+	return (
+		<thead>
+			<tr>
+				<th scope="col" className="px-cell text-left">
+					Role
+				</th>
+				{SURFACES.map((surface) => (
+					<th key={surface} scope="col" className="px-cell text-left">
+						on {surface}{" "}
+						<code className="font-normal">{roles[surface]?.value}</code>
+					</th>
+				))}
+			</tr>
+		</thead>
+	);
+}
+
+function RoleHeader({ role, roles }: { role: Role; roles: Resolved }) {
+	return (
+		<th scope="row" className="px-cell text-left font-normal">
+			{role} <code>{roles[role]?.value}</code>
+		</th>
+	);
 }
 
 function ThemePanel({ theme }: { theme: Theme }) {
@@ -77,44 +176,104 @@ function ThemePanel({ theme }: { theme: Theme }) {
 			ref={ref}
 			data-theme={theme}
 			aria-labelledby={`tokens-${theme}`}
-			className="rounded-popover border border-border-default bg-surface p-6 text-text"
+			className="flex flex-col gap-6 rounded-popover border border-border-default bg-surface p-6 text-text"
 		>
 			<h2 id={`tokens-${theme}`} className="text-heading font-bold">
 				{theme === "dark" ? "Dark" : "Light"}
 			</h2>
-			<table className="mt-4 border-collapse text-ui">
+
+			<table className="border-collapse text-ui">
 				<caption className="pb-2 text-left">
-					Contrast of each role colour on each surface (WCAG 2). "text" is at
-					least 4.5:1; "non-text only" is 3 to 4.5:1.
+					Text roles on each surface, as 14 px text. Each must be at least
+					4.5:1.
 				</caption>
-				<thead>
-					<tr>
-						<th scope="col" className="px-cell text-left">
-							Role
-						</th>
-						{SURFACES.map((surface) => (
-							<th key={surface} scope="col" className="px-cell text-left">
-								on {surface}{" "}
-								<span className="font-normal">{roles[surface]?.value}</span>
-							</th>
-						))}
-					</tr>
-				</thead>
+				<SurfaceHeaders roles={roles} />
 				<tbody>
-					{FOREGROUNDS.map((fg) => (
+					{TEXT_ROLES.map((fg) => (
 						<tr key={fg}>
-							<th scope="row" className="px-cell text-left font-normal">
-								{fg} <code>{roles[fg]?.value}</code>
-							</th>
-							{SURFACES.map((surface) => (
-								<RatioCell
-									key={surface}
-									fg={fg}
-									surface={surface}
-									fgRgb={roles[fg]?.rgb ?? null}
-									bgRgb={roles[surface]?.rgb ?? null}
-								/>
-							))}
+							<RoleHeader role={fg} roles={roles} />
+							{SURFACES.map((bg) => {
+								const ratio = ratioOf(roles, fg, bg);
+								return (
+									<td
+										key={bg}
+										className="px-cell py-2"
+										style={{ backgroundColor: `var(--role-${bg})` }}
+									>
+										<span
+											style={{ color: `var(--role-${fg})` }}
+											{...pairData("text", fg, bg, ratio)}
+										>
+											Sample text {describeRatio(ratio)}
+										</span>
+									</td>
+								);
+							})}
+						</tr>
+					))}
+				</tbody>
+			</table>
+
+			<div>
+				<h3 className="pb-2 text-ui-lg font-bold">
+					Text on fills (button and badge labels; at least 4.5:1)
+				</h3>
+				<ul className="flex flex-wrap gap-cell">
+					{FILLS.map((fill) => {
+						const on = `on-${fill}` as const;
+						const ratio = ratioOf(roles, on, fill);
+						return (
+							<li key={fill}>
+								<span
+									className="inline-flex h-control-m items-center rounded-pill px-pill-edge"
+									style={{
+										backgroundColor: `var(--role-${fill})`,
+										color: `var(--role-${on})`,
+									}}
+									{...pairData("text", on, fill, ratio)}
+								>
+									{on} on {fill} {describeRatio(ratio)}
+								</span>
+							</li>
+						);
+					})}
+				</ul>
+			</div>
+
+			<table className="border-collapse text-ui">
+				<caption className="pb-2 text-left">
+					Lines on each surface. border-control and focus-ring must be at least
+					3:1 (WCAG 1.4.11); border-default is a decorative divider with no
+					minimum.
+				</caption>
+				<SurfaceHeaders roles={roles} />
+				<tbody>
+					{[...NON_TEXT_ROLES, ...DECORATIVE_ROLES].map((fg) => (
+						<tr key={fg}>
+							<RoleHeader role={fg} roles={roles} />
+							{SURFACES.map((bg) => {
+								const ratio = ratioOf(roles, fg, bg);
+								const kind = (NON_TEXT_ROLES as readonly Role[]).includes(fg)
+									? "non-text"
+									: "decorative";
+								return (
+									<td
+										key={bg}
+										className="px-cell py-2"
+										style={{ backgroundColor: `var(--role-${bg})` }}
+										{...pairData(kind, fg, bg, ratio)}
+									>
+										<div className="flex items-center gap-text-to-visual">
+											<span
+												aria-hidden="true"
+												className="inline-block h-2 w-10 rounded-sm"
+												style={{ backgroundColor: `var(--role-${fg})` }}
+											/>
+											<span>{describeLineRatio(ratio, kind)}</span>
+										</div>
+									</td>
+								);
+							})}
 						</tr>
 					))}
 				</tbody>
@@ -122,56 +281,6 @@ function ThemePanel({ theme }: { theme: Theme }) {
 		</section>
 	);
 }
-
-function RatioCell(props: {
-	fg: Role;
-	surface: Role;
-	fgRgb: Rgb | null;
-	bgRgb: Rgb | null;
-}) {
-	const { fg, surface, fgRgb, bgRgb } = props;
-	const ratio = fgRgb && bgRgb ? contrastRatio(fgRgb, bgRgb) : null;
-	return (
-		<td
-			className="px-cell py-2"
-			style={{ backgroundColor: `var(--role-${surface})` }}
-			data-fg={fg}
-			data-surface={surface}
-			data-ratio={ratio?.toFixed(2)}
-		>
-			<div className="flex items-center gap-text-to-visual">
-				<span
-					aria-hidden="true"
-					className="inline-block h-2 w-10 rounded-sm"
-					style={{ backgroundColor: `var(--role-${fg})` }}
-				/>
-				<span>
-					{ratio === null
-						? "n/a"
-						: `${ratio.toFixed(2)} ${GRADE_LABEL[gradeContrast(ratio)]}`}
-				</span>
-			</div>
-		</td>
-	);
-}
-
-const FONTS: ReadonlyArray<{
-	name: string;
-	variable: string;
-	weights: number[];
-}> = [
-	{
-		name: "Archivo",
-		variable: "--font-family-archivo",
-		weights: [400, 500, 700],
-	},
-	{ name: "Inter", variable: "--font-family-inter", weights: [400, 500, 700] },
-	{
-		name: "JetBrains Mono",
-		variable: "--font-family-jetbrains-mono",
-		weights: [400],
-	},
-];
 
 const SIZE_TOKENS = [
 	"--spacing-control-s",
@@ -183,6 +292,7 @@ const SIZE_TOKENS = [
 	"--spacing-text-to-visual",
 	"--spacing-row",
 	"--spacing-row-compact",
+	"--spacing-topbar",
 	"--spacing-tab",
 	"--spacing-tab-gap",
 	"--spacing-cell",
@@ -215,7 +325,8 @@ const meta = {
 	parameters: {
 		docs: {
 			description: {
-				component: "Provisional values pending the P1a design gate.",
+				component:
+					"Tokens decided at the P1a design gate (25 November 2026): Agent Kernel's palette, Inter, Archivo and JetBrains Mono, Spectrum 2 medium density.",
 			},
 		},
 	},
@@ -227,51 +338,88 @@ type Story = StoryObj<typeof meta>;
 export const Colours: Story = {
 	render: () => (
 		<Stack>
-			<h1 className="text-ui-3xl font-bold">
-				Role colours (provisional: P1a design gate)
-			</h1>
+			<h1 className="text-ui-3xl font-bold">Role colours</h1>
 			<ThemePanel theme="dark" />
 			<ThemePanel theme="light" />
 		</Stack>
 	),
-	// The ratios come from the CSS as loaded (empty variables would give "n/a"), and the story's own labels,
-	// `text` on each surface, must stay readable whatever the palette.
+	// The ratios come from the CSS as loaded (an empty or invalid variable gives "n/a", which fails here).
 	play: async ({ canvasElement }) => {
-		const cells = [...canvasElement.querySelectorAll("td[data-ratio]")];
-		await expect(cells).toHaveLength(2 * FOREGROUNDS.length * SURFACES.length);
-		for (const cell of cells) {
-			const ratio = Number(cell.getAttribute("data-ratio"));
-			await expect(ratio).toBeGreaterThanOrEqual(1);
-			await expect(ratio).toBeLessThanOrEqual(21);
-			if (cell.getAttribute("data-fg") === "text") {
-				await expect(ratio).toBeGreaterThanOrEqual(4.5);
-			}
-		}
+		const pairs = (kind: string) =>
+			[...canvasElement.querySelectorAll(`[data-pair="${kind}"]`)].map(
+				(el) => ({
+					name: `${el.closest("[data-theme]")?.getAttribute("data-theme")} ${el.getAttribute("data-fg")} on ${el.getAttribute("data-bg")}`,
+					ratio: Number(el.getAttribute("data-ratio")),
+				}),
+			);
+		const text = pairs("text");
+		const nonText = pairs("non-text");
+		await expect(text).toHaveLength(
+			2 * (TEXT_ROLES.length * SURFACES.length + FILLS.length),
+		);
+		await expect(nonText).toHaveLength(
+			2 * NON_TEXT_ROLES.length * SURFACES.length,
+		);
+		const below = (list: typeof text, min: number) =>
+			list
+				.filter((pair) => !(pair.ratio >= min))
+				.map((pair) => `${pair.name}: ${pair.ratio}`);
+		await expect(below(text, TEXT_MIN)).toEqual([]);
+		await expect(below(nonText, NON_TEXT_MIN)).toEqual([]);
 	},
 };
+
+const SAMPLE = "Agent Kernel Studio 0123456789";
 
 export const Fonts: Story = {
 	render: () => (
 		<Stack>
-			<h1 className="text-ui-3xl font-bold">Bundled fonts</h1>
-			<p>Which family is used where waits for the P1a design gate.</p>
-			{FONTS.map((font) => (
-				<section key={font.name} aria-label={font.name}>
-					<h2 className="text-ui-lg font-bold">{font.name}</h2>
-					{font.weights.map((weight) => (
-						<p
-							key={weight}
-							className="text-ui-xl"
-							style={{
-								fontFamily: `var(${font.variable})`,
-								fontWeight: weight,
-							}}
-						>
-							{weight}: Agent Kernel Studio 0123456789
-						</p>
-					))}
-				</section>
-			))}
+			<h1 className="text-ui-3xl font-bold">Fonts</h1>
+			<section aria-labelledby="font-ui" className="font-ui">
+				<h2 id="font-ui" className="text-ui-lg font-bold">
+					font-ui: Inter (UI and body text, button labels)
+				</h2>
+				{[400, 500, 700].map((weight) => (
+					<p key={weight} className="text-ui" style={{ fontWeight: weight }}>
+						{weight} at 14 px: {SAMPLE}
+					</p>
+				))}
+			</section>
+			<section aria-labelledby="font-heading">
+				<h2 id="font-heading" className="text-ui-lg font-bold">
+					font-heading: Archivo (headings, the default for h1 to h6)
+				</h2>
+				<p className="font-heading text-heading font-bold">
+					Heading 22 px: {SAMPLE}
+				</p>
+				<p className="font-heading text-ui-xl font-bold">
+					Heading 18 px: {SAMPLE}
+				</p>
+			</section>
+			<section aria-labelledby="font-mono">
+				<h2 id="font-mono" className="text-ui-lg font-bold">
+					font-mono: JetBrains Mono (code, paths, identifiers, numbers)
+				</h2>
+				<p className="font-mono text-ui">src/agents/review.py run_7f3a2c</p>
+				<p className="mono-figures text-ui">
+					mono-figures (tabular): 1,204 tokens 12.5 s $0.42
+				</p>
+				<p className="mono-figures text-ui">
+					mono-figures (tabular): 98,311 tokens 1.0 s $13.07
+				</p>
+			</section>
+			<section aria-labelledby="font-control">
+				<h2 id="font-control" className="text-ui-lg font-bold">
+					Button labels at 14 px, 700: Inter (chosen) and Archivo (for
+					comparison)
+				</h2>
+				<p className="font-ui text-ui font-control">
+					Run agent Deploy Discard changes
+				</p>
+				<p className="font-heading text-ui font-control">
+					Run agent Deploy Discard changes
+				</p>
+			</section>
 		</Stack>
 	),
 };
@@ -304,8 +452,7 @@ export const Sizes: Story = {
 	render: () => (
 		<Stack>
 			<h1 className="text-ui-3xl font-bold">
-				Sizes, spacing and radii (Spectrum 2 medium; provisional: P1a design
-				gate)
+				Sizes, spacing and radii (Spectrum 2 medium, one density)
 			</h1>
 			<table className="border-collapse text-ui">
 				<thead>

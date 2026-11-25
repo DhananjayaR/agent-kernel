@@ -1,12 +1,37 @@
 /*
  * Agent Kernel Studio design tokens: the Tailwind 4 entry for the renderer and Storybook.
  *
- * MECHANISM ONLY. The P1a design gate has not signed off the palette, fonts, density or default theme. Every
- * colour below is a stand-in taken from the docs site (docs/src/css/custom.css) and marked
- * "provisional: P1a design gate"; Task 8 replaces the values once the gate picks. Size, radius and spacing
- * tokens are Spectrum 2 medium as measured in spike S1
- * (docs/specs/950-agent-kernel-studio/research/spike-s1-components.md); they are provisional too, because
- * density is a gate subject.
+ * Decided at the P1a design gate (signed off 25 November 2026; options and measured contrast in
+ * docs/specs/950-agent-kernel-studio/research/p1a-design-gate-options.md): palette A (Agent Kernel's brand from
+ * docs/src/css/custom.css), Inter for UI text, Archivo for headings, JetBrains Mono for code and figures,
+ * one density (Spectrum 2 medium, spike S1 measurements in research/spike-s1-components.md), and the default
+ * theme follows the system (dark when unknown; apps/renderer/src/theme.ts).
+ *
+ * Colour token names. Each Tailwind colour `--color-<name>` gives the utilities `bg-<name>`, `text-<name>`,
+ * `border-<name>`, `outline-<name>` and so on; its per-theme value is the variable `--role-<name>`.
+ *
+ *   surface, surface-raised, surface-overlay   Grounds: the window, panels, floating layers (menus, dialogs).
+ *   text, text-<role>                           TEXT: colour for text, icons and thin lines. At least 4.5:1 on
+ *                                               all three surfaces of its theme (class `text-text-muted`,
+ *                                               `text-text-accent-primary`, ...).
+ *   <role>                                      FILL: a solid background (button, badge, selected chip). May be
+ *                                               the pure brand colour; never used as text on a surface.
+ *   on-<role>                                   Text on that fill. At least 4.5:1 on the fill.
+ *   border-default                              Decorative divider only (panel edges, table rules). No minimum;
+ *                                               never the only thing marking a control.
+ *   border-control, focus-ring                  Non-text: a control's boundary and the focus indicator. At least
+ *                                               3:1 on all three surfaces (WCAG 1.4.11).
+ *
+ * Roles: accent-primary (primary action, selection), accent-ai (the coding agent, nothing else),
+ * status-success, status-warning, status-danger.
+ *
+ * Each text value is the brand colour with only its OKLCH lightness changed (hue kept, chroma clipped into
+ * sRGB where needed), by the smallest amount that gives at least 4.6:1 on the theme's hardest surface (the
+ * overlay); 4.6 leaves a margin over 4.5 for rounding. One value per role per theme passes on every surface,
+ * so there are no per-surface variants. Two values go further than the minimum to keep primary and danger
+ * apart (the brand's red is darker than its orange): dark text-accent-primary is the brand's own
+ * --ak-primary-light, and light text-status-danger is tuned to 6:1. The token story (src/tokens.stories.tsx)
+ * renders every pair and fails `pnpm test:storybook` below 4.5:1 (text) or 3:1 (non-text).
  *
  * Consumers import this file and add an @source for their own files; this file adds packages/ui/src.
  */
@@ -20,44 +45,73 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /*
- * Role colours per theme. Dark is the default and is restated under [data-theme="dark"] so a dark block nested
- * inside a light one (the token story shows both) resolves correctly.
+ * Role colours per theme. Dark is the fallback and is restated under [data-theme="dark"] so a dark block nested
+ * inside a light one (the token story shows both) resolves correctly. Comments name the brand source
+ * (custom.css) and, for a tuned value, the brand colour it comes from.
  */
 :root,
 [data-theme="dark"] {
-	--role-surface: #011428; /* provisional: P1a design gate */ /* custom.css --ak-surface */
-	--role-surface-raised: #02284f; /* provisional: P1a design gate */ /* custom.css --ak-surface-raised */
-	--role-surface-overlay: #0d315a; /* provisional: P1a design gate */ /* custom.css --ak-surface-overlay */
-	--role-text: #eaf3f8; /* provisional: P1a design gate */ /* custom.css --ak-text */
-	--role-text-muted: #798bad; /* provisional: P1a design gate */ /* custom.css --ak-text-muted */
-	--role-border-default: #173964; /* provisional: P1a design gate */ /* custom.css --ak-border */
-	--role-accent-primary: #ff5e32; /* provisional: P1a design gate */ /* custom.css --ak-primary */
-	/* custom.css defines no coding-agent colour; --ak-blue is a stand-in only, not a pick. */
-	--role-accent-ai: #b1cdff; /* provisional: P1a design gate */ /* custom.css --ak-blue */
-	--role-status-success: #26a64d; /* provisional: P1a design gate */ /* custom.css --ak-green */
-	--role-status-warning: #f7a544; /* provisional: P1a design gate */ /* custom.css --ak-warning */
-	--role-status-danger: #db4444; /* provisional: P1a design gate */ /* custom.css --ak-red */
+	--role-surface: #011428; /* --ak-surface */
+	--role-surface-raised: #02284f; /* --ak-surface-raised */
+	--role-surface-overlay: #0d315a; /* --ak-surface-overlay */
+
+	--role-text: #eaf3f8; /* --ak-text */
+	--role-text-muted: #889abd; /* from --ak-text-muted #798bad */
+	--role-text-accent-primary: #ff8260; /* --ak-primary-light */
+	--role-text-accent-ai: #b1cdff; /* --ak-ice */
+	--role-text-status-success: #32af55; /* from --ak-green #26a64d */
+	--role-text-status-warning: #f7a544; /* --ak-warning */
+	--role-text-status-danger: #ff6863; /* from --ak-red #db4444 */
+
+	--role-accent-primary: #ff5e32; /* --ak-primary */
+	--role-on-accent-primary: #011428; /* --ak-on-primary */
+	--role-accent-ai: #b1cdff; /* --ak-ice */
+	--role-on-accent-ai: #011428;
+	--role-status-success: #26a64d; /* --ak-green */
+	--role-on-status-success: #011428;
+	--role-status-warning: #f7a544; /* --ak-warning */
+	--role-on-status-warning: #011428;
+	--role-status-danger: #d43d3e; /* from --ak-red #db4444 (fails with navy and white text as is) */
+	--role-on-status-danger: #ffffff;
+
+	--role-border-default: #173964; /* --ak-border */
+	--role-border-control: #597eae; /* from --ak-border #173964 */
+	--role-focus-ring: #ff5e32; /* --ak-primary */
 }
 
 [data-theme="light"] {
-	--role-surface: #ffffff; /* provisional: P1a design gate */ /* custom.css --ak-surface */
-	--role-surface-raised: #f1f5fa; /* provisional: P1a design gate */ /* custom.css --ak-surface-raised */
-	--role-surface-overlay: #e7eef7; /* provisional: P1a design gate */ /* custom.css --ak-surface-overlay */
-	--role-text: #02284f; /* provisional: P1a design gate */ /* custom.css --ak-text */
-	--role-text-muted: #5d7199; /* provisional: P1a design gate */ /* custom.css --ak-text-muted */
-	--role-border-default: #d3deec; /* provisional: P1a design gate */ /* custom.css --ak-border */
-	--role-accent-primary: #ff5e32; /* provisional: P1a design gate */ /* custom.css --ak-primary */
-	--role-accent-ai: #3f598a; /* provisional: P1a design gate */ /* custom.css --ak-blue */
-	--role-status-success: #26a64d; /* provisional: P1a design gate */ /* custom.css --ak-green */
-	--role-status-warning: #f7a544; /* provisional: P1a design gate */ /* custom.css --ak-warning */
-	--role-status-danger: #db4444; /* provisional: P1a design gate */ /* custom.css --ak-red */
+	--role-surface: #ffffff; /* --ak-surface */
+	--role-surface-raised: #f1f5fa; /* --ak-surface-raised */
+	--role-surface-overlay: #e7eef7; /* --ak-surface-overlay */
+
+	--role-text: #02284f; /* --ak-text */
+	--role-text-muted: #576a92; /* from --ak-text-muted #5d7199 */
+	--role-text-accent-primary: #c53500; /* from --ak-primary #ff5e32 */
+	--role-text-accent-ai: #3f598a; /* --ak-dusk */
+	--role-text-status-success: #007b31; /* from --ak-green #26a64d */
+	--role-text-status-warning: #995c00; /* from --ak-warning #f7a544 */
+	--role-text-status-danger: #b11221; /* from --ak-red #db4444, tuned to 6:1 */
+
+	--role-accent-primary: #ff5e32; /* --ak-primary */
+	--role-on-accent-primary: #011428; /* --ak-on-primary */
+	--role-accent-ai: #3f598a; /* --ak-dusk */
+	--role-on-accent-ai: #ffffff;
+	--role-status-success: #26a64d; /* --ak-green */
+	--role-on-status-success: #011428;
+	--role-status-warning: #f7a544; /* --ak-warning */
+	--role-on-status-warning: #011428;
+	--role-status-danger: #d43d3e; /* from --ak-red #db4444 */
+	--role-on-status-danger: #ffffff;
+
+	--role-border-default: #d3deec; /* --ak-border */
+	--role-border-control: #7d8794; /* from --ak-border #d3deec */
+	--role-focus-ring: #ef4e20; /* from --ak-primary #ff5e32 */
 }
 
 /*
  * No Tailwind default palette: only the role colours exist as colour utilities. The other default scales that
- * would bypass the tokens are removed too (shadows carry their own colours; radius and text sizes have
- * Studio tokens below). The default family utilities go as well; the one family token, `--font-ui`, is below
- * (a stand-in until the design gate); preflight still falls back to the system font elsewhere.
+ * would bypass the tokens are removed too (shadows carry their own colours; radius, text sizes and font
+ * families have Studio tokens below).
  */
 @theme {
 	--color-*: initial;
@@ -77,22 +131,36 @@
 	--color-surface: var(--role-surface);
 	--color-surface-raised: var(--role-surface-raised);
 	--color-surface-overlay: var(--role-surface-overlay);
+
 	--color-text: var(--role-text);
 	--color-text-muted: var(--role-text-muted);
-	--color-border-default: var(--role-border-default);
+	--color-text-accent-primary: var(--role-text-accent-primary);
+	--color-text-accent-ai: var(--role-text-accent-ai);
+	--color-text-status-success: var(--role-text-status-success);
+	--color-text-status-warning: var(--role-text-status-warning);
+	--color-text-status-danger: var(--role-text-status-danger);
+
 	--color-accent-primary: var(--role-accent-primary);
+	--color-on-accent-primary: var(--role-on-accent-primary);
 	--color-accent-ai: var(--role-accent-ai);
+	--color-on-accent-ai: var(--role-on-accent-ai);
 	--color-status-success: var(--role-status-success);
+	--color-on-status-success: var(--role-on-status-success);
 	--color-status-warning: var(--role-status-warning);
+	--color-on-status-warning: var(--role-on-status-warning);
 	--color-status-danger: var(--role-status-danger);
+	--color-on-status-danger: var(--role-on-status-danger);
+
+	--color-border-default: var(--role-border-default);
+	--color-border-control: var(--role-border-control);
+	--color-focus-ring: var(--role-focus-ring);
 }
 
 /*
  * Spectrum 2, medium size, desktop scale (spike S1 measurements; L = live, S = s2 source, T = spectrum-tokens).
- * Density is a gate subject, so the marker below covers every value in this block. `static` keeps every
- * variable in the output so the token story can read it even before a utility uses it.
+ * One density: 32 px controls, 40 px rows (32 compact in tables only), 14 px base text, 48 px top bar.
+ * `static` keeps every variable in the output so the token story can read it even before a utility uses it.
  */
-/* provisional: P1a design gate */
 @theme static {
 	/* Control heights (T component-height-75..300) */
 	--spacing-control-s: 24px;
@@ -105,7 +173,8 @@
 	--spacing-pill-edge: 16px; /* pill = height / 2 (Button padding-x) */
 	--spacing-text-to-visual: 6px; /* fontRelative(6) at 14 px */
 	--spacing-row: 40px; /* TableView and TreeView row, desktop regular */
-	--spacing-row-compact: 32px; /* TableView compact and header row */
+	--spacing-row-compact: 32px; /* TableView compact and header row; tables only */
+	--spacing-topbar: 48px; /* the shell's top bar */
 	--spacing-tab: 48px; /* Tabs item height */
 	--spacing-tab-gap: 24px; /* tab-item-to-tab-item */
 	--spacing-cell: 16px; /* TableView cell padding-x */
@@ -126,7 +195,7 @@
 	--radius-dialog: 16px; /* extra-large: Dialog */
 	--radius-pill: 9999px; /* pill = height / 2 (Button) */
 
-	/* UI type scale (T font-size-50..500) and weights */
+	/* UI type scale (T font-size-50..500) and weights; `text-ui` (14 px) is the base size */
 	--text-ui-xs: 11px;
 	--text-ui-sm: 12px;
 	--text-ui: 14px;
@@ -139,10 +208,45 @@
 	--text-heading--line-height: 26px;
 	--font-weight-control: 700; /* Button label */
 	--font-weight-action: 500; /* ActionButton */
-	/* UI text family (`font-ui`): Inter as a stand-in so the app uses a bundled font; the gate picks the families. */
-	--font-ui: "Inter Variable", sans-serif; /* provisional: P1a design gate */
+
+	/*
+	 * Families (bundled in fonts.css). `font-ui`: Inter, all UI and body text. `font-heading`: Archivo,
+	 * headings only. `font-mono`: JetBrains Mono, for code, paths, identifiers, durations, token counts and
+	 * money; with figures, use `mono-figures` (below) for tabular digits. Button labels stay in Inter
+	 * (`font-ui` with weight `font-control`), so every control in a row (buttons, action buttons, fields,
+	 * menus, tabs) shares one face at 14 px; Archivo is kept for headings, where it reads as the brand.
+	 */
+	--font-ui: var(--font-family-inter);
+	--font-heading: var(--font-family-archivo);
+	--font-mono: var(--font-family-jetbrains-mono);
+	--default-font-family: var(--font-ui);
+	--default-mono-font-family: var(--font-mono);
 
 	/* Floating layers are solid (decided in P0); this is the popover shadow, first two layers (L). */
 	--shadow-elevated: 0 4px 12px rgb(0 0 0 / 0.08), 0 2px 6px rgb(0 0 0 / 0.04);
 	--press-depth: -2px; /* S pressScale: translate3d(0, 0, -2px) on press */
+}
+
+/* Numbers in JetBrains Mono with tabular figures, so columns of durations, counts and money line up. */
+@utility mono-figures {
+	font-family: var(--font-mono);
+	font-variant-numeric: tabular-nums;
+}
+
+/* Page defaults: 14 px Inter in `text` on `surface`; headings in Archivo (preflight resets their size). */
+@layer base {
+	body {
+		background-color: var(--color-surface);
+		color: var(--color-text);
+		font-size: var(--text-ui);
+		line-height: var(--text-ui--line-height);
+	}
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		font-family: var(--font-heading);
+	}
 }

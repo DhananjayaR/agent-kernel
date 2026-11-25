@@ -15,7 +15,7 @@ const preview: Preview = {
 			toolbar: { title: "Theme", items: ["dark", "light"], dynamicTitle: true },
 		},
 	},
-	// A viewing default for Storybook only; the app's default theme is a design-gate decision.
+	// A viewing default for Storybook only; the app defaults to `system`, dark when unknown (apps/renderer/src/theme.ts).
 	initialGlobals: { theme: "dark" },
 	decorators: [
 		(Story, context) => {
