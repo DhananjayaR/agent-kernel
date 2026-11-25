@@ -2,7 +2,7 @@
 // moves in, Escape or the close button closes it, focus returns to the control). In P1a it holds one setting, the
 // theme (System, Dark, Light); a change applies and is stored at once, so there is no save button. P4 adds the
 // toolchain, secrets and general sections.
-import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
+import { IconDeviceDesktop, IconMoon, IconSun } from "@tabler/icons-react";
 import { useId } from "react";
 import type { Key } from "react-aria-components";
 import { fieldDescription } from "../lib/styles";
@@ -60,19 +60,19 @@ export function SettingsModal({
 					>
 						<SegmentedControlItem
 							id="system"
-							icon={<MonitorIcon aria-hidden="true" />}
+							icon={<IconDeviceDesktop aria-hidden="true" />}
 						>
 							{text.system}
 						</SegmentedControlItem>
 						<SegmentedControlItem
 							id="dark"
-							icon={<MoonIcon aria-hidden="true" />}
+							icon={<IconMoon aria-hidden="true" />}
 						>
 							{text.dark}
 						</SegmentedControlItem>
 						<SegmentedControlItem
 							id="light"
-							icon={<SunIcon aria-hidden="true" />}
+							icon={<IconSun aria-hidden="true" />}
 						>
 							{text.light}
 						</SegmentedControlItem>

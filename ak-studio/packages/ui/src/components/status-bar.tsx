@@ -8,7 +8,7 @@
 // status bar's own narrow rule, with the version slot.
 //
 // The coding agent's item carries the AI colour on its sparkle (the AI colour marks the coding agent only).
-import { GitBranchIcon, SparklesIcon } from "lucide-react";
+import { IconGitBranch, IconSparkles } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import { cn } from "../lib/utils";
 import { type StatusBarStrings, uiStrings } from "../strings";
@@ -76,7 +76,7 @@ export function StatusBar({
 						data-slot="git-branch"
 						className="flex min-w-0 shrink items-center gap-1.5"
 					>
-						<GitBranchIcon aria-hidden="true" className="size-4 shrink-0" />
+						<IconGitBranch aria-hidden="true" className="size-4 shrink-0" />
 						<span className="sr-only">{text.gitBranch}</span>
 						<span className="truncate font-mono">{gitBranch}</span>
 					</span>
@@ -94,7 +94,7 @@ export function StatusBar({
 				) : null}
 				{codingAgent ? (
 					<span data-slot="coding-agent" className="flex items-center gap-1.5">
-						<SparklesIcon
+						<IconSparkles
 							aria-hidden="true"
 							className="size-4 shrink-0 text-text-accent-ai"
 						/>

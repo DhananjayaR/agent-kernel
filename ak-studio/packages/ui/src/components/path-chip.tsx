@@ -4,7 +4,7 @@
 // the chip's text for assistive technology and the description of each action. Reveal and copy are optional
 // actions with tooltips; this package makes no Electron or clipboard call, the feature passes callbacks. After a
 // copy the button shows a check for a moment and a status message announces it. Copy defaults: strings.ts.
-import { CheckIcon, CopyIcon, FolderOpenIcon } from "lucide-react";
+import { IconCheck, IconCopy, IconFolderOpen } from "@tabler/icons-react";
 import {
 	type HTMLAttributes,
 	type ReactNode,
@@ -114,7 +114,7 @@ export function PathChip({
 			{hasActions ? <span className="w-1 shrink-0" /> : null}
 			{onReveal ? (
 				<ChipAction label={text.reveal} describedBy={pathId} onPress={onReveal}>
-					<FolderOpenIcon aria-hidden="true" />
+					<IconFolderOpen aria-hidden="true" />
 				</ChipAction>
 			) : null}
 			{onCopy ? (
@@ -127,9 +127,9 @@ export function PathChip({
 					}}
 				>
 					{copied ? (
-						<CheckIcon aria-hidden="true" />
+						<IconCheck aria-hidden="true" />
 					) : (
-						<CopyIcon aria-hidden="true" />
+						<IconCopy aria-hidden="true" />
 					)}
 				</ChipAction>
 			) : null}

@@ -8,7 +8,7 @@
 // help text, error, required state and look as every other read-only field. Under `name` it submits the
 // selected key (a hidden input), as the editable Select does. The option is found by React Aria's key rule
 // (lib/collection.ts), so static options need an `id`.
-import { CheckIcon, ChevronDownIcon } from "lucide-react";
+import { IconCheck, IconChevronDown } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import {
 	Select as AriaSelect,
@@ -131,7 +131,7 @@ export function Select<T extends object>({
 									)
 								}
 							/>
-							<ChevronDownIcon aria-hidden="true" className="size-4 shrink-0" />
+							<IconChevronDown aria-hidden="true" className="size-4 shrink-0" />
 						</Button>
 					</FieldFrame>
 					<Popover
@@ -176,7 +176,7 @@ export function SelectItem({ children, ...props }: SelectItemProps) {
 				<>
 					<span className="flex-1 truncate">{children}</span>
 					{isSelected ? (
-						<CheckIcon
+						<IconCheck
 							aria-hidden="true"
 							className="absolute right-edge size-4"
 						/>

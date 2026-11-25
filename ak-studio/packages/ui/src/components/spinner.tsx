@@ -2,7 +2,7 @@
 // the shadcn CLI (aria-nova), restyled. Its label is required: never a spinner with no label. A long operation
 // is a labelled job (JobProgress, P1b), not a spinner. The label is visible unless `hideLabel`, and is announced
 // through role="status". Under reduced motion the icon stays still; the label carries the meaning.
-import { Loader2Icon } from "lucide-react";
+import { IconLoader2 } from "@tabler/icons-react";
 import type { HTMLAttributes } from "react";
 import { cn } from "../lib/utils";
 
@@ -29,7 +29,7 @@ export function Spinner({
 			)}
 			{...props}
 		>
-			<Loader2Icon
+			<IconLoader2
 				aria-hidden="true"
 				className="size-4 shrink-0 animate-spin motion-reduce:animate-none"
 			/>

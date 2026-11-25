@@ -8,12 +8,12 @@
 // shows their not-yet states: the run control "No project to run" with no start control (a start button with
 // nothing to start would be a dead control), and the deploy status "Not deployed".
 import {
-	PlayIcon,
-	ScrollTextIcon,
-	SettingsIcon,
-	SparklesIcon,
-	SquareIcon,
-} from "lucide-react";
+	IconPlayerPlay,
+	IconPlayerStop,
+	IconScript,
+	IconSettings,
+	IconSparkles,
+} from "@tabler/icons-react";
 import type { ReactElement, RefAttributes } from "react";
 import { Group } from "react-aria-components";
 import { cn } from "../lib/utils";
@@ -103,20 +103,20 @@ export function RunControl({
 			{state === "no-project" ? null : live ? (
 				<ActionIcon
 					label={text.stop}
-					icon={<SquareIcon aria-hidden="true" />}
+					icon={<IconPlayerStop aria-hidden="true" />}
 					onPress={onStop}
 				/>
 			) : (
 				<ActionIcon
 					label={text.start}
-					icon={<PlayIcon aria-hidden="true" />}
+					icon={<IconPlayerPlay aria-hidden="true" />}
 					onPress={onStart}
 				/>
 			)}
 			{state === "failed" && onShowLog ? (
 				<ActionIcon
 					label={text.showLog}
-					icon={<ScrollTextIcon aria-hidden="true" />}
+					icon={<IconScript aria-hidden="true" />}
 					onPress={onShowLog}
 				/>
 			) : null}
@@ -195,7 +195,7 @@ export function BuildWithAIButton({
 			<Button
 				data-slot="build-with-ai"
 				variant="ai"
-				icon={<SparklesIcon aria-hidden="true" />}
+				icon={<IconSparkles aria-hidden="true" />}
 				className={cn(compact && "gap-0 px-1.5", className)}
 				{...props}
 			>
@@ -224,7 +224,7 @@ export function SettingsButton({
 			<IconButton
 				data-slot="settings-button"
 				aria-label={label}
-				icon={<SettingsIcon aria-hidden="true" />}
+				icon={<IconSettings aria-hidden="true" />}
 				{...props}
 			/>
 		</Tooltip>

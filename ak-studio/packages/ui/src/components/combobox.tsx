@@ -3,7 +3,7 @@
 // (label, box with its button, help text, error). Spectrum 2 padding: 12 px before the text, 4 px after the
 // button. State colours: `fieldBoxColours` (lib/state.ts). Read-only keeps the box, does not open and does not
 // change on hover.
-import { CheckIcon, ChevronDownIcon } from "lucide-react";
+import { IconCheck, IconChevronDown } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import {
 	ComboBox as AriaComboBox,
@@ -101,7 +101,7 @@ export function Combobox<T extends object>({
 											: "text-text data-hovered:bg-fill data-pressed:bg-fill-hover",
 								)}
 							>
-								<ChevronDownIcon aria-hidden="true" className="size-4" />
+								<IconChevronDown aria-hidden="true" className="size-4" />
 							</Button>
 						</Group>
 					</FieldFrame>
@@ -150,7 +150,7 @@ export function ComboboxItem({ children, ...props }: ComboboxItemProps) {
 				<>
 					<span className="flex-1 truncate">{children}</span>
 					{isSelected ? (
-						<CheckIcon
+						<IconCheck
 							aria-hidden="true"
 							className="absolute right-edge size-4"
 						/>

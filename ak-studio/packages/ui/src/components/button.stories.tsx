@@ -1,5 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { CopyIcon, FolderOpenIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import {
+	IconCopy,
+	IconFolderOpen,
+	IconPlus,
+	IconTrash,
+} from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import {
@@ -31,21 +36,24 @@ function Row({ children }: { children: ReactNode }) {
 export const Default: Story = {
 	render: () => (
 		<Row>
-			<Button variant="primary" icon={<FolderOpenIcon />}>
+			<Button variant="primary" icon={<IconFolderOpen aria-hidden="true" />}>
 				Open folder
 			</Button>
 			<Button variant="secondary">Show commands</Button>
 			<Button variant="outline">Check again</Button>
 			<Button variant="ghost">Clear list</Button>
-			<Button variant="danger" icon={<Trash2Icon />}>
+			<Button variant="danger" icon={<IconTrash aria-hidden="true" />}>
 				Remove project
 			</Button>
 			<Button variant="danger">Destroy deployment</Button>
-			<IconButton aria-label="Copy path" icon={<CopyIcon />} />
+			<IconButton
+				aria-label="Copy path"
+				icon={<IconCopy aria-hidden="true" />}
+			/>
 			<IconButton
 				aria-label="Add project"
 				variant="outline"
-				icon={<PlusIcon />}
+				icon={<IconPlus aria-hidden="true" />}
 			/>
 		</Row>
 	),
@@ -213,7 +221,11 @@ export const Disabled: Story = {
 			<Button variant="ai" isDisabled>
 				Build with AI
 			</Button>
-			<IconButton aria-label="Copy path" icon={<CopyIcon />} isDisabled />
+			<IconButton
+				aria-label="Copy path"
+				icon={<IconCopy aria-hidden="true" />}
+				isDisabled
+			/>
 		</Row>
 	),
 	play: async ({ canvasElement }) => {

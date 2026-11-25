@@ -19,7 +19,12 @@
 // was (`useLandmarkReturn`); Tab moves through a toast's
 // buttons; when a focused toast closes, focus moves to the next toast or back to where it came from. A toast with
 // an action stays until dismissed (WCAG 2.2.1); one without closes after 8 s, paused while hovered or focused.
-import { CircleCheckIcon, CircleXIcon, InfoIcon, XIcon } from "lucide-react";
+import {
+	IconCircleCheck,
+	IconCircleX,
+	IconInfoCircle,
+	IconX,
+} from "@tabler/icons-react";
 import { type RefObject, useEffect, useRef } from "react";
 import {
 	UNSTABLE_Toast as AriaToast,
@@ -68,14 +73,18 @@ export function notifyBackgroundResult(
 }
 
 const TONES = {
-	info: { Icon: InfoIcon, icon: "text-text", edge: "border-s-border-control" },
+	info: {
+		Icon: IconInfoCircle,
+		icon: "text-text",
+		edge: "border-s-border-control",
+	},
 	success: {
-		Icon: CircleCheckIcon,
+		Icon: IconCircleCheck,
 		icon: "text-text-status-success",
 		edge: "border-s-text-status-success",
 	},
 	danger: {
-		Icon: CircleXIcon,
+		Icon: IconCircleX,
 		icon: "text-text-status-danger",
 		edge: "border-s-text-status-danger",
 	},
@@ -188,7 +197,7 @@ export function ToastRegion({ queue, strings, className }: ToastRegionProps) {
 						<IconButton
 							slot="close"
 							aria-label={text.dismiss}
-							icon={<XIcon aria-hidden="true" />}
+							icon={<IconX aria-hidden="true" />}
 							className="-my-1.5 shrink-0"
 						/>
 					</AriaToast>

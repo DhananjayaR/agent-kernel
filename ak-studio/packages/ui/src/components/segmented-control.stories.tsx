@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
+import { IconDeviceDesktop, IconMoon, IconSun } from "@tabler/icons-react";
 import { expect, userEvent, within } from "storybook/test";
 import {
 	expectFocusRing,
@@ -21,13 +21,16 @@ const meta = {
 	},
 	render: (args) => (
 		<SegmentedControl {...args}>
-			<SegmentedControlItem id="system" icon={<MonitorIcon />}>
+			<SegmentedControlItem
+				id="system"
+				icon={<IconDeviceDesktop aria-hidden="true" />}
+			>
 				System
 			</SegmentedControlItem>
-			<SegmentedControlItem id="light" icon={<SunIcon />}>
+			<SegmentedControlItem id="light" icon={<IconSun aria-hidden="true" />}>
 				Light
 			</SegmentedControlItem>
-			<SegmentedControlItem id="dark" icon={<MoonIcon />}>
+			<SegmentedControlItem id="dark" icon={<IconMoon aria-hidden="true" />}>
 				Dark
 			</SegmentedControlItem>
 		</SegmentedControl>

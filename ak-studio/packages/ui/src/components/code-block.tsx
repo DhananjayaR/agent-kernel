@@ -3,7 +3,7 @@
 // block): monospace on the raised surface, a caption row with an optional copy action (a callback: this
 // package makes no clipboard call) with a tooltip. The code scrolls sideways; its scroll region is
 // keyboard-focusable and named by the caption. Copy defaults: strings.ts.
-import { CheckIcon, CopyIcon } from "lucide-react";
+import { IconCheck, IconCopy } from "@tabler/icons-react";
 import { type HTMLAttributes, useEffect, useId, useState } from "react";
 import { cn } from "../lib/utils";
 import { type CodeBlockStrings, uiStrings } from "../strings";
@@ -61,7 +61,13 @@ export function CodeBlock({
 						<IconButton
 							aria-label={text.copy}
 							aria-describedby={captionId}
-							icon={copied ? <CheckIcon /> : <CopyIcon />}
+							icon={
+								copied ? (
+									<IconCheck aria-hidden="true" />
+								) : (
+									<IconCopy aria-hidden="true" />
+								)
+							}
 							onPress={() => {
 								onCopy(code);
 								setCopied(true);

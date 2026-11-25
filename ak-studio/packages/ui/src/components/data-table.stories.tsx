@@ -135,7 +135,7 @@ export const Default: Story = {
 		const resting = duration.querySelector(
 			"[data-slot=sort-icon]",
 		) as SVGElement;
-		await expect(resting).toHaveClass("lucide-chevrons-up-down");
+		await expect(resting).toHaveClass("tabler-icon-selector");
 		await expectNonTextContrastOnSurfaces(resting, "color");
 		await expect(
 			column(canvasElement, /Status/).querySelector("[data-slot=sort-icon]"),

@@ -7,8 +7,13 @@
 // `text-accent-ai` for the label and edge (at least 4.5:1, so also 3:1, on every surface) and `accent-ai` with
 // `on-accent-ai` for the hover fill. It is never the view's primary action. `IconButton` is the icon-only form;
 // its label is required by type.
+
+import {
+	IconAlertTriangle,
+	IconLoader2,
+	IconSparkles,
+} from "@tabler/icons-react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { Loader2Icon, SparklesIcon, TriangleAlertIcon } from "lucide-react";
 import type { ReactNode, RefAttributes } from "react";
 import {
 	Button as AriaButton,
@@ -68,14 +73,14 @@ type BaseProps = Omit<AriaButtonProps, "children" | "className"> &
 
 export type ButtonProps = BaseProps & {
 	variant?: ButtonVariant;
-	/** Leading icon (lucide-react). `danger` shows a warning icon and `ai` a sparkle when none is given. */
+	/** Leading icon (Tabler outline, `@tabler/icons-react`). `danger` shows a warning icon and `ai` a sparkle when none is given. */
 	icon?: ReactNode;
 	children: ReactNode;
 };
 
 function PendingIcon() {
 	return (
-		<Loader2Icon
+		<IconLoader2
 			aria-hidden="true"
 			className="animate-spin motion-reduce:animate-none"
 		/>
@@ -97,9 +102,9 @@ export function Button({
 	const leading =
 		icon ??
 		(variant === "danger" ? (
-			<TriangleAlertIcon aria-hidden="true" />
+			<IconAlertTriangle aria-hidden="true" />
 		) : variant === "ai" ? (
-			<SparklesIcon aria-hidden="true" />
+			<IconSparkles aria-hidden="true" />
 		) : null);
 	return (
 		<AriaButton
@@ -119,7 +124,7 @@ export type IconButtonProps = Omit<BaseProps, "aria-label"> & {
 	/** What the button does ("Copy path"); also its accessible name. Required: the button has no text. */
 	"aria-label": string;
 	variant?: Exclude<ButtonVariant, "primary" | "danger" | "ai">;
-	/** The icon (lucide-react), decorative. */
+	/** The icon (Tabler outline, `@tabler/icons-react`), decorative. */
 	icon: ReactNode;
 };
 

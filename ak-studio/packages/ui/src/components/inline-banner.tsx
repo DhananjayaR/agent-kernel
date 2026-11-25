@@ -5,12 +5,12 @@
 // title, description, then actions. Errors say what happened and what to do next. It is a live region: role
 // "alert" for danger, "status" otherwise (WCAG 4.1.3), overridable with `role`.
 import {
-	CircleCheckIcon,
-	CircleXIcon,
-	InfoIcon,
-	type LucideIcon,
-	TriangleAlertIcon,
-} from "lucide-react";
+	IconAlertTriangle,
+	IconCircleCheck,
+	IconCircleX,
+	IconInfoCircle,
+	type TablerIcon,
+} from "@tabler/icons-react";
 import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "../lib/utils";
 
@@ -18,21 +18,25 @@ export type BannerTone = "info" | "success" | "warning" | "danger";
 
 const TONES: Record<
 	BannerTone,
-	{ Icon: LucideIcon; icon: string; edge: string }
+	{ Icon: TablerIcon; icon: string; edge: string }
 > = {
-	info: { Icon: InfoIcon, icon: "text-text", edge: "border-l-border-control" },
+	info: {
+		Icon: IconInfoCircle,
+		icon: "text-text",
+		edge: "border-l-border-control",
+	},
 	success: {
-		Icon: CircleCheckIcon,
+		Icon: IconCircleCheck,
 		icon: "text-text-status-success",
 		edge: "border-l-text-status-success",
 	},
 	warning: {
-		Icon: TriangleAlertIcon,
+		Icon: IconAlertTriangle,
 		icon: "text-text-status-warning",
 		edge: "border-l-text-status-warning",
 	},
 	danger: {
-		Icon: CircleXIcon,
+		Icon: IconCircleX,
 		icon: "text-text-status-danger",
 		edge: "border-l-text-status-danger",
 	},

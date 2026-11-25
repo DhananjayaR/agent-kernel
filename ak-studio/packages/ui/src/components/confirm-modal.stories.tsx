@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { EllipsisIcon } from "lucide-react";
+import { IconDots } from "@tabler/icons-react";
 import { useState } from "react";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import {
@@ -237,7 +237,7 @@ function MenuThenConfirm({ onConfirm }: { onConfirm: () => void }) {
 				trigger={
 					<IconButton
 						aria-label="Agent actions"
-						icon={<EllipsisIcon aria-hidden="true" />}
+						icon={<IconDots aria-hidden="true" />}
 					/>
 				}
 				onAction={(key) => {

@@ -22,7 +22,7 @@
 // - Escape: inside an overlay (Modal, Popover) it closes the overlay, even with rows selected (the collection does
 //   not take it); outside, it clears a non-empty selection. Mod+A (Ctrl+A, Cmd+A on macOS) selects all rows with
 //   `selectionMode="multiple"` and does nothing otherwise.
-import { ArrowDownIcon, ArrowUpIcon, ChevronsUpDownIcon } from "lucide-react";
+import { IconArrowDown, IconArrowUp, IconSelector } from "@tabler/icons-react";
 import { createContext, type ReactNode, useContext } from "react";
 import {
 	Table as AriaTable,
@@ -143,20 +143,20 @@ export function DataTableColumn({
 				<span className="flex items-center gap-text-to-visual">
 					{children}
 					{sortDirection === "ascending" ? (
-						<ArrowUpIcon
+						<IconArrowUp
 							data-slot="sort-icon"
 							aria-hidden="true"
 							className="size-4 shrink-0"
 						/>
 					) : sortDirection === "descending" ? (
-						<ArrowDownIcon
+						<IconArrowDown
 							data-slot="sort-icon"
 							aria-hidden="true"
 							className="size-4 shrink-0"
 						/>
 					) : allowsSorting ? (
 						// At rest a sortable column shows that it sorts (a non-text cue, at least 3:1 on the header).
-						<ChevronsUpDownIcon
+						<IconSelector
 							data-slot="sort-icon"
 							aria-hidden="true"
 							className="size-4 shrink-0 text-text-muted"

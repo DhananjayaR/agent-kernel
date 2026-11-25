@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { ExternalLinkIcon, FolderOpenIcon } from "lucide-react";
+import { IconExternalLink, IconFolderOpen } from "@tabler/icons-react";
 import {
 	expect,
 	fireEvent,
@@ -37,10 +37,13 @@ const meta = {
 		menu: (target: string | null) =>
 			target === null ? null : (
 				<>
-					<MenuItem id="open-editor" icon={<ExternalLinkIcon />}>
+					<MenuItem
+						id="open-editor"
+						icon={<IconExternalLink aria-hidden="true" />}
+					>
 						Open in editor
 					</MenuItem>
-					<MenuItem id="reveal" icon={<FolderOpenIcon />}>
+					<MenuItem id="reveal" icon={<IconFolderOpen aria-hidden="true" />}>
 						Reveal in file manager
 					</MenuItem>
 				</>

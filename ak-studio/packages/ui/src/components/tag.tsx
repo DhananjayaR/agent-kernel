@@ -6,7 +6,7 @@ import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "../lib/utils";
 
 export type TagProps = Omit<HTMLAttributes<HTMLSpanElement>, "children"> & {
-	/** Leading icon (lucide-react), decorative. */
+	/** Leading icon (Tabler outline, `@tabler/icons-react`), decorative. */
 	icon?: ReactNode;
 	children: ReactNode;
 };

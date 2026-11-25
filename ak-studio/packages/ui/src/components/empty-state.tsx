@@ -9,7 +9,7 @@ export type EmptyStateProps = {
 	title: string;
 	/** What it is for and how to fill it. */
 	description: string;
-	/** Icon (lucide-react), decorative. */
+	/** Icon (Tabler outline, `@tabler/icons-react`), decorative. */
 	icon?: ReactNode;
 	/** The first action: usually one primary Button, plus an alternative. */
 	action?: ReactNode;

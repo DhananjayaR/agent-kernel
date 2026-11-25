@@ -1,7 +1,7 @@
 // Internal parts shared by the field components (Input, Textarea, Select, Combobox): label, help text and
 // error text on React Aria's Label, Text and FieldError, so each field is labelled and its error is announced.
 // Not exported from the package: features use the field components' `label`, `description` and `errorMessage`.
-import { CircleAlertIcon } from "lucide-react";
+import { IconAlertCircle } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import {
 	FieldError as AriaFieldError,
@@ -51,7 +51,7 @@ export function FieldErrorText({ children }: { children?: string }) {
 				const text = children || validationErrors.join(" ");
 				return text ? (
 					<>
-						<CircleAlertIcon aria-hidden="true" />
+						<IconAlertCircle aria-hidden="true" />
 						<span>{text}</span>
 					</>
 				) : null;

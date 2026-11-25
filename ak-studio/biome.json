@@ -6,7 +6,22 @@
 		"includes": ["**", "!**/tools/depcruise-selftest/fixture"]
 	},
 	"formatter": { "enabled": true, "indentStyle": "tab", "lineEnding": "lf" },
-	"linter": { "enabled": true, "rules": { "preset": "recommended" } },
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"preset": "recommended",
+			"style": {
+				"noRestrictedImports": {
+					"level": "error",
+					"options": {
+						"paths": {
+							"lucide-react": "Interface icons are Tabler outline icons: import them from @tabler/icons-react (branding/README.md)."
+						}
+					}
+				}
+			}
+		}
+	},
 	"javascript": { "formatter": { "quoteStyle": "double" } },
 	"css": { "parser": { "tailwindDirectives": true } },
 	"assist": {

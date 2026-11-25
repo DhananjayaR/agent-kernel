@@ -68,7 +68,7 @@ export type SegmentedControlItemProps = Omit<
 	"children" | "className" | "id"
 > & {
 	id: Key;
-	/** Leading icon (lucide-react). With no text, give the item an `aria-label`. */
+	/** Leading icon (Tabler outline, `@tabler/icons-react`). With no text, give the item an `aria-label`. */
 	icon?: ReactNode;
 	children?: ReactNode;
 };

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { InfoIcon } from "lucide-react";
+import { IconInfoCircle } from "@tabler/icons-react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
 	expectFocusWithin,
@@ -19,7 +19,7 @@ const meta = {
 		trigger: (
 			<IconButton
 				aria-label="About this version"
-				icon={<InfoIcon aria-hidden="true" />}
+				icon={<IconInfoCircle aria-hidden="true" />}
 			/>
 		),
 		children: (

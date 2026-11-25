@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
-	EllipsisIcon,
-	ExternalLinkIcon,
-	FolderOpenIcon,
-	RefreshCwIcon,
-} from "lucide-react";
+	IconDots,
+	IconExternalLink,
+	IconFolderOpen,
+	IconRefresh,
+} from "@tabler/icons-react";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import {
 	expectFocusRing,
@@ -26,7 +26,7 @@ const meta = {
 		trigger: (
 			<IconButton
 				aria-label="Project actions"
-				icon={<EllipsisIcon aria-hidden="true" />}
+				icon={<IconDots aria-hidden="true" />}
 			/>
 		),
 		onAction: fn(),
@@ -35,13 +35,16 @@ const meta = {
 	render: (args) => (
 		<div className="flex h-72 items-start">
 			<Menu {...args}>
-				<MenuItem id="open-editor" icon={<ExternalLinkIcon />}>
+				<MenuItem
+					id="open-editor"
+					icon={<IconExternalLink aria-hidden="true" />}
+				>
 					Open in editor
 				</MenuItem>
-				<MenuItem id="reveal" icon={<FolderOpenIcon />}>
+				<MenuItem id="reveal" icon={<IconFolderOpen aria-hidden="true" />}>
 					Reveal in file manager
 				</MenuItem>
-				<MenuItem id="reload" icon={<RefreshCwIcon />}>
+				<MenuItem id="reload" icon={<IconRefresh aria-hidden="true" />}>
 					Reload project
 				</MenuItem>
 				<MenuSeparator />
@@ -184,12 +187,16 @@ export const Shortcuts: Story = {
 			<Menu {...args}>
 				<MenuItem
 					id="open-editor"
-					icon={<ExternalLinkIcon />}
+					icon={<IconExternalLink aria-hidden="true" />}
 					shortcut="Ctrl+E"
 				>
 					Open in editor
 				</MenuItem>
-				<MenuItem id="reveal" icon={<FolderOpenIcon />} shortcut="Ctrl+R">
+				<MenuItem
+					id="reveal"
+					icon={<IconFolderOpen aria-hidden="true" />}
+					shortcut="Ctrl+R"
+				>
 					Reveal in file manager
 				</MenuItem>
 			</Menu>

@@ -67,7 +67,7 @@ export function TabList<T extends object>({
 export type TabProps = Omit<AriaTabProps, "className" | "children"> & {
 	/** The label, and optionally a Badge after it (a count, the background job notice). */
 	children: ReactNode;
-	/** Leading icon (lucide-react), decorative. */
+	/** Leading icon (Tabler outline, `@tabler/icons-react`), decorative. */
 	icon?: ReactNode;
 };
 

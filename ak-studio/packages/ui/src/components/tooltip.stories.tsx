@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { CopyIcon } from "lucide-react";
+import { IconCopy } from "@tabler/icons-react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { hover, settle, tabTo } from "../lib/story-checks";
 import { IconButton } from "./button";
@@ -10,7 +10,12 @@ const meta = {
 	component: Tooltip,
 	args: {
 		content: "Copy path",
-		children: <IconButton aria-label="Copy path" icon={<CopyIcon />} />,
+		children: (
+			<IconButton
+				aria-label="Copy path"
+				icon={<IconCopy aria-hidden="true" />}
+			/>
+		),
 	},
 	render: (args) => (
 		<div className="flex flex-col gap-4 pt-12">
@@ -74,7 +79,11 @@ export const Disabled: Story = {
 	args: {
 		isDisabled: true,
 		children: (
-			<IconButton aria-label="Copy path" icon={<CopyIcon />} isDisabled />
+			<IconButton
+				aria-label="Copy path"
+				icon={<IconCopy aria-hidden="true" />}
+				isDisabled
+			/>
 		),
 	},
 };

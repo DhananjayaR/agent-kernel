@@ -4,7 +4,7 @@
 // text-accent-primary (at least 3:1 on every surface) and shows a mark, so the state is never colour alone.
 // Invalid draws the danger border and, with `errorMessage`, text with an icon. Read-only does not change on hover
 // or press. State colours and their precedence: `toggleIndicatorColours` (lib/state.ts).
-import { CheckIcon, CircleAlertIcon, MinusIcon } from "lucide-react";
+import { IconAlertCircle, IconCheck, IconMinus } from "@tabler/icons-react";
 import { type ReactNode, useId } from "react";
 import {
 	Checkbox as AriaCheckbox,
@@ -77,9 +77,9 @@ export function Checkbox({
 						)}
 					>
 						{isIndeterminate ? (
-							<MinusIcon />
+							<IconMinus aria-hidden="true" />
 						) : isSelected ? (
-							<CheckIcon />
+							<IconCheck aria-hidden="true" />
 						) : null}
 					</span>
 					{children}
@@ -92,7 +92,7 @@ export function Checkbox({
 		<div className={cn("flex flex-col", className)}>
 			{checkbox}
 			<span id={errorId} className={fieldError}>
-				<CircleAlertIcon aria-hidden="true" />
+				<IconAlertCircle aria-hidden="true" />
 				{errorMessage}
 			</span>
 		</div>

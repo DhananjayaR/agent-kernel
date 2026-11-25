@@ -23,7 +23,7 @@
 //   not take it); outside, it clears a non-empty selection. Mod+A (Ctrl+A, Cmd+A on macOS) selects all visible rows with
 //   `selectionMode="multiple"` and does nothing otherwise.
 // The chevron is a pointer target only (not in the Tab order); Shift+F10 opens a ContextMenu wrapped around it.
-import { ChevronRightIcon } from "lucide-react";
+import { IconChevronRight } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import {
 	Tree as AriaTree,
@@ -74,7 +74,7 @@ export type TreeItemProps<T extends object = object> = Omit<
 > & {
 	/** The row's text (a file or folder name); also what typing a letter matches. */
 	title: string;
-	/** Leading icon (lucide-react), decorative. */
+	/** Leading icon (Tabler outline, `@tabler/icons-react`), decorative. */
 	icon?: ReactNode;
 	/** At the end of the row: markers for changed or new files. Their labels are added to the row's name. */
 	markers?: TreeMarker[];
@@ -137,7 +137,7 @@ export function TreeItem<T extends object = object>({
 									slot="chevron"
 									className="flex size-control-s shrink-0 cursor-default items-center justify-center rounded-sm outline-none"
 								>
-									<ChevronRightIcon
+									<IconChevronRight
 										aria-hidden="true"
 										className={cn(
 											"size-4 transition-transform duration-150 motion-reduce:transition-none",

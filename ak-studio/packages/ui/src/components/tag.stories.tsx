@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { BoxIcon } from "lucide-react";
+import { IconBox } from "@tabler/icons-react";
 import { expect } from "storybook/test";
 import { expectHeight, expectStyle } from "../lib/story-checks";
 import { Tag } from "./tag";
@@ -20,7 +20,7 @@ export const Default: Story = {
 			<Tag {...args} />
 			<Tag>LangGraph</Tag>
 			<Tag>CrewAI</Tag>
-			<Tag icon={<BoxIcon />}>redis extra</Tag>
+			<Tag icon={<IconBox aria-hidden="true" />}>redis extra</Tag>
 		</div>
 	),
 	play: async ({ canvasElement }) => {

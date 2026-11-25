@@ -5,21 +5,21 @@ import {
 	EmptyState,
 } from "@ak-studio/ui";
 import {
-	BoxesIcon,
-	FileCodeIcon,
-	FlaskConicalIcon,
-	RocketIcon,
-	SlidersHorizontalIcon,
-} from "lucide-react";
+	IconAdjustmentsHorizontal,
+	IconFileCode,
+	IconFlask,
+	IconPackages,
+	IconRocket,
+} from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import { panelEmptyStates, tabEmptyStates } from "./strings";
 
 const TAB_ICONS: Record<AppTabId, ReactNode> = {
-	canvas: <BoxesIcon />,
-	code: <FileCodeIcon />,
-	config: <SlidersHorizontalIcon />,
-	"test-trace": <FlaskConicalIcon />,
-	deploy: <RocketIcon />,
+	canvas: <IconPackages aria-hidden="true" />,
+	code: <IconFileCode aria-hidden="true" />,
+	config: <IconAdjustmentsHorizontal aria-hidden="true" />,
+	"test-trace": <IconFlask aria-hidden="true" />,
+	deploy: <IconRocket aria-hidden="true" />,
 };
 
 export function TabEmptyState({ tab }: { tab: AppTabId }) {

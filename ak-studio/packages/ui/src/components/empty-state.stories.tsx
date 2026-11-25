@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { FolderOpenIcon, ListChecksIcon } from "lucide-react";
+import { IconFolderOpen, IconListCheck } from "@tabler/icons-react";
 import { expect, within } from "storybook/test";
 import { Button } from "./button";
 import { EmptyState } from "./empty-state";
@@ -11,10 +11,10 @@ const meta = {
 		title: "No projects yet",
 		description:
 			"Open a folder that holds an Agent Kernel project to see its agents, code and configuration.",
-		icon: <FolderOpenIcon />,
+		icon: <IconFolderOpen aria-hidden="true" />,
 		action: (
 			<>
-				<Button variant="primary" icon={<FolderOpenIcon />}>
+				<Button variant="primary" icon={<IconFolderOpen aria-hidden="true" />}>
 					Open folder
 				</Button>
 				<Button variant="outline">New project</Button>
@@ -44,7 +44,7 @@ export const WithoutAction: Story = {
 	args: {
 		title: "No problems",
 		description: "Configuration and code errors in this project appear here.",
-		icon: <ListChecksIcon />,
+		icon: <IconListCheck aria-hidden="true" />,
 		action: undefined,
 		headingLevel: 3,
 	},

@@ -1,12 +1,12 @@
 // Story fixtures for the desktop shell (not exported): the support-triage example project from the briefs, the
 // viewports the gate asks about, and a composed shell whose every slot can be set from a story's args.
 import {
-	BoxesIcon,
-	CodeIcon,
-	FlaskConicalIcon,
-	RocketIcon,
-	SlidersHorizontalIcon,
-} from "lucide-react";
+	IconAdjustmentsHorizontal,
+	IconCode,
+	IconFlask,
+	IconPackages,
+	IconRocket,
+} from "@tabler/icons-react";
 import { type ReactNode, useState } from "react";
 import { expect } from "storybook/test";
 import { Badge } from "../components/badge";
@@ -95,31 +95,31 @@ const TAB_EMPTY: Record<
 		title: "Canvas",
 		description:
 			"The project's agents, tools and handoffs as a graph. It arrives in P3, once a project can be opened.",
-		icon: <BoxesIcon />,
+		icon: <IconPackages aria-hidden="true" />,
 	},
 	code: {
 		title: "Code",
 		description:
 			"Every file in the project, with a file tree. It arrives in P3, once a project can be opened.",
-		icon: <CodeIcon />,
+		icon: <IconCode aria-hidden="true" />,
 	},
 	config: {
 		title: "Config",
 		description:
 			"Each section of config.yaml as a form. It arrives in P3, once a project can be opened.",
-		icon: <SlidersHorizontalIcon />,
+		icon: <IconAdjustmentsHorizontal aria-hidden="true" />,
 	},
 	"test-trace": {
 		title: "Test & trace",
 		description:
 			"Chat with the running project and follow its trace (P8), then tests and scenarios (P9).",
-		icon: <FlaskConicalIcon />,
+		icon: <IconFlask aria-hidden="true" />,
 	},
 	deploy: {
 		title: "Deploy",
 		description:
 			"Deploy the project to a cloud target, review the plan and destroy it again. It arrives in P10.",
-		icon: <RocketIcon />,
+		icon: <IconRocket aria-hidden="true" />,
 	},
 };
 

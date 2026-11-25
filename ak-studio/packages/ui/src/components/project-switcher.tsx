@@ -6,12 +6,12 @@
 //
 // Keyboard: the Menu's (Enter, Space or ArrowDown opens it; arrows move; Escape closes and returns focus).
 import {
-	ChevronDownIcon,
-	FolderIcon,
-	FolderOpenIcon,
-	FolderPlusIcon,
-	FolderSearchIcon,
-} from "lucide-react";
+	IconChevronDown,
+	IconFolder,
+	IconFolderOpen,
+	IconFolderPlus,
+	IconFolderSearch,
+} from "@tabler/icons-react";
 import { cn } from "../lib/utils";
 import { type ProjectSwitcherStrings, uiStrings } from "../strings";
 import { Button } from "./button";
@@ -59,7 +59,7 @@ export function ProjectSwitcher({
 					className,
 				)}
 			>
-				<FolderIcon aria-hidden="true" className="size-4 shrink-0" />
+				<IconFolder aria-hidden="true" className="size-4 shrink-0" />
 				<span className="truncate">{text.noProject}</span>
 			</span>
 		);
@@ -82,19 +82,19 @@ export function ProjectSwitcher({
 					<Button
 						data-slot="project-switcher"
 						variant="ghost"
-						icon={<FolderIcon aria-hidden="true" />}
+						icon={<IconFolder aria-hidden="true" />}
 						className={cn("max-w-full min-w-0 shrink", className)}
 					>
 						<span className="min-w-0 truncate">{project.name}</span>
-						<ChevronDownIcon aria-hidden="true" />
+						<IconChevronDown aria-hidden="true" />
 					</Button>
 				</Tooltip>
 			}
 		>
-			<MenuItem id="open-folder" icon={<FolderOpenIcon />}>
+			<MenuItem id="open-folder" icon={<IconFolderOpen aria-hidden="true" />}>
 				{text.openFolder}
 			</MenuItem>
-			<MenuItem id="new-project" icon={<FolderPlusIcon />}>
+			<MenuItem id="new-project" icon={<IconFolderPlus aria-hidden="true" />}>
 				{text.newProject}
 			</MenuItem>
 			{recent.length > 0 ? (
@@ -105,7 +105,7 @@ export function ProjectSwitcher({
 							<MenuItem
 								key={r.path}
 								id={`recent:${r.path}`}
-								icon={<FolderIcon />}
+								icon={<IconFolder aria-hidden="true" />}
 							>
 								{r.name}
 							</MenuItem>
@@ -114,7 +114,7 @@ export function ProjectSwitcher({
 				</>
 			) : null}
 			<MenuSeparator />
-			<MenuItem id="reveal" icon={<FolderSearchIcon />}>
+			<MenuItem id="reveal" icon={<IconFolderSearch aria-hidden="true" />}>
 				{text.reveal}
 			</MenuItem>
 		</Menu>

@@ -3,38 +3,38 @@
 // hairline; each state has its own icon and label, so it is never colour alone (the status colours are close
 // to the primary one), and the icon takes the state's text colour.
 import {
-	CircleCheckIcon,
-	CircleDashedIcon,
-	CircleXIcon,
-	Clock3Icon,
-	Loader2Icon,
-	type LucideIcon,
-} from "lucide-react";
+	IconCircleCheck,
+	IconCircleDashed,
+	IconCircleX,
+	IconClockHour3,
+	IconLoader2,
+	type TablerIcon,
+} from "@tabler/icons-react";
 import type { HTMLAttributes } from "react";
 import { cn } from "../lib/utils";
 import { uiStrings } from "../strings";
 
 export type Status = "passed" | "running" | "waiting" | "failed" | "not-set-up";
 
-const STATES: Record<Status, { Icon: LucideIcon; iconClass: string }> = {
+const STATES: Record<Status, { Icon: TablerIcon; iconClass: string }> = {
 	passed: {
-		Icon: CircleCheckIcon,
+		Icon: IconCircleCheck,
 		iconClass: "text-text-status-success",
 	},
 	running: {
-		Icon: Loader2Icon,
+		Icon: IconLoader2,
 		iconClass: "animate-spin text-text",
 	},
 	waiting: {
-		Icon: Clock3Icon,
+		Icon: IconClockHour3,
 		iconClass: "text-text-status-warning",
 	},
 	failed: {
-		Icon: CircleXIcon,
+		Icon: IconCircleX,
 		iconClass: "text-text-status-danger",
 	},
 	"not-set-up": {
-		Icon: CircleDashedIcon,
+		Icon: IconCircleDashed,
 		iconClass: "text-text-muted",
 	},
 };

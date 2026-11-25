@@ -9,7 +9,7 @@
 // item, ArrowUp on the last; ArrowUp and ArrowDown move (wrapping), Home and End jump, typing a letter moves to the
 // next item starting with it; Enter or Space runs the item and closes the menu; Escape closes it; either way focus
 // returns to the trigger. Tab closes the menu and moves on.
-import { CheckIcon } from "lucide-react";
+import { IconCheck } from "@tabler/icons-react";
 import type { ReactElement, ReactNode } from "react";
 import {
 	Menu as AriaMenu,
@@ -95,7 +95,7 @@ export type MenuItemProps<T extends object = object> = Omit<
 > & {
 	/** The label: what happens ("Open in editor"). Also what typing a letter matches. */
 	children: string;
-	/** Leading icon (lucide-react), decorative. */
+	/** Leading icon (Tabler outline, `@tabler/icons-react`), decorative. */
 	icon?: ReactNode;
 	/** The shortcut, as shown ("Ctrl+E"); assistive technology reads it as the item's description. */
 	shortcut?: string;
@@ -119,7 +119,7 @@ export function MenuItem<T extends object = object>({
 				<>
 					{selectionMode !== "none" ? (
 						<span className="flex size-4 shrink-0 items-center justify-center">
-							{isSelected ? <CheckIcon aria-hidden="true" /> : null}
+							{isSelected ? <IconCheck aria-hidden="true" /> : null}
 						</span>
 					) : null}
 					{icon ? (

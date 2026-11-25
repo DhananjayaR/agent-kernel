@@ -15,7 +15,7 @@
 // Separation: in light theme the scrim (navy text at 40%) separates the modal's fill from the page by more than
 // 2:1; in dark theme no existing colour is dark enough for that (theme.css, scrim), so the dark modal draws its
 // edge in border-control, at least 3:1 against the scrimmed page.
-import { XIcon } from "lucide-react";
+import { IconX } from "@tabler/icons-react";
 import {
 	type ReactElement,
 	type ReactNode,
@@ -161,7 +161,7 @@ export function Modal({
 									<IconButton
 										slot="close"
 										aria-label={text.close}
-										icon={<XIcon aria-hidden="true" />}
+										icon={<IconX aria-hidden="true" />}
 										className="-me-2 -mt-1"
 									/>
 								) : null}

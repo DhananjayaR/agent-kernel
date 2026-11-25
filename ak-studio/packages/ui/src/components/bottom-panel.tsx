@@ -13,7 +13,7 @@
 // Declared shortcut (P1a has no shortcut registry or clash test yet; P1b's feature manifests take it over):
 //   Mod+J  Show or hide the bottom panel. Not used by the app menu (reload, zoom, full screen, edit roles),
 //          React Aria (F6, Shift+F10) or the browser in Electron.
-import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
+import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
 import {
 	type ReactNode,
 	useCallback,
@@ -172,9 +172,9 @@ export function BottomPanel({
 								aria-expanded={isOpen}
 								icon={
 									isOpen ? (
-										<ChevronDownIcon aria-hidden="true" />
+										<IconChevronDown aria-hidden="true" />
 									) : (
-										<ChevronUpIcon aria-hidden="true" />
+										<IconChevronUp aria-hidden="true" />
 									)
 								}
 								className="ms-auto"

@@ -1,6 +1,6 @@
 // Story fixtures shared by several components' stories (not exported): a small project tree in the shape of the
 // support-triage example.
-import { FileIcon, FolderIcon } from "lucide-react";
+import { IconFile, IconFolder } from "@tabler/icons-react";
 import { Collection } from "react-aria-components";
 import { TreeItem } from "../components/tree";
 
@@ -43,7 +43,13 @@ export function FileTreeItem({ node }: { node: FileNode }) {
 		<TreeItem
 			id={node.id}
 			title={node.name}
-			icon={node.children ? <FolderIcon /> : <FileIcon />}
+			icon={
+				node.children ? (
+					<IconFolder aria-hidden="true" />
+				) : (
+					<IconFile aria-hidden="true" />
+				)
+			}
 			markers={marker ? [marker] : undefined}
 		>
 			{node.children ? (
