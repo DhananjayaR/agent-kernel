@@ -8,7 +8,7 @@ pnpm install --frozen-lockfile   # also fetches the Electron binary (apps/deskto
 pnpm lint        # Biome check, then check-palette
 pnpm typecheck   # tsc -b over all members
 pnpm test        # every member's unit tests (Vitest), then check-palette's own test
-pnpm check-palette        # no Tailwind default-palette class or arbitrary value in apps/renderer or packages/ui
+pnpm check-palette        # no default-palette class, arbitrary value or colour literal in apps/renderer, packages/ui
 pnpm storybook            # Storybook dev server for packages/ui on 127.0.0.1:6006
 pnpm build-storybook      # static Storybook into packages/ui/storybook-static/
 pnpm test:storybook       # every story, dark and light, in headless Chromium with axe (fails on a violation)
@@ -56,3 +56,11 @@ tokens from `apps/renderer/src/styles.css`; Storybook from `packages/ui/.storybo
 ratio. `packages/ui/components.json` configures the shadcn CLI (React Aria base, style `aria-nova`); run
 `pnpm --filter @ak-studio/ui exec shadcn add <name>` (the pinned CLI) once the gate approves a component, and
 pin whatever it adds.
+
+**check-palette: known limits.** It reads source as text, so it cannot see class names built at run time
+(template strings such as `` `bg-${tone}-500` ``, or concatenation such as `"bg-" + tone`), and it does not flag
+Tailwind's CSS-variable shorthand (`bg-(--x)`, `w-(--trigger-width)`). Colour literals (hex, `rgb()`, `hsl()`,
+`oklch()`, `color()` ...) are allowed only in `packages/ui/src/theme.css` and in unit tests (`*.test.*`); hex
+counts only in a value position, and comment lines are not checked for literals. Tailwind's default palette,
+shadow, inset/drop/text shadow, radius, text-size and font-family scales are removed in `theme.css`, so such a
+class compiles to nothing even where the check cannot see it. Its scope is `apps/renderer` and `packages/ui`.

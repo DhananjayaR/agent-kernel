@@ -1,8 +1,12 @@
-/* Must pass tools/check-palette. */
+/* Must pass tools/check-palette: token classes in @apply, attribute and id selectors, no colour literal. */
 :root[data-theme="dark"] {
-	--role-text: #eaf3f8;
+	--example: var(--role-text);
 }
 .example {
 	@apply bg-surface text-text;
-	box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);
+	box-shadow: var(--shadow-elevated);
+}
+#app,
+#fade {
+	background: var(--role-surface);
 }

@@ -53,9 +53,23 @@
 	--role-status-danger: #db4444; /* provisional: P1a design gate */ /* custom.css --ak-red */
 }
 
-/* No Tailwind default palette: only the role colours exist as colour utilities. */
+/*
+ * No Tailwind default palette: only the role colours exist as colour utilities. The other default scales that
+ * would bypass the tokens are removed too (shadows carry their own colours; radius and text sizes have
+ * Studio tokens below). Font families are not mapped yet (design gate), so the default family utilities go
+ * as well; preflight still falls back to the system font.
+ */
 @theme {
 	--color-*: initial;
+	--shadow-*: initial;
+	--inset-shadow-*: initial;
+	--drop-shadow-*: initial;
+	--text-shadow-*: initial;
+	--radius-*: initial;
+	--text-*: initial;
+	--font-sans: initial;
+	--font-serif: initial;
+	--font-mono: initial;
 }
 
 /* `inline` makes each utility read the role variable where it is used, so nested data-theme blocks work. */

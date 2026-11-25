@@ -40,11 +40,12 @@ function toRgb(color: string): Rgb | null {
 	if (hex) return hex;
 	const ctx = document.createElement("canvas").getContext("2d");
 	if (!ctx || !color) return null;
-	// An invalid colour leaves fillStyle unchanged; the sentinel makes that visible instead of reading black.
-	const sentinel = "#010203";
-	ctx.fillStyle = sentinel;
+	// An invalid colour leaves fillStyle unchanged; starting from transparent makes that visible (as "n/a")
+	// instead of reading the default black.
+	ctx.fillStyle = "transparent";
+	const before = ctx.fillStyle;
 	ctx.fillStyle = color;
-	if (ctx.fillStyle === sentinel) return null;
+	if (ctx.fillStyle === before) return null;
 	ctx.fillRect(0, 0, 1, 1);
 	const [r = 0, g = 0, b = 0] = ctx.getImageData(0, 0, 1, 1).data;
 	return [r, g, b];

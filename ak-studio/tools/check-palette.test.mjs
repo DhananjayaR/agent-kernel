@@ -4,8 +4,10 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+	allowsColourLiterals,
 	checkPalette,
 	defaultPaletteFamilies,
+	findColourLiterals,
 	findViolations,
 } from "./check-palette.mjs";
 
@@ -34,6 +36,55 @@ describe("check-palette", () => {
 		expect(r.status).toBe(1);
 		expect(r.stderr).toContain("text-blue-500");
 		expect(r.stderr).toContain("p-[13px]");
+	});
+
+	it("reports planted colour literals in TSX (style prop, string) and CSS", () => {
+		const { violations } = checkPalette(["bad-colours"], fixture);
+		expect(
+			violations.map((v) => [v.file.split("/").at(-1), v.kind, v.token]),
+		).toEqual([
+			["Inline.tsx", "colour literal", "#fff"],
+			["Inline.tsx", "colour literal", "rgb("],
+			["Inline.tsx", "colour literal", "#FF5E32"],
+			["raw.css", "colour literal", "#abcdef"],
+			["raw.css", "colour literal", "oklch("],
+			["raw.css", "colour literal", "#00000080"],
+		]);
+		expect(run("bad-colours").status).toBe(1);
+	});
+
+	it.each([
+		['color: "#fff"'],
+		['fill="#000"'],
+		["linear-gradient(#fff, #0008)"],
+		["const c = '#123456';"],
+		["background: hsl(10 20% 30%)"],
+		['style={{ border: "1px solid #ccc" }}'],
+		["color(srgb 1 0 0)"],
+	])("flags the colour literal in %s", (text) => {
+		expect(findColourLiterals(text).length).toBeGreaterThan(0);
+	});
+
+	it.each([
+		['document.querySelector("#root")'],
+		['href="#add"'],
+		['const route = "#/settings";'],
+		["see issue #950 for details"],
+		["// fixes (#950)"],
+		["#fade { display: none; }"],
+		["toRgb(color)"],
+		["backgroundColor: `var(--role-${surface})`"],
+	])("allows %s", (text) => {
+		expect(findColourLiterals(text)).toEqual([]);
+	});
+
+	it("allows colour literals only in theme.css and unit tests", () => {
+		expect(allowsColourLiterals("/x/packages/ui/src/theme.css")).toBe(true);
+		expect(allowsColourLiterals("/x/packages/ui/src/contrast.test.ts")).toBe(
+			true,
+		);
+		expect(allowsColourLiterals("/x/packages/ui/src/fonts.css")).toBe(false);
+		expect(allowsColourLiterals("/x/apps/renderer/src/styles.css")).toBe(false);
 	});
 
 	it("passes tokens, arbitrary variants and CSS selectors", () => {

@@ -1,11 +1,15 @@
 // `pnpm check-palette` (also run by `pnpm lint` and `pnpm build`): fails on a Tailwind default-palette colour
-// class or an arbitrary value anywhere in the renderer or packages/ui. The design system removes the default
-// palette (`--color-*: initial`), so such a class would silently produce no CSS; an arbitrary value bypasses
-// the tokens. Both must be fixed at the source.
+// class, an arbitrary value or a colour literal anywhere in the renderer or packages/ui. The design system
+// removes the default palette (`--color-*: initial`), so such a class would silently produce no CSS; an
+// arbitrary value or a literal colour (in CSS, a style prop or any string) bypasses the tokens. All must be
+// fixed at the source.
 //
 //   node tools/check-palette.mjs [dir ...]   (default: apps/renderer packages/ui, relative to ak-studio/)
 //
-// Like Tailwind's own scanner this reads every source file as text, comments included.
+// Like Tailwind's own scanner this reads every source file as text; class checks include comments.
+// Colour literals are allowed only where the tokens are defined (packages/ui/src/theme.css) and in unit tests
+// (*.test.*), which feed colours to functions rather than render them; comment lines are skipped for them.
+// Known limits (see README): class names built at run time and the `utility-(--var)` shorthand.
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join, relative, resolve } from "node:path";
@@ -35,6 +39,38 @@ export function defaultPaletteFamilies() {
 	if (families.size === 0)
 		throw new Error("no palette colours found in tailwindcss/theme.css");
 	return [...families];
+}
+
+// Colour-shaped hex (3, 4, 6 or 8 digits) only in a value position: right after ':', '(', ',' or '=' (with
+// optional space and quote), or after a space later in a `prop: value` declaration (`1px solid #fff`). That leaves out ids and anchors (#root, #/route, `a #fade` in prose); an attribute that
+// takes a fragment (href="#add") is excluded explicitly.
+const HEX_LITERAL =
+	/(?<=[:(,=]\s*["'`]?|:[^;{}]*\s)(?<!\b(?:href|to|id|htmlFor|for|xlinkHref)=["'`]?)#(?:[0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{3,4})(?![\w-])/gi;
+const FUNCTION_LITERAL =
+	/(?<![\w-])(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(/gi;
+const COMMENT_LINE = /^\s*(?:\/\/|\/\*|\*|<!--|\{\/\*)/;
+
+/** True for files where colour literals are allowed: the token definitions and unit tests. */
+export function allowsColourLiterals(file) {
+	const path = file.replaceAll("\\", "/");
+	return (
+		path.endsWith("packages/ui/src/theme.css") ||
+		/\.test\.[cm]?[jt]sx?$/.test(path)
+	);
+}
+
+/** Returns the colour literals (hex and colour functions) in `text`, skipping comment lines. */
+export function findColourLiterals(text) {
+	const found = [];
+	text.split("\n").forEach((line, index) => {
+		if (COMMENT_LINE.test(line)) return;
+		for (const re of [HEX_LITERAL, FUNCTION_LITERAL]) {
+			for (const m of line.matchAll(re)) {
+				found.push({ kind: "colour literal", token: m[0], line: index + 1 });
+			}
+		}
+	});
+	return found;
 }
 
 /** Returns the default-palette and arbitrary-value classes in `text`, with 1-based line numbers. */
@@ -101,7 +137,10 @@ export function checkPalette(roots, base = STUDIO) {
 		}
 		for (const file of sourceFiles(dir)) {
 			files += 1;
-			for (const v of findViolations(readFileSync(file, "utf8"), families)) {
+			const text = readFileSync(file, "utf8");
+			const found = findViolations(text, families);
+			if (!allowsColourLiterals(file)) found.push(...findColourLiterals(text));
+			for (const v of found) {
 				violations.push({ ...v, file: relative(base, file) });
 			}
 		}
@@ -131,7 +170,7 @@ function main(argv) {
 		return 1;
 	}
 	console.log(
-		`check-palette OK: ${files} files, no default-palette or arbitrary-value classes`,
+		`check-palette OK: ${files} files, no default-palette classes, arbitrary values or colour literals`,
 	);
 	return 0;
 }
