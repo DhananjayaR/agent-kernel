@@ -40,6 +40,9 @@ Component names are working names until the P1a design gate.
   radius, not Spectrum 2's pill; cards and panels use the 16 px card radius. The logo mark
   (`branding/logo-mark/`) is the app icon and sits in the top bar, used as supplied: never redrawn,
   recoloured or stretched.
+- **Radius exception: the window controls.** The minimise, maximise and close buttons in the top bar are square
+  (0 px), 40 px wide and the bar's full 48 px tall, because they sit against the window's edge where a rounded
+  corner would show a gap. They are the only controls with no radius.
 - **Type.** Inter for UI text. Archivo for headings and for primary call-to-action labels (the Archivo-for-CTA rule is from the Drive "Agent Kernel - Style Guidelines Quick Reference", May 2026, not `branding/README.md`). JetBrains Mono for
   code. All three are bundled.
 

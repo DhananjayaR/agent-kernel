@@ -5,15 +5,21 @@
 // owns the data, the route and the stored layout.
 //
 // Layout: one 48 px top bar row. The project name shrinks first (down to 96 px, with an ellipsis; the full name and
-// path stay in its tooltip and menu), the tabs never shrink, and the controls keep their labels; at 1100 px and
-// wider every label is shown in full (stories `At1100`, `At1440`; at 1100 px the worst case leaves the project 8 px
-// above its minimum, after the OAK mark). Narrower than that (the window allows 800 px), or when the full form does not fit even so
-// (badges on the tabs, a longer label; story `At1100WithBadges`), the top bar is compact (`TOP_BAR_COMPACT_BELOW`,
-// story `At800Compact`): the tabs sit 16 px apart instead of 24 and the bar's parts 8 px instead of 12, Build with AI shows its sparkle only (its name in a
+// path stay in its tooltip and menu), the tabs never shrink, and the controls keep their labels; at 1220 px and
+// wider every label is shown in full (stories `At1220`, `At1440`; at 1220 px the worst case leaves the project 8 px
+// above its minimum, after the OAK mark, with the 120 px window controls counted). Narrower than that (the window
+// allows 1000 px; at 1100 px the bar is compact, story `At1100`), or when the full form does not fit even so
+// (badges on the tabs, a longer label; story `At1220WithBadges`), the top bar is compact (`TOP_BAR_COMPACT_BELOW`,
+// story `At1000Compact`): the tabs sit 16 px apart instead of 24 and the bar's parts 8 px instead of 12, Build with AI shows its sparkle only (its name in a
 // tooltip), the run control drops the port, and the deploy status drops its time. Compact because it overflowed,
 // it tries the full form again when the tabs change (a badge goes) or the bar widens (story `BadgesComeAndGo`).
 // Changing form never remounts a control, so focus stays where it was. Nothing scrolls sideways at any width
 // (asserted by the stories).
+//
+// Window chrome (the window has no system title bar): the top bar is the window's drag region (`app-drag`; empty
+// space between the parts drags, and every interactive part inside opts out with `app-no-drag`). `windowControls`
+// (the WindowControls, Linux and Windows) sits flush at the bar's far right, 120 px wide, and `leadingInset` (px,
+// macOS: about 76 for the traffic lights) reserves room at its left. The controls' 120 px count in the widths above.
 //
 // Tabs: React Aria tabs (the Tabs keyboard model: arrows move and select, Home and End, Tab leaves the list to the
 // panel). The panel area is the `main` landmark. Panel sizes: the bottom panel's height is in pixels, restored from
@@ -68,10 +74,10 @@ export function isAppTabId(value: unknown): value is AppTabId {
 }
 
 /**
- * Below this top bar width (CSS pixels) the top bar is compact. At 1100 px every label shows in full; wider, it is
- * compact only if the full form overflows.
+ * Below this top bar width (CSS pixels) the top bar is compact. At 1220 px every label shows in full (with the
+ * window controls; it was 1100 px before them); wider, it is compact only if the full form overflows.
  */
-export const TOP_BAR_COMPACT_BELOW = 1100;
+export const TOP_BAR_COMPACT_BELOW = 1220;
 
 const CompactContext = createContext(false);
 
@@ -102,6 +108,10 @@ export type TopBarProps = {
 	tabs: ReactNode;
 	/** RunControl, DeployStatus, Build with AI and the settings control, in that order. */
 	actions?: ReactNode;
+	/** The WindowControls, flush with the bar's right edge, after `actions`. Omit where the system draws them. */
+	windowControls?: ReactNode;
+	/** Space (px) kept free at the bar's left edge, for the macOS traffic lights (about 76). Default: none. */
+	leadingInset?: number;
 	/** Overrides of the default copy (strings.ts): `appName`, the mark's accessible name. */
 	strings?: Partial<ShellStrings>;
 	className?: string;
@@ -116,6 +126,8 @@ export function TopBar({
 	project,
 	tabs,
 	actions,
+	windowControls,
+	leadingInset,
 	strings,
 	className,
 }: TopBarProps) {
@@ -134,7 +146,7 @@ export function TopBar({
 			setCompact((was) => {
 				if (width < TOP_BAR_COMPACT_BELOW) return true;
 				if (!was) {
-					// Compact as well when the full form does not fit, even at 1100 px or wider.
+					// Compact as well when the full form does not fit, even at 1220 px or wider.
 					if (el.scrollWidth <= el.clientWidth) return false;
 					overflowed.current = { width, tabs: tabsText() };
 					return true;
@@ -163,8 +175,12 @@ export function TopBar({
 				ref={ref}
 				data-slot="top-bar"
 				data-compact={compact || undefined}
+				style={leadingInset ? { paddingInlineStart: leadingInset } : undefined}
 				className={cn(
-					"flex h-topbar w-full min-w-0 shrink-0 items-center gap-3 border-b border-border-default bg-surface-raised ps-2 pe-3",
+					"app-drag flex h-topbar w-full min-w-0 shrink-0 items-center gap-3 border-b border-border-default bg-surface-raised ps-2 pe-3",
+					// Everything the person can press or type in stays out of the drag region.
+					"[&_:is(a,button,input,select,textarea,[role=tab],[role=button])]:app-no-drag",
+					windowControls && "pe-0",
 					compact && "gap-2",
 					className,
 				)}
@@ -186,6 +202,14 @@ export function TopBar({
 				{actions ? (
 					<div className="ms-auto flex shrink-0 items-center gap-3">
 						{actions}
+					</div>
+				) : null}
+				{windowControls ? (
+					<div
+						data-slot="top-bar-window-controls"
+						className={cn("flex h-full shrink-0", !actions && "ms-auto")}
+					>
+						{windowControls}
 					</div>
 				) : null}
 			</header>
@@ -331,6 +355,10 @@ export type DesktopShellProps = {
 	project: ReactNode;
 	/** The top bar's controls after the tabs: RunControl, DeployStatus, Build with AI, the settings control. */
 	actions?: ReactNode;
+	/** The WindowControls, at the top bar's far right (Linux and Windows); omit where the system draws them. */
+	windowControls?: ReactNode;
+	/** Space (px) kept free at the top bar's left for the macOS traffic lights (about 76); default none. */
+	leadingInset?: number;
 	/** A Badge after a tab's label, by tab. */
 	tabBadges?: Partial<Record<AppTabId, ReactNode>>;
 	/** The BottomPanel; omitted, the tab content takes the whole height. */
@@ -354,6 +382,8 @@ export function DesktopShell({
 	onTabChange,
 	project,
 	actions,
+	windowControls,
+	leadingInset,
 	tabBadges,
 	bottomPanel,
 	bottomPanelLayout = { open: true, height: 240 },
@@ -396,6 +426,8 @@ export function DesktopShell({
 					strings={strings}
 					tabs={<AppTabList badges={tabBadges} strings={strings} />}
 					actions={actions}
+					windowControls={windowControls}
+					leadingInset={leadingInset}
 				/>
 				<InWindow className="min-h-0 flex-1">
 					{bottomPanel ? (

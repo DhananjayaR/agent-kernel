@@ -61,7 +61,17 @@ catalog, lives in `renderer/shared` (`JobProgress`, `ErrorView`, `CapabilityGate
 - Opening a project creates a **project scope** in the main process: its watcher, its services' state, its
   jobs and sessions. Closing the project or the window disposes the scope: watchers stop, sessions stop, and
   running jobs follow the quit rule under "Jobs".
-- App-level services (`AppService`, `ToolchainService`) live outside any scope.
+- App-level services (`AppService`, `WindowService`, `ToolchainService`) live outside any scope.
+
+## Window chrome
+
+The window has no system title bar (Linux and Windows: `frame: false`; macOS: a hidden title bar with the
+traffic lights in our top bar). The renderer's top bar is the drag region (`app-region: drag`, every control in
+it opts out) and draws the minimise, maximise and close buttons, which call `window.minimize`,
+`window.toggleMaximize` and `window.close`. `WindowService` in the main process serves them against a small
+`ControlledWindow` interface, so it has no Electron import; `index.ts` passes the window in. The `window.state`
+stream tells the renderer when the window is maximised, so the middle button can say "Restore". Full screen
+counts as not maximised. The application menu is still installed, only not drawn, so its shortcuts work.
 
 ## Where each kind of data lives
 

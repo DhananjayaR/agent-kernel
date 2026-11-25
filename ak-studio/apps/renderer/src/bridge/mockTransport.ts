@@ -44,13 +44,25 @@ export type MockStreamHandlers = {
 /** The version the mock reports for `app.info`. */
 export const MOCK_VERSION = "0.0.0-mock";
 
+/** A fake window for the mock: a maximised flag that `window.toggleMaximize` flips and `window.state` reports. */
+export interface MockWindow {
+	maximized: boolean;
+	listeners: Set<(maximized: boolean) => void>;
+}
+
+export function createMockWindow(): MockWindow {
+	return { maximized: false, listeners: new Set() };
+}
+
 /**
  * Fixture answers: `app.info` reports the browser platform; `app.setTheme` and `app.setLayout` keep their values in
- * memory (a reload starts again from the defaults, as on a first run).
+ * memory (a reload starts again from the defaults, as on a first run). The window requests act on `mockWindow`
+ * (minimise and close do nothing in a browser).
  */
 export function defaultMockHandlers(
 	initialTheme: ThemePreference = "system",
 	initialLayout: ShellLayout = DEFAULT_SHELL_LAYOUT,
+	mockWindow: MockWindow = createMockWindow(),
 ): MockHandlers {
 	let theme = initialTheme;
 	let layout = initialLayout;
@@ -69,6 +81,30 @@ export function defaultMockHandlers(
 			theme = input.theme;
 			return { theme };
 		},
+		"window.close": () => ({}),
+		"window.minimize": () => ({}),
+		"window.toggleMaximize": () => {
+			mockWindow.maximized = !mockWindow.maximized;
+			for (const listener of [...mockWindow.listeners])
+				listener(mockWindow.maximized);
+			return { maximized: mockWindow.maximized };
+		},
+	};
+}
+
+/** Fixture streams: `window.state` reports `mockWindow`'s flag at once and on every change. */
+export function defaultMockStreams(
+	mockWindow: MockWindow = createMockWindow(),
+): MockStreamHandlers {
+	return {
+		"window.state": (_input, emit) => {
+			const listener = (maximized: boolean) => emit({ maximized });
+			mockWindow.listeners.add(listener);
+			emit({ maximized: mockWindow.maximized });
+			return () => {
+				mockWindow.listeners.delete(listener);
+			};
+		},
 	};
 }
 
@@ -76,7 +112,7 @@ export interface MockTransportOptions {
 	/** Replace any of the default fixture handlers. */
 	handlers?: Partial<MockHandlers>;
 	streams?: Partial<MockStreamHandlers>;
-	/** The contract to serve (default: the app's). Tests pass a test-local one; P1a's declares no stream. */
+	/** The contract to serve (default: the app's). Tests pass a test-local one. */
 	contract?: Contract;
 	/** Delay before each answer, to show pending states (default 0). */
 	latencyMs?: number;
@@ -86,11 +122,15 @@ export interface MockTransportOptions {
 export function createMockTransport(
 	options: MockTransportOptions = {},
 ): Transport {
+	const mockWindow = createMockWindow();
 	const handlers: Partial<MockHandlers> = {
-		...defaultMockHandlers(),
+		...defaultMockHandlers("system", DEFAULT_SHELL_LAYOUT, mockWindow),
 		...options.handlers,
 	};
-	const streamHandlers: Partial<MockStreamHandlers> = { ...options.streams };
+	const streamHandlers: Partial<MockStreamHandlers> = {
+		...defaultMockStreams(mockWindow),
+		...options.streams,
+	};
 	const onStreamError = options.onStreamError ?? logStreamError;
 	const latencyMs = options.latencyMs ?? 0;
 	const served: Contract = options.contract ?? contract;

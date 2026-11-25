@@ -1,7 +1,7 @@
 // The top bar's controls after the tabs: RunControl (the local run, a session control: state, start and stop, the
 // port, a link to its log), DeployStatus (whether the project is deployed), BuildWithAIButton (the AI button
 // style) and SettingsButton. States are StatusChips (icon and label, never colour alone). In the compact top bar
-// (narrower than 1100 px) the run control drops the port and the deploy status its time; Build with AI keeps its
+// (narrower than 1220 px) the run control drops the port and the deploy status its time; Build with AI keeps its
 // sparkle and its name, shown in a tooltip.
 //
 // Presentational: the local run arrives in P8 and deploying in P10. While no project is open (all of P1a) the app

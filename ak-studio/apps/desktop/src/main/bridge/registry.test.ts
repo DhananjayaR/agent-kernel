@@ -83,8 +83,11 @@ describe("ServiceRegistry start-up", () => {
 
 	it("serves the real contract completely with the app's own services (registerServices, as index.ts)", () => {
 		const registry = new ServiceRegistry();
-		expect(registry.missingHandlers()).toEqual(Object.keys(operations).sort());
+		expect(registry.missingHandlers()).toEqual(
+			[...Object.keys(operations), ...Object.keys(contract.streams)].sort(),
+		);
 		const services = registerServices(registry, {
+			window: () => null,
 			app: {
 				version: "1.0.0",
 				platform: "linux",
@@ -96,6 +99,7 @@ describe("ServiceRegistry start-up", () => {
 		expect(() => registry.start()).not.toThrow();
 		expect(Object.keys(contract.operations)).toContain(appInfo.name);
 		expect(Object.keys(contract.operations)).toContain(appSetTheme.name);
+		expect(services.window).toBeDefined();
 	});
 });
 

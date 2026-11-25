@@ -198,9 +198,9 @@ selected tab's content as the `main` landmark, the bottom panel, the status bar)
 hover; existing roles only), `SettingsButton`, `BottomPanel` (Problems, Run log, Commands), `StatusBar` and
 `SettingsModal`. Fixtures and the width checks are in `src/lib/shell-fixtures.tsx`; shell stories render full bleed
 (`parameters.fullBleed`) at a set viewport (`parameters.viewport` and `globals.viewport`, which the Vitest run
-applies), so a story at 1100 px measures 1100 px. The top bar is one row: at 1100 px and wider every label shows in
-full and only the project name gives way (ellipsis, at least 96 px); below 1100 px (the window allows 800), or when the full form does not fit (badges on the tabs; it tries the full form again when the tabs change or the bar widens), it is compact: tabs 16 px apart and the bar's parts 8 px (12 px in the full form), Build with AI shows its sparkle (name in a tooltip), the run control drops the port and
-the deploy status its time. Nothing scrolls sideways (stories `At1100`, `At1440`, `At800Compact`; e2e at 1100 px);
+applies), so a story at 1100 px measures 1100 px. The top bar is one row: at 1220 px and wider every label shows in
+full and only the project name gives way (ellipsis, at least 96 px); below 1220 px (the window allows 1000), or when the full form does not fit (badges on the tabs; it tries the full form again when the tabs change or the bar widens), it is compact: tabs 16 px apart and the bar's parts 8 px (12 px in the full form), Build with AI shows its sparkle (name in a tooltip), the run control drops the port and
+the deploy status its time. Nothing scrolls sideways (stories `At1220`, `At1440`, `At1100`, `At1000Compact`; e2e at 1100 px). The top bar is also the window's drag region and, on Linux and Windows, holds `WindowControls` (120 px) at its right edge; `leadingInset` keeps room for the macOS traffic lights;
 below about 1100 px the status bar may cut its last items (its narrow rule is P2's). The bottom panel collapses to
 its tab strip, so its toggle stays put; selecting a panel tab opens it; Mod+J (Ctrl+J, Cmd+J on macOS; declared in
 `bottom-panel.tsx`, no clash test exists yet) toggles it from anywhere; hiding it moves focus out of the views

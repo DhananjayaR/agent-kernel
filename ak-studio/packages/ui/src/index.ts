@@ -182,6 +182,10 @@ export {
 	type TreeMarker,
 	type TreeProps,
 } from "./components/tree";
+export {
+	WindowControls,
+	type WindowControlsProps,
+} from "./components/window-controls";
 export { cn } from "./lib/utils";
 export type {
 	BottomPanelStrings,
@@ -196,5 +200,6 @@ export type {
 	ShellStrings,
 	StatusBarStrings,
 	ToastStrings,
+	WindowControlsStrings,
 } from "./strings";
 export { fillString, uiStrings } from "./strings";

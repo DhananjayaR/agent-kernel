@@ -2,7 +2,7 @@
 // translated in one module). Every one can be overridden where the component is used: StatusChip's `label`,
 // Combobox's `emptyText`, BuildWithAIButton's and SettingsButton's `label`, and the `strings` prop of PathChip,
 // CodeBlock, Modal, ConfirmModal, ToastRegion and the shell (DesktopShell, ProjectSwitcher, RunControl,
-// DeployStatus, BottomPanel, StatusBar, SettingsModal). Placeholders such as `{port}` are filled by `fillString`.
+// DeployStatus, BottomPanel, StatusBar, SettingsModal, WindowControls). Placeholders such as `{port}` are filled by `fillString`.
 // Features keep their own copy in their own strings module and pass it in.
 export const uiStrings = {
 	status: {
@@ -100,6 +100,14 @@ export const uiStrings = {
 		/** The shortcut that shows or hides the panel, as shown (Mod+J: Ctrl+J, or Cmd+J on macOS). */
 		shortcut: "Ctrl+J",
 	},
+	windowControls: {
+		group: "Window controls",
+		minimise: "Minimise",
+		maximise: "Maximise",
+		/** The maximise button's name while the window is maximised. */
+		restore: "Restore",
+		close: "Close",
+	},
 	statusBar: {
 		gitBranch: "Git branch",
 		/** Shown before the Studio's own version number. */
@@ -139,6 +147,9 @@ export type SettingsStrings = {
 };
 export type BottomPanelStrings = {
 	-readonly [K in keyof typeof uiStrings.bottomPanel]: string;
+};
+export type WindowControlsStrings = {
+	-readonly [K in keyof typeof uiStrings.windowControls]: string;
 };
 export type StatusBarStrings = {
 	-readonly [K in keyof typeof uiStrings.statusBar]: string;

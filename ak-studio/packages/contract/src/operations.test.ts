@@ -17,6 +17,10 @@ import {
 	streams,
 	themePreferenceSchema,
 	toStudioError,
+	windowClose,
+	windowMinimize,
+	windowState,
+	windowToggleMaximize,
 } from "./operations";
 import {
 	bridgeResultSchema,
@@ -42,9 +46,44 @@ describe("the operations map", () => {
 			"app.info",
 			"app.setLayout",
 			"app.setTheme",
+			"window.close",
+			"window.minimize",
+			"window.toggleMaximize",
 		]);
-		expect(Object.keys(streams)).toEqual([]);
+		expect(Object.keys(streams)).toEqual(["window.state"]);
+		for (const [key, stream] of Object.entries(streams)) {
+			expect(stream.name).toBe(key);
+			expect(stream.kind).toBe("stream");
+		}
 		expect(contract.operations).toBe(operations);
+	});
+
+	it("declares the window operations with strict inputs and plain outputs", () => {
+		for (const op of [windowMinimize, windowToggleMaximize, windowClose]) {
+			expect(op.input.safeParse({}).success).toBe(true);
+			expect(op.input.safeParse({ extra: 1 }).success).toBe(false);
+		}
+		expect(windowMinimize.output.parse({ extra: 1 })).toEqual({});
+		expect(windowClose.output.parse({ extra: 1 })).toEqual({});
+		expect(
+			windowToggleMaximize.output.parse({ maximized: true, extra: 1 }),
+		).toEqual({ maximized: true });
+		expect(windowToggleMaximize.output.safeParse({}).success).toBe(false);
+		expect(
+			windowToggleMaximize.output.safeParse({ maximized: 1 }).success,
+		).toBe(false);
+	});
+
+	it("declares the window.state stream", () => {
+		expect(windowState.input.safeParse({}).success).toBe(true);
+		expect(windowState.input.safeParse({ extra: 1 }).success).toBe(false);
+		expect(windowState.event.parse({ maximized: false, extra: 1 })).toEqual({
+			maximized: false,
+		});
+		expect(windowState.event.safeParse({}).success).toBe(false);
+		expect(windowState.event.safeParse({ maximized: "yes" }).success).toBe(
+			false,
+		);
 	});
 
 	it("declares app.info with the P1a schemas", () => {

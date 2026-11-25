@@ -317,6 +317,20 @@
 }
 
 /*
+ * The window drag region (Electron's frameless window): the top bar drags the window, and every interactive part
+ * inside it opts out, or a press on it would drag instead of click. `app-region` is the standard property;
+ * `-webkit-app-region` is what Chromium (Electron) implements today.
+ */
+@utility app-drag {
+	-webkit-app-region: drag;
+	app-region: drag;
+}
+@utility app-no-drag {
+	-webkit-app-region: no-drag;
+	app-region: no-drag;
+}
+
+/*
  * Spectrum 2's press: the control pushes in 2 px while [data-pressed] (S pressScale; perspective is the
  * control height, as measured in S1). Transitions are set by the component (`transition`, 150 ms).
  */

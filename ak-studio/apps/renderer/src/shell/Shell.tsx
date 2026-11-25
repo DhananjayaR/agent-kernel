@@ -1,6 +1,7 @@
 // The desktop shell in the app: the design system's DesktopShell wired to the bridge. Real data where it exists in
-// P1a: the Studio's version (status bar), the theme preference (settings) and the remembered panel layout (an app
-// preference, stored by main through `app.setLayout`). No project can be opened before P2, so everything else shows
+// P1a: the window controls (Linux, Windows and the browser; macOS keeps its own), the Studio's version (status bar),
+// the theme preference (settings) and the remembered panel layout (an app preference, stored by main through
+// `app.setLayout`). No project can be opened before P2, so everything else shows
 // its not-yet state: the project switcher "No project open", the run control "No project to run" (no start
 // control), the deploy status "Not deployed", the coding agent "not set up" (P6), and each tab and panel view the
 // empty state that names the phase that fills it.
@@ -27,11 +28,12 @@ import {
 	SettingsModal,
 	StatusBar,
 	ToastRegion,
+	WindowControls,
 } from "@ak-studio/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
-import { isStudioFailure } from "../bridge/client";
+import { getTransport, isStudioFailure } from "../bridge/client";
 import {
 	appInfoQueryKey,
 	cacheStoredLayout,
@@ -40,9 +42,24 @@ import {
 	storeLayout,
 	storeTheme,
 } from "../queries";
+import { useWindowMaximized } from "../useWindowMaximized";
 import { tabFromPath } from "./routes";
 import { shellStrings } from "./strings";
 import { PanelEmptyState } from "./TabEmptyState";
+
+/** Room kept at the top bar's left for the macOS traffic lights (px): the three lights and their margin. */
+const MAC_TRAFFIC_LIGHTS_INSET = 76;
+
+/** A window control press. A failure is not shown: the window simply does not change, and the next press tries again. */
+function requestWindow(
+	name: "window.minimize" | "window.toggleMaximize" | "window.close",
+): void {
+	getTransport()
+		.request(name, {})
+		.catch((error: unknown) => {
+			console.error(`[studio] ${name} failed: ${describeError(error)}`);
+		});
+}
 
 function describeError(error: unknown): string {
 	return isStudioFailure(error) ? error.error.message : String(error);
@@ -99,6 +116,7 @@ function LoadedShell({
 
 	const theme: ThemePreference = info?.theme ?? "system";
 	const mac = info?.platform === "darwin";
+	const maximized = useWindowMaximized();
 
 	return (
 		<>
@@ -107,6 +125,19 @@ function LoadedShell({
 				onTabChange={(next) => {
 					void navigate({ to: "/$tab", params: { tab: next } });
 				}}
+				// The window has no system title bar: the top bar is its drag region. Linux and Windows (and the
+				// browser) get our controls; macOS keeps its own traffic lights, so only room is kept for them.
+				leadingInset={mac ? MAC_TRAFFIC_LIGHTS_INSET : undefined}
+				windowControls={
+					mac ? undefined : (
+						<WindowControls
+							maximized={maximized}
+							onMinimize={() => requestWindow("window.minimize")}
+							onToggleMaximize={() => requestWindow("window.toggleMaximize")}
+							onClose={() => requestWindow("window.close")}
+						/>
+					)
+				}
 				project={<ProjectSwitcher />}
 				actions={
 					<>

@@ -29,6 +29,30 @@ describe("mockTransport", () => {
 		});
 	});
 
+	it("serves the window requests and window.state with a fake maximised flag", async () => {
+		const transport = createMockTransport();
+		const events: boolean[] = [];
+		const stop = transport.subscribe("window.state", {}, (e) =>
+			events.push(e.maximized),
+		);
+		await expect(transport.request("window.minimize", {})).resolves.toEqual({});
+		await expect(
+			transport.request("window.toggleMaximize", {}),
+		).resolves.toEqual({ maximized: true });
+		await expect(
+			transport.request("window.toggleMaximize", {}),
+		).resolves.toEqual({ maximized: false });
+		await expect(transport.request("window.close", {})).resolves.toEqual({});
+		expect(events).toEqual([false, true, false]);
+		stop();
+		await transport.request("window.toggleMaximize", {});
+		expect(events).toEqual([false, true, false]);
+		// A new subscriber starts from the current flag.
+		const later: boolean[] = [];
+		transport.subscribe("window.state", {}, (e) => later.push(e.maximized))();
+		expect(later).toEqual([true]);
+	});
+
 	it("keeps the layout set with app.setLayout, beside the theme", async () => {
 		const transport = createMockTransport();
 		const layout = { bottomPanel: { open: false, height: 300 } };

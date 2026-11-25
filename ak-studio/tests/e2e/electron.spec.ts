@@ -296,7 +296,7 @@ test("the bottom panel's open state and height persist across a restart", async 
 	});
 });
 
-test("holds at 1100 px: the top bar in one row, no horizontal scroll", async () => {
+test("holds at 1100 px: the top bar in one row (compact, with the window controls), no horizontal scroll", async () => {
 	await withStudio(async ({ app, page }) => {
 		await expect(appVersion(page)).not.toBeEmpty();
 		await app.evaluate(({ BrowserWindow }) => {
@@ -323,8 +323,47 @@ test("holds at 1100 px: the top bar in one row, no horizontal scroll", async () 
 				scrollWidth: 1100,
 				barHeight: 48,
 				barScroll: 0,
-				compact: false,
+				compact: true,
 			});
+	});
+});
+
+// The custom window chrome: no system title bar or menu (Linux and Windows draw the controls in the top bar),
+// Maximise and Restore work through the bridge, and the button's name follows. Close and Minimise are not driven
+// here: a closed window ends the test's app, and a minimised one is not reliable on a headless or nested display
+// (covered by the WindowService unit tests).
+test("the window is frameless and its Maximise and Restore buttons work", async () => {
+	await withStudio(async ({ app, page }) => {
+		await expect(appVersion(page)).not.toBeEmpty();
+		// No frame: the window and its content have the same bounds, and no menu bar shows.
+		const frame = await app.evaluate(({ BrowserWindow }) => {
+			const win = BrowserWindow.getAllWindows()[0];
+			return {
+				bounds: win?.getBounds(),
+				content: win?.getContentBounds(),
+				menuBar: win?.isMenuBarVisible(),
+			};
+		});
+		if (process.platform !== "darwin") {
+			expect(frame.content).toEqual(frame.bounds);
+			expect(frame.menuBar).toBe(false);
+		}
+		const isMaximized = () =>
+			app.evaluate(
+				({ BrowserWindow }) =>
+					BrowserWindow.getAllWindows()[0]?.isMaximized() ?? false,
+			);
+		expect(await isMaximized()).toBe(false);
+		if (process.platform === "darwin") return; // macOS has the system's traffic lights, not ours.
+		const controls = page.getByRole("group", { name: "Window controls" });
+		await expect(controls).toBeVisible();
+		await controls.getByRole("button", { name: "Maximise" }).click();
+		await expect.poll(isMaximized).toBe(true);
+		await controls.getByRole("button", { name: "Restore" }).click();
+		await expect.poll(isMaximized).toBe(false);
+		await expect(
+			controls.getByRole("button", { name: "Maximise" }),
+		).toBeVisible();
 	});
 });
 

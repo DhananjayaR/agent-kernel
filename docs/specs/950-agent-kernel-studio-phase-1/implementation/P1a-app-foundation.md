@@ -126,6 +126,11 @@ if the owner wants 8 or 16 px.
 - [x] Single-instance lock. Application menu per platform. (Run on Linux; the macOS app menu is written, not run.)
 - [x] The app makes no network calls of its own. (Checked on Chromium's network stack; Node networking in the
       main process is not covered by the check.)
+- [x] Frameless window (added 25 Nov 2026 at the owner's request): no system title bar and no menu bar on Linux
+      and Windows (`frame: false`); on macOS the title bar is hidden and the traffic lights sit in the top bar
+      (`titleBarStyle: "hidden"`). The application menu stays installed, so shortcuts and the macOS app menu
+      work. Run on Linux; the Windows and macOS paths are written, not run. The window's minimum width is 1000 px
+      (it was 800) so the top bar holds with the window controls.
 - [ ] Extend the "no network calls" check to Node networking in the main process. It is a standing principle
       ([principles](../PHASE-1-PLAN.md#principles)): with usage data off, the app makes no network calls of its own.
 
@@ -137,8 +142,9 @@ if the owner wants 8 or 16 px.
       P1a ships the transport and one plain request; the contract's operation shapes (query, command, job,
       session) are built on it in [P1b](P1b-data-layer-and-patterns.md).
 - [x] A `Transport` interface with two implementations: Electron IPC (sender checked on every message), and a mock for the browser and tests. The same renderer code runs on both.
-- [x] Services in the main process are classes registered against the contract. P1a ships one: `AppService`
-      (app version, platform, theme preference).
+- [x] Services in the main process are classes registered against the contract. P1a ships two: `AppService`
+      (app version, platform, theme preference, shell layout) and `WindowService` (minimise, maximise or restore,
+      close, and the `window.state` stream; added 25 Nov 2026 at the owner's request).
 - [x] Errors cross the bridge as typed `StudioError` values, not as thrown strings.
 - [x] Contract test: every declared operation has a handler; inputs are validated in the main process.
 
@@ -175,6 +181,11 @@ if the owner wants 8 or 16 px.
 - [ ] Routing with in-memory or hash history. Theme switch. Panel sizes remembered. (Task 10: each tab is a hash
       route; the theme switches from the settings modal; the bottom panel's open state and height are an app
       preference stored through `app.setLayout`. Waits for the "Shell layout" sign-off.)
+- [x] Window controls (added 25 Nov 2026 at the owner's request): the top bar is the window's drag region and
+      holds our minimise, maximise (restore) and close buttons on Linux and Windows, 120 px wide; macOS keeps its
+      traffic lights and the bar leaves 76 px for them. In a browser the controls show against the mock
+      transport. With them the full top bar needs 1220 px (it was 1100); below that the bar is compact, and it
+      holds at the window's 1000 px minimum. macOS is untested.
 - [x] Runs in a browser against the mock transport.
 
 ### 1.6 Continuous integration

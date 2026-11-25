@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
 	clampWindowState,
 	DEFAULT_SIZE,
+	MIN_SIZE,
 	parseWindowState,
 	type Rect,
 	readWindowState,
@@ -108,7 +109,7 @@ describe("clampWindowState", () => {
 	it("raises a too-small saved size to the minimum, and a small display caps it", () => {
 		const tiny = { x: 0, y: 0, width: 100, height: 100, isMaximized: false };
 		expect(clampWindowState(tiny, [PRIMARY])).toMatchObject({
-			width: 800,
+			width: MIN_SIZE.width,
 			height: 600,
 		});
 		const small: Rect = { x: 0, y: 0, width: 700, height: 500 };

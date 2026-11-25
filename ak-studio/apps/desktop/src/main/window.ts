@@ -36,7 +36,8 @@ export function windowBackground(useDarkColors: boolean): string {
 }
 
 export const DEFAULT_SIZE = { width: 1280, height: 800 } as const;
-export const MIN_SIZE = { width: 800, height: 600 } as const;
+// 1000 px wide: the compact top bar with the window controls (120 px) needs about 960 px (stories `At1000Compact`).
+export const MIN_SIZE = { width: 1000, height: 600 } as const;
 export const WINDOW_STATE_FILE = "window-state.json";
 
 const isNum = (v: unknown): v is number =>

@@ -30,8 +30,9 @@ import {
 	type RunState,
 	SettingsButton,
 } from "../components/top-bar-controls";
+import { WindowControls } from "../components/window-controls";
 
-/** Storybook viewports for the shell: the gate's two widths and the window's minimum. */
+/** Storybook viewports for the shell: the gate's two widths, the width the full top bar needs and the window's minimum. */
 export const SHELL_VIEWPORTS = {
 	studio1440: {
 		name: "1440 px",
@@ -43,9 +44,14 @@ export const SHELL_VIEWPORTS = {
 		styles: { width: "1100px", height: "720px" },
 		type: "desktop",
 	},
-	studio800: {
-		name: "800 px (the window's minimum)",
-		styles: { width: "800px", height: "600px" },
+	studio1220: {
+		name: "1220 px (the full top bar's width)",
+		styles: { width: "1220px", height: "720px" },
+		type: "desktop",
+	},
+	studio1000: {
+		name: "1000 px (the window's minimum)",
+		styles: { width: "1000px", height: "600px" },
 		type: "desktop",
 	},
 } as const;
@@ -187,6 +193,10 @@ export type FixtureShellProps = {
 	onLayoutChange?: (layout: BottomPanelLayout) => void;
 	onOpenSettings?: () => void;
 	settings?: ReactNode;
+	/** Shows the window controls (Linux and Windows; the default) with a maximised flag of their own. */
+	windowControls?: boolean;
+	/** Space (px) at the top bar's left, for the macOS traffic lights. */
+	leadingInset?: number;
 };
 
 /**
@@ -210,7 +220,10 @@ export function FixtureShell({
 	onLayoutChange,
 	onOpenSettings,
 	settings,
+	windowControls = true,
+	leadingInset,
 }: FixtureShellProps) {
+	const [maximized, setMaximized] = useState(false);
 	const [selected, setSelected] = useState<AppTabId>(tab);
 	const [panel, setPanel] = useState<BottomPanelTabId>(panelTab);
 	const [stored, setStored] = useState(layout);
@@ -223,6 +236,17 @@ export function FixtureShell({
 			selectedTab={selected}
 			onTabChange={setSelected}
 			tabBadges={tabBadges}
+			leadingInset={leadingInset}
+			windowControls={
+				windowControls ? (
+					<WindowControls
+						maximized={maximized}
+						onMinimize={() => {}}
+						onToggleMaximize={() => setMaximized((was) => !was)}
+						onClose={() => {}}
+					/>
+				) : undefined
+			}
 			project={
 				<ProjectSwitcher
 					project={project ?? undefined}

@@ -116,6 +116,9 @@ protocol.registerSchemesAsPrivileged([
 ]);
 app.enableSandbox();
 
+// The macOS traffic lights (about 52 px wide, 12 px high) centred in the 48 px top bar, 16 px from its left edge.
+const TRAFFIC_LIGHTS = { x: 16, y: 18 };
+
 let mainWindow: BrowserWindow | null = null;
 /** The web contents of every window the app created: the only senders the bridge accepts. */
 const appContents = new WeakSet<WebContents>();
@@ -139,6 +142,14 @@ function createWindow(): BrowserWindow {
 		minHeight: MIN_SIZE.height,
 		show: false,
 		title: "Open Agent Kernel Studio",
+		// Custom window chrome: the renderer's top bar draws the window controls and is the drag region. Linux and
+		// Windows have no system frame (so no menu bar either); macOS keeps its traffic lights, inset into the bar.
+		...(process.platform === "darwin"
+			? {
+					titleBarStyle: "hidden" as const,
+					trafficLightPosition: TRAFFIC_LIGHTS,
+				}
+			: { frame: false }),
 		...(process.platform === "linux" ? { icon: windowIcon } : {}),
 		// The stored theme is already applied (startBridge sets nativeTheme.themeSource first): no white flash.
 		backgroundColor: windowBackground(nativeTheme.shouldUseDarkColors),
@@ -181,6 +192,7 @@ function createWindow(): BrowserWindow {
 function startBridge(): void {
 	const registry = new ServiceRegistry();
 	const services = registerServices(registry, {
+		window: () => mainWindow,
 		app: {
 			version: app.getVersion(),
 			platform: process.platform,

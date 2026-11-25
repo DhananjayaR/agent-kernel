@@ -112,7 +112,7 @@ test("the bottom panel hides and shows with Ctrl+J and its toggle, keeping focus
 	).toBeFocused();
 });
 
-test("holds at 1100 px: one row in the top bar, no horizontal scroll", async ({
+test("holds at 1100 px: one row in the top bar (compact, with the window controls), no horizontal scroll", async ({
 	page,
 }) => {
 	await page.setViewportSize({ width: 1100, height: 720 });
@@ -133,6 +133,20 @@ test("holds at 1100 px: one row in the top bar, no horizontal scroll", async ({
 		scrollWidth: 1100,
 		barHeight: 48,
 		barScroll: 0,
-		compact: false,
+		compact: true,
 	});
+});
+
+test("shows the window controls in the browser, and Maximise toggles to Restore", async ({
+	page,
+}) => {
+	await page.goto("/");
+	await expect(appVersion(page)).toHaveText(MOCK_VERSION);
+	const controls = page.getByRole("group", { name: "Window controls" });
+	await controls.getByRole("button", { name: "Maximise" }).click();
+	await expect(controls.getByRole("button", { name: "Restore" })).toBeVisible();
+	await controls.getByRole("button", { name: "Restore" }).click();
+	await expect(
+		controls.getByRole("button", { name: "Maximise" }),
+	).toBeVisible();
 });

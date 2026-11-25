@@ -16,6 +16,7 @@ import {
 	readPreferences,
 	toPlatform,
 } from "./AppService";
+import { WindowService } from "./WindowService";
 
 let dir: string;
 let file: string;
@@ -26,7 +27,10 @@ beforeEach(() => {
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
 function serve(service: AppService) {
-	const registry = new ServiceRegistry().register(service);
+	// The window service serves the window operations, so the registry (which needs every handler) can start.
+	const registry = new ServiceRegistry()
+		.register(service)
+		.register(new WindowService(() => null));
 	registry.start();
 	return registry;
 }

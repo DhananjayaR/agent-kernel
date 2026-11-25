@@ -145,12 +145,13 @@ export const At1440: Story = {
 };
 
 /**
- * Gate question (a), at 1100 px, with the worst case the top bar must hold: a 40-character project name, "Running
- * on port 8000" and "Deployed 3 days ago". The five tabs and every control keep their full labels; the project
- * name gives way first (cut with an ellipsis; the full name and path are in its tooltip and menu).
+ * The full top bar's width, 1220 px, with the worst case it must hold, the window controls included: a 40-character
+ * project name, "Running on port 8000" and "Deployed 3 days ago". The five tabs and every control keep their full
+ * labels; the project name gives way first (cut with an ellipsis; the full name and path are in its tooltip and
+ * menu).
  */
-export const At1100: Story = {
-	...atViewport("studio1100"),
+export const At1220: Story = {
+	...atViewport("studio1220"),
 	args: {
 		project: longProject,
 		run: "running",
@@ -160,7 +161,7 @@ export const At1100: Story = {
 		problemCount: 2,
 	},
 	play: async ({ canvasElement }) => {
-		await expect(window.innerWidth).toBe(1100);
+		await expect(window.innerWidth).toBe(1220);
 		await document.fonts.ready;
 		await expect(topBar(canvasElement)).not.toHaveAttribute("data-compact");
 		await expectTopBarHolds(canvasElement);
@@ -185,12 +186,11 @@ export const At1100: Story = {
 };
 
 /**
- * The overflow rule below 1100 px (the window allows 800 px): the top bar turns compact. Build with AI keeps its
- * sparkle and name (in a tooltip and for assistive technology), the run control drops the port and the deploy
- * status its time. Still one row, still nothing past the edge.
+ * The page's floor, 1100 px: the window controls take 120 px, so the full form no longer fits here and the top bar
+ * is compact (the rule is below 1220 px). Everything is still whole and inside the bar.
  */
-export const At800Compact: Story = {
-	...atViewport("studio800"),
+export const At1100: Story = {
+	...atViewport("studio1100"),
 	args: {
 		project: longProject,
 		run: "running",
@@ -200,7 +200,34 @@ export const At800Compact: Story = {
 		problemCount: 2,
 	},
 	play: async ({ canvasElement }) => {
-		await expect(window.innerWidth).toBe(800);
+		await expect(window.innerWidth).toBe(1100);
+		await expect(topBar(canvasElement)).toHaveAttribute("data-compact");
+		await expectTopBarHolds(canvasElement);
+		const canvas = within(canvasElement);
+		await expect(canvas.getByText("Running")).toBeVisible();
+		await expect(
+			canvas.getByRole("button", { name: "Maximise" }),
+		).toBeVisible();
+	},
+};
+
+/**
+ * The overflow rule below 1220 px (the window allows 1000 px): the top bar turns compact. Build with AI keeps its
+ * sparkle and name (in a tooltip and for assistive technology), the run control drops the port and the deploy
+ * status its time. Still one row, still nothing past the edge, at the app's real state too (no project open).
+ */
+export const At1000Compact: Story = {
+	...atViewport("studio1000"),
+	args: {
+		project: longProject,
+		run: "running",
+		port: 8000,
+		deploy: "deployed",
+		deployedAgo: "3 days ago",
+		problemCount: 2,
+	},
+	play: async ({ canvasElement }) => {
+		await expect(window.innerWidth).toBe(1000);
 		await expect(topBar(canvasElement)).toHaveAttribute("data-compact");
 		// The status bar's end may cut its last items at this width (its rule, settled at P2's gate).
 		await expectTopBarHolds(canvasElement, '[data-slot="status-bar-end"]');
@@ -225,6 +252,20 @@ export const At800Compact: Story = {
 	},
 };
 
+/** The app's own state (no project open) at the window's minimum: compact, and everything whole inside the bar. */
+export const At1000NoProject: Story = {
+	...atViewport("studio1000"),
+	args: { project: null },
+	play: async ({ canvasElement }) => {
+		await expect(window.innerWidth).toBe(1000);
+		await expect(topBar(canvasElement)).toHaveAttribute("data-compact");
+		await expectTopBarHolds(canvasElement, '[data-slot="status-bar-end"]');
+		await expect(
+			within(canvasElement).getByRole("button", { name: "Close" }),
+		).toBeVisible();
+	},
+};
+
 /**
  * The shell as the app shows it in P1a: no project can be opened yet, so the project switcher says so, the run
  * control says there is no project to run (no start control), the deploy status "Not deployed", and the status
@@ -232,7 +273,7 @@ export const At800Compact: Story = {
  * fills it.
  */
 export const NoProject: Story = {
-	...atViewport("studio1100"),
+	...atViewport("studio1220"),
 	args: {
 		project: null,
 		status: {
@@ -262,11 +303,11 @@ export const NoProject: Story = {
 };
 
 /**
- * Badges on the tabs (background job notices) at 1100 px with the worst case: the full form no longer fits, so
+ * Badges on the tabs (background job notices) at 1220 px with the worst case: the full form no longer fits, so
  * the top bar turns compact rather than pushing a control past the edge.
  */
-export const At1100WithBadges: Story = {
-	...atViewport("studio1100"),
+export const At1220WithBadges: Story = {
+	...atViewport("studio1220"),
 	args: {
 		project: longProject,
 		run: "running",
@@ -279,7 +320,7 @@ export const At1100WithBadges: Story = {
 		},
 	},
 	play: async ({ canvasElement }) => {
-		await expect(window.innerWidth).toBe(1100);
+		await expect(window.innerWidth).toBe(1220);
 		await waitFor(() =>
 			expect(topBar(canvasElement)).toHaveAttribute("data-compact"),
 		);
@@ -290,7 +331,7 @@ export const At1100WithBadges: Story = {
 	},
 };
 
-/** The worst case at 1100 px, with badges that the story adds and removes (a hidden control, pressed by the test). */
+/** The worst case at 1220 px, with badges that the story adds and removes (a hidden control, pressed by the test). */
 function BadgesComeAndGoShell() {
 	const [badges, setBadges] = useState(false);
 	return (
@@ -325,7 +366,7 @@ function BadgesComeAndGoShell() {
  * still there).
  */
 export const BadgesComeAndGo: Story = {
-	...atViewport("studio1100"),
+	...atViewport("studio1220"),
 	render: () => <BadgesComeAndGoShell />,
 	play: async ({ canvasElement }) => {
 		const bar = topBar(canvasElement);
@@ -590,8 +631,8 @@ function TabsOnOwnRow() {
 /**
  * Gate question (a), option B (not recommended): the tabs on a second row under the project and the controls. It
  * gives the project name its full width at any size, but costs 48 px of height on every screen (the canvas and
- * code views need it most) and parts the project from its areas. Option A (one row; stories At1100, At1440 and
- * At800Compact) fits at 1100 px with every label in full, so the second row buys nothing there.
+ * code views need it most) and parts the project from its areas. Option A (one row; stories At1220, At1440 and
+ * At1000Compact) fits at 1220 px with every label in full, so the second row buys nothing there.
  */
 export const OptionTabsOnOwnRow: Story = {
 	...atViewport("studio1100"),

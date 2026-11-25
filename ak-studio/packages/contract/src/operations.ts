@@ -2,7 +2,7 @@
 // process validates every input and output against these; the renderer gets its types from them.
 //
 // P1a ships two primitives: a request (one answer) and a stream (events until cancelled). The operation shapes
-// (query, command, job, session) are built on them in P1b. P1a declares no stream.
+// (query, command, job, session) are built on them in P1b. P1a declares one stream, `window.state`.
 import "./zodConfig";
 import { z } from "zod";
 import { ERROR_CODES, isStudioFailure, type StudioError } from "./errors";
@@ -144,15 +144,51 @@ export const appSetLayout = defineOperation({
 	output: z.object({ layout: shellLayoutOutputSchema }),
 });
 
+/** Minimises the window. Answers once it is asked; a missing window is not an error. */
+export const windowMinimize = defineOperation({
+	name: "window.minimize",
+	input: z.strictObject({}),
+	output: z.object({}),
+});
+
+/** Maximises the window, or restores it when it is maximised; answers with the state it asked for. */
+export const windowToggleMaximize = defineOperation({
+	name: "window.toggleMaximize",
+	input: z.strictObject({}),
+	output: z.object({ maximized: z.boolean() }),
+});
+
+/** Closes the window (the app quits with its last window, except on macOS). */
+export const windowClose = defineOperation({
+	name: "window.close",
+	input: z.strictObject({}),
+	output: z.object({}),
+});
+
+/**
+ * Whether the window is maximised: the current state at once on subscribe, then on every change. Full screen
+ * counts as not maximised, since the window controls are shown for the maximise state alone.
+ */
+export const windowState = defineStream({
+	name: "window.state",
+	input: z.strictObject({}),
+	event: z.object({ maximized: z.boolean() }),
+});
+
 /** Every request operation, keyed by name (a test checks each key equals its operation's name). */
 export const operations = {
 	"app.info": appInfo,
 	"app.setLayout": appSetLayout,
 	"app.setTheme": appSetTheme,
+	"window.close": windowClose,
+	"window.minimize": windowMinimize,
+	"window.toggleMaximize": windowToggleMaximize,
 } as const satisfies OperationMap;
 
-/** Every stream, keyed by name. None in P1a. */
-export const streams = {} as const satisfies StreamMap;
+/** Every stream, keyed by name. */
+export const streams = {
+	"window.state": windowState,
+} as const satisfies StreamMap;
 
 export const contract = { operations, streams } as const satisfies Contract;
 
