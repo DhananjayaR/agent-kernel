@@ -1,5 +1,5 @@
-// PLACEHOLDER: this unstyled page is replaced by the shell (tabs, layout, styling) in Task 10, after the design
-// gate. It exists to prove the bridge and the theme preference work end to end.
+// PLACEHOLDER: this barely styled page is replaced by the shell (tabs, layout, styling) in Task 10. It exists to
+// prove the bridge and the theme preference work end to end, on the final design tokens.
 import type { ThemePreference } from "@ak-studio/contract";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getTransportKind, isStudioFailure } from "../bridge/client";
@@ -25,18 +25,23 @@ export function Home() {
 	});
 
 	return (
-		// One colour token (bg-surface) and one font token (font-ui, the bundled Inter) prove the design-system CSS
-		// and the bundled fonts load; styling waits for the shell (Task 10).
-		<main className="bg-surface font-ui">
-			<h1>Agent Kernel Studio</h1>
-			<p>Placeholder page (replaced by the shell in Task 10).</p>
+		// A few tokens (surface and text colours, Inter for text, Archivo for the heading, JetBrains Mono for the
+		// version) prove the design-system CSS and the bundled fonts load; styling waits for the shell (Task 10).
+		<main className="min-h-screen bg-surface p-dialog font-ui text-ui text-text">
+			<h1 className="text-heading font-bold">Agent Kernel Studio</h1>
+			<p className="text-text-muted">
+				Placeholder page (replaced by the shell in Task 10).
+			</p>
 			{info.isPending && <p>Loading...</p>}
 			{info.isError && <p role="alert">{describeError(info.error)}</p>}
 			{info.data && (
 				<>
 					<p>
-						Version <span data-testid="version">{info.data.version}</span>,
-						platform <span data-testid="platform">{info.data.platform}</span>{" "}
+						Version{" "}
+						<span data-testid="version" className="mono-figures">
+							{info.data.version}
+						</span>
+						, platform <span data-testid="platform">{info.data.platform}</span>{" "}
 						(bridge: <span data-testid="bridge">{getTransportKind()}</span>)
 					</p>
 					<label>

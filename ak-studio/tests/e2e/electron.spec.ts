@@ -145,7 +145,7 @@ test("makes no network request (Chromium requests only; Node networking in main 
 
 // A font the CSP blocks never reaches the request gate, so a zero count alone would not catch it: this test
 // records `securitypolicyviolation` events from the first script on, and checks where the font file came from.
-test("uses the bundled UI font, loaded from app:// with no CSP violation", async () => {
+test("uses the bundled fonts (UI, heading, mono), loaded from app:// with no CSP violation", async () => {
 	await withStudio(async ({ app, page }) => {
 		// The window loaded before the test could add a listener: add it as an init script, then reload.
 		await page.addInitScript(() => {
@@ -160,20 +160,33 @@ test("uses the bundled UI font, loaded from app:// with no CSP violation", async
 		await page.reload();
 		await expect(page.getByTestId("version")).not.toBeEmpty();
 		const fonts = await page.evaluate(async () => {
-			const main = document.querySelector("main");
-			const family = main ? getComputedStyle(main).fontFamily : "";
-			// The faces needed for the page's own text, loaded (this waits for any load in progress).
-			const loaded = await document.fonts.load(
-				'16px "Inter Variable"',
-				main?.textContent ?? "",
-			);
+			// Each family token on the placeholder page: body text (Inter), the heading (Archivo), the version
+			// number (JetBrains Mono, tabular figures).
+			const samples = {
+				ui: document.querySelector("main"),
+				heading: document.querySelector("main h1"),
+				mono: document.querySelector('[data-testid="version"]'),
+			};
+			const used: Record<string, { family: string; numeric: string }> = {};
+			const loaded: { family: string; status: string }[] = [];
+			for (const [role, el] of Object.entries(samples)) {
+				const style = el ? getComputedStyle(el) : null;
+				used[role] = {
+					family: style?.fontFamily ?? "",
+					numeric: style?.fontVariantNumeric ?? "",
+				};
+				// The faces needed for that element's text, loaded (this waits for any load in progress).
+				const family = style?.fontFamily.split(",")[0] ?? "";
+				for (const face of await document.fonts.load(
+					`16px ${family}`,
+					el?.textContent ?? "",
+				))
+					loaded.push({ family: face.family, status: face.status });
+			}
 			await document.fonts.ready;
 			return {
-				family,
-				loaded: loaded.map((face) => ({
-					family: face.family,
-					status: face.status,
-				})),
+				used,
+				loaded,
 				files: performance
 					.getEntriesByType("resource")
 					.map((entry) => entry.name)
@@ -182,14 +195,19 @@ test("uses the bundled UI font, loaded from app:// with no CSP violation", async
 					.__cspViolations,
 			};
 		});
-		expect(fonts.family).toMatch(/^"?Inter Variable"?,/);
-		expect(fonts.loaded.length).toBeGreaterThan(0);
-		for (const face of fonts.loaded) {
-			expect(face).toEqual({ family: "Inter Variable", status: "loaded" });
-		}
+		expect(fonts.used.ui?.family).toMatch(/^"?Inter Variable"?,/);
+		expect(fonts.used.heading?.family).toMatch(/^"?Archivo Variable"?,/);
+		expect(fonts.used.mono?.family).toMatch(/^"?JetBrains Mono"?,/);
+		expect(fonts.used.mono?.numeric).toBe("tabular-nums");
+		expect(new Set(fonts.loaded.map((face) => face.family))).toEqual(
+			new Set(["Inter Variable", "Archivo Variable", "JetBrains Mono"]),
+		);
+		for (const face of fonts.loaded) expect(face.status).toBe("loaded");
 		expect(fonts.files.length).toBeGreaterThan(0);
 		for (const file of fonts.files) {
-			expect(file).toMatch(/^app:\/\/studio\/assets\/inter-[^/]+\.woff2$/);
+			expect(file).toMatch(
+				/^app:\/\/studio\/assets\/(inter|archivo|jetbrains-mono)-[^/]+\.woff2$/,
+			);
 		}
 		expect(fonts.violations).toEqual([]);
 		expect(await cancelledRequests(app)).toEqual({ count: 0, urls: [] });
