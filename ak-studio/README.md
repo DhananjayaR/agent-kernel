@@ -80,7 +80,7 @@ networking in main is not covered), and that the gate does count a refused reque
 packages for the current system into `apps/desktop/release/`: an AppImage and `linux-unpacked/` on Linux, an NSIS
 installer on Windows, a dmg on macOS (Windows and macOS are configured, not yet built). Nothing is signed. The
 asar holds `out/` and `package.json` only (the contract and zod are bundled into main, so no `node_modules`).
-`appId` (`ai.yaala.akstudio`) and the product name are working names until P12. Electron fuses are flipped at
+`appId` (`ai.yaala.kernel.studio`) and the product name are working names until P12. Electron fuses are flipped at
 package time: `RunAsNode`, `EnableNodeOptionsEnvironmentVariable`, `EnableNodeCliInspectArguments` and
 `GrantFileProtocolExtraPrivileges` off; `EnableCookieEncryption`, `OnlyLoadAppFromAsar` and
 `EnableEmbeddedAsarIntegrityValidation` (macOS and Windows only; no effect on Linux) on. So
@@ -105,10 +105,12 @@ The Python `Test` and `Code Quality` workflows ignore changes under `ak-studio/*
 | `pnpm build-storybook`                                               | Pass                                                                                  | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
 | `pnpm test:storybook`                                                | Pass: 6 (3 stories, dark and light), no axe violation                                 | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
 | `pnpm test:e2e`                                                      | Pass: 6 (browser 2, Electron 4) in about 3 s, no display (xvfb-run -a)                | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
-| `pnpm package`                                                       | Pass: AppImage 126,422,062 bytes (120.6 MiB); `linux-unpacked/` 276 MiB; about 17 s   | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm package`                                                       | Pass: AppImage 126,422,064 bytes (120.6 MiB); `linux-unpacked/` 276 MiB; about 17 s   | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
 | Packaged app starts                                                  | Pass: AppImage and `linux-unpacked/` show version, platform and the IPC bridge        | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
 | Fuses (`ELECTRON_RUN_AS_NODE=1 ... -e`, `NODE_OPTIONS`, `--inspect`) | Pass: none takes effect; the app starts as itself                                     | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
 
 Windows, macOS and the CI workflow were deferred by the owner for P1a (no push access yet): `studio.yml` was
-parsed, not run. The Linux runner's `apparmor_restrict_unprivileged_userns` step and the macOS fuse re-signing
-(`resetAdHocDarwinSignature`) are unverified until it runs.
+parsed, not run. Unverified until it runs: the Linux runner's `apparmor_restrict_unprivileged_userns` step, the
+macOS fuse re-signing (`resetAdHocDarwinSignature`), and that the Windows and macOS builds start with
+`EnableEmbeddedAsarIntegrityValidation` and `OnlyLoadAppFromAsar` on (a missing or wrong embedded asar hash stops
+the app from starting there; Linux does not check it).
