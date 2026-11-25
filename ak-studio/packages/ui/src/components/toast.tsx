@@ -4,8 +4,10 @@
 // shows a badge and the job itself shows the approval, so this API has no "waiting" tone.
 //
 // Built on React Aria's toast (`UNSTABLE_ToastRegion`, `UNSTABLE_Toast`, `UNSTABLE_ToastQueue`; pinned at 1.22.1),
-// not on sonner 2.0.8 (P0 D1): sonner injects a global stylesheet of its own (fixed 400 ms transitions, its own
-// colour values and widths) that applies even in its unstyled mode, which breaks the motion and token rules.
+// not on sonner 2.0.8, which P0 D1 names (a departure the decision record still has to take in): sonner injects
+// a global stylesheet whose base toast rule, not switched off by its unstyled mode, sets fixed 400 ms
+// transitions, absolute positioning and a fixed width, which breaks the motion and token rules. The same sheet
+// also carries its own colour values (not checked whether any apply when unstyled).
 // shadcn's aria-nova registry has no React Aria toast, so this file is written by hand in the same style.
 //
 // Look: the solid floating layer (overlay surface, decorative hairline, elevated shadow) at most 336 px wide, a

@@ -3,6 +3,7 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
 	expectFocusRing,
 	expectHeight,
+	expectInsetFocusRing,
 	expectStyle,
 	expectTokenColour,
 	hover,
@@ -268,6 +269,10 @@ export const Keyboard: Story = {
 			expect(
 				within(listbox).getByRole("option", { name: "Redis" }),
 			).toHaveFocus(),
+		);
+		// The focused option shows the inset 2 px ring (keyboard only).
+		await expectInsetFocusRing(
+			within(listbox).getByRole("option", { name: "Redis" }),
 		);
 		await userEvent.keyboard("{ArrowDown}");
 		await expect(

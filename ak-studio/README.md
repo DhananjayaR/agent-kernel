@@ -119,8 +119,9 @@ Focus moves into a Modal or Popover when it opens and back to its trigger when i
 ConfirmModal is an alert dialog whose action says what happens; the destructive variant names what it affects
 and enables its danger action only when the thing's name is typed exactly, and focus never starts on that
 action (Escape and Cancel close it without acting; a scrim click does nothing). Toast is React Aria's toast
-(`UNSTABLE_ToastRegion`, pinned with react-aria-components 1.22.1), not sonner: sonner injects a global stylesheet
-with its own 400 ms transitions, widths and colours even when unstyled. A toast is only for a background result
+(`UNSTABLE_ToastRegion`, pinned with react-aria-components 1.22.1), not sonner as P0 D1 records (the record needs
+the owner's change): sonner injects a global stylesheet whose base toast rule, active even when unstyled, sets
+400 ms transitions, absolute positioning and a fixed width. A toast is only for a background result
 (`notifyBackgroundResult`); a toast with an action stays until dismissed; F6 reaches the region. ContextMenu
 wraps a region (a Tree or DataTable) and opens for the row under the pointer or the focused row (Shift+F10, the
 ContextMenu key). ResizablePanels (react-resizable-panels 4.24.1, P0 D1) never stores anything: `defaultLayout`

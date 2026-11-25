@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useState } from "react";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import {
 	expectFocusWithin,
@@ -136,5 +137,44 @@ export const DestructiveCancel: Story = {
 		el = await alertDialog();
 		await expect(within(el).getByRole("textbox")).toHaveValue("");
 		await expect(args.onConfirm).not.toHaveBeenCalled();
+	},
+};
+
+/** Controlled by the caller (a job waiting for an answer opens it); confirming closes it through `onOpenChange`. */
+function ControlledConfirm({ onConfirm }: { onConfirm: () => void }) {
+	const [isOpen, setOpen] = useState(false);
+	return (
+		<>
+			<Button onPress={() => setOpen(true)}>Answer the job</Button>
+			<ConfirmModal
+				isOpen={isOpen}
+				onOpenChange={setOpen}
+				title="Install the LangGraph extra?"
+				confirmLabel="Install extra"
+				onConfirm={onConfirm}
+				affects={<PathChip path="support-triage/pyproject.toml" />}
+			>
+				uv adds agentkernel[langgraph] to the project and syncs the environment.
+			</ConfirmModal>
+		</>
+	);
+}
+
+export const Controlled: Story = {
+	render: (args) => <ControlledConfirm onConfirm={args.onConfirm} />,
+	play: async ({ canvasElement, args }) => {
+		const opener = within(canvasElement).getByRole("button", {
+			name: "Answer the job",
+		});
+		await tabTo(opener);
+		await userEvent.keyboard("{Enter}");
+		const el = await alertDialog();
+		await expectFocusWithin(el);
+		await userEvent.click(
+			within(el).getByRole("button", { name: "Install extra" }),
+		);
+		await expect(args.onConfirm).toHaveBeenCalledOnce();
+		await waitFor(() => expect(el).not.toBeInTheDocument());
+		await waitFor(() => expect(opener).toHaveFocus());
 	},
 };

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { useState } from "react";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import {
 	expectFocusRing,
 	expectFocusWithin,
@@ -121,5 +122,53 @@ export const Dismissable: Story = {
 		const overlay = el.closest("[data-slot=modal-overlay]") as HTMLElement;
 		await userEvent.click(overlay);
 		await waitFor(() => expect(el).not.toBeInTheDocument());
+	},
+};
+
+const openChanged = fn();
+
+/** Opened from the caller's state, as the approval pattern and the unsaved-changes guard open it. */
+function ControlledModal() {
+	const [isOpen, setOpen] = useState(false);
+	return (
+		<>
+			<Button onPress={() => setOpen(true)}>Review changes</Button>
+			<Modal
+				isOpen={isOpen}
+				onOpenChange={(open) => {
+					openChanged(open);
+					setOpen(open);
+				}}
+				title="Unsaved changes in config.yaml"
+				actions={(close) => <Button onPress={close}>Stay</Button>}
+			>
+				<p>The session store section has changes that are not saved.</p>
+			</Modal>
+		</>
+	);
+}
+
+/**
+ * Controlled (`isOpen` and `onOpenChange`, no trigger): focus moves in when the caller opens it; Escape asks the
+ * caller to close it; focus returns to the element that had it.
+ */
+export const Controlled: Story = {
+	render: () => <ControlledModal />,
+	beforeEach: () => {
+		openChanged.mockClear();
+	},
+	play: async ({ canvasElement }) => {
+		const opener = within(canvasElement).getByRole("button", {
+			name: "Review changes",
+		});
+		await tabTo(opener);
+		await userEvent.keyboard("{Enter}");
+		const el = await dialog();
+		await expect(el).toHaveAccessibleName("Unsaved changes in config.yaml");
+		await expectFocusWithin(el);
+		await userEvent.keyboard("{Escape}");
+		await expect(openChanged).toHaveBeenCalledWith(false);
+		await waitFor(() => expect(el).not.toBeInTheDocument());
+		await waitFor(() => expect(opener).toHaveFocus());
 	},
 };

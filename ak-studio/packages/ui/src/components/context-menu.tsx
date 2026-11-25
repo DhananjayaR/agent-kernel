@@ -5,9 +5,10 @@
 // items as Menu (MenuItem, MenuSection, MenuSeparator) in the same solid floating layer.
 //
 // Opening: a right click (or long press) anywhere in the region opens the menu at the pointer; Shift+F10 or the
-// ContextMenu key opens it at the focused element. The target is the nearest element with a `data-key` (React
-// Aria puts it on every collection row), passed to `menu` and `onAction` as a string; `null` for the region
-// itself. Keyboard inside the menu as in Menu (focus starts on the first item); Escape or running an item closes
+// ContextMenu key opens it at the focused element. The target is the row it is in: the nearest row with a
+// `data-key` (React Aria puts one on every collection row, and on table cells, so rows win), passed to `menu` and `onAction` as a string; `null` for the region
+// itself. Events from inside the open menu (a portal, but a React child of the region) are ignored. Keyboard
+// inside the menu as in Menu (focus starts on the first item); Escape or running an item closes
 // it, and focus returns to the row it was opened from.
 import {
 	type KeyboardEvent,
@@ -35,11 +36,21 @@ export type ContextMenuProps = {
 
 type Opened = { target: string | null; items: ReactNode };
 
-/** The nearest element inside `region` that carries a `data-key`, starting at `from`. */
+/**
+ * The row inside `region` that `from` is in: the nearest row with a `data-key` (a table cell also has one, so rows
+ * win), else the nearest element with a `data-key` (a list option).
+ */
 function targetOf(region: HTMLElement, from: EventTarget | null) {
+	if (!(from instanceof Element)) return null;
 	const el =
-		from instanceof Element ? from.closest<HTMLElement>("[data-key]") : null;
+		from.closest<HTMLElement>('[role="row"][data-key]') ??
+		from.closest<HTMLElement>("[data-key]");
 	return el && region.contains(el) ? el : null;
+}
+
+/** True when the event started in the region's own DOM, not in its portalled menu (React bubbles both). */
+function fromRegion(region: HTMLElement, target: EventTarget | null) {
+	return target instanceof Node && region.contains(target);
 }
 
 export function ContextMenu({
@@ -72,7 +83,7 @@ export function ContextMenu({
 
 	function onContextMenu(e: MouseEvent<HTMLDivElement>) {
 		const region = regionRef.current;
-		if (!region || !pointRef.current) return;
+		if (!region || !pointRef.current || !fromRegion(region, e.target)) return;
 		e.preventDefault();
 		const rect = region.getBoundingClientRect();
 		setPoint({ x: e.clientX - rect.left, y: e.clientY - rect.top });
@@ -82,7 +93,7 @@ export function ContextMenu({
 	function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
 		const keyboardMenu =
 			e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey);
-		if (!keyboardMenu) return;
+		if (!keyboardMenu || !fromRegion(e.currentTarget, e.target)) return;
 		// Handled here on every platform, so the browser's own contextmenu event does not open a second menu.
 		e.preventDefault();
 		e.stopPropagation();
@@ -111,6 +122,8 @@ export function ContextMenu({
 			/>
 			<Popover
 				data-slot="context-menu-popover"
+				// React Aria renders a standalone popover as a dialog; it is named like its menu.
+				aria-label={ariaLabel}
 				triggerRef={anchorRef}
 				isOpen={isOpen}
 				onOpenChange={setIsOpen}

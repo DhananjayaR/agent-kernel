@@ -15,6 +15,14 @@ import {
 } from "../lib/story-checks";
 import { FileTreeItem, projectFiles } from "../lib/story-fixtures";
 import { ContextMenu } from "./context-menu";
+import {
+	DataTable,
+	DataTableBody,
+	DataTableCell,
+	DataTableColumn,
+	DataTableHeader,
+	DataTableRow,
+} from "./data-table";
 import { MenuItem } from "./menu";
 import { Tree } from "./tree";
 
@@ -96,6 +104,90 @@ export const Keyboard: Story = {
 			expect(row(canvasElement, /^config\.yaml/)).toHaveFocus(),
 		);
 		await expect(args.onAction).toHaveBeenCalledOnce();
+	},
+};
+
+/**
+ * Inside the open menu, a right click or the ContextMenu key does not reopen it for another target: events from
+ * the menu are not the region's.
+ */
+export const EventsFromTheMenu: Story = {
+	play: async ({ canvasElement, args }) => {
+		const app = row(canvasElement, /^app\.py/);
+		await tabTo(row(canvasElement, /^agents/));
+		await userEvent.keyboard("{End}{ArrowUp}{ArrowUp}");
+		await userEvent.keyboard("{Shift>}{F10}{/Shift}");
+		const el = await menu();
+		const first = within(el).getByRole("menuitem", { name: "Open in editor" });
+		await waitFor(() => expect(first).toHaveFocus());
+		fireEvent.contextMenu(first, { button: 2, clientX: 5, clientY: 5 });
+		await userEvent.keyboard("{ContextMenu}");
+		await expect(first).toHaveFocus();
+		await userEvent.keyboard("{Enter}");
+		await expect(args.onAction).toHaveBeenCalledWith("open-editor", "app.py");
+		await waitFor(() => expect(el).not.toBeInTheDocument());
+		await waitFor(() => expect(app).toHaveFocus());
+	},
+};
+
+const runs = [
+	{ id: "r1", command: "uv sync", seconds: 2.4 },
+	{ id: "r2", command: "ak inspect --json", seconds: 5.8 },
+];
+
+/**
+ * On a DataTable: the target is the row, also when the menu opens from a focused cell (React Aria puts a
+ * `data-key` on cells too).
+ */
+export const OnADataTable: Story = {
+	args: {
+		"aria-label": "Command actions",
+		menu: (target: string | null) =>
+			target === null ? null : <MenuItem id="copy">Copy command</MenuItem>,
+	},
+	render: (args) => (
+		<ContextMenu {...args}>
+			<DataTable aria-label="Commands run">
+				<DataTableHeader>
+					<DataTableColumn id="command" isRowHeader>
+						Command
+					</DataTableColumn>
+					<DataTableColumn id="seconds">Duration</DataTableColumn>
+				</DataTableHeader>
+				<DataTableBody items={runs}>
+					{(run) => (
+						<DataTableRow id={run.id}>
+							<DataTableCell>{run.command}</DataTableCell>
+							<DataTableCell>{run.seconds} s</DataTableCell>
+						</DataTableRow>
+					)}
+				</DataTableBody>
+			</DataTable>
+		</ContextMenu>
+	),
+	play: async ({ canvasElement, args }) => {
+		const second = row(canvasElement, /ak inspect/);
+		await tabTo(row(canvasElement, /uv sync/));
+		await userEvent.keyboard("{ArrowDown}{ArrowRight}{ArrowRight}");
+		const cell = within(second).getAllByRole("gridcell")[0] as HTMLElement;
+		await expect(cell).toHaveFocus();
+		await userEvent.keyboard("{Shift>}{F10}{/Shift}");
+		let el = await menu();
+		await userEvent.keyboard("{Enter}");
+		await expect(args.onAction).toHaveBeenLastCalledWith("copy", "r2");
+		await waitFor(() => expect(el).not.toBeInTheDocument());
+		await waitFor(() => expect(cell).toHaveFocus());
+		const box = cell.getBoundingClientRect();
+		fireEvent.contextMenu(cell, {
+			button: 2,
+			clientX: box.left + 4,
+			clientY: box.top + 4,
+		});
+		el = await menu();
+		await userEvent.click(
+			within(el).getByRole("menuitem", { name: "Copy command" }),
+		);
+		await expect(args.onAction).toHaveBeenLastCalledWith("copy", "r2");
 	},
 };
 
