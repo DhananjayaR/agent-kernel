@@ -198,6 +198,20 @@ export const ReadOnlyInvalidRequired: Story = {
 	},
 };
 
+/** Read-only and disabled: like a disabled editable Select, it submits nothing under `name`. */
+export const ReadOnlyDisabled: Story = {
+	args: { isReadOnly: true, isDisabled: true, name: "session_store" },
+	render: (args) => (
+		<form aria-label="Config">
+			<SessionStores {...args} />
+		</form>
+	),
+	play: async ({ canvasElement }) => {
+		const form = canvasElement.querySelector("form") as HTMLFormElement;
+		await expect(new FormData(form).has("session_store")).toBe(false);
+	},
+};
+
 const stores = [
 	{ id: "in-memory", name: "In memory" },
 	{ id: "redis", name: "Redis" },

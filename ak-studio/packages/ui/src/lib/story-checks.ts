@@ -113,7 +113,7 @@ export async function expectDisabledLook(el: Element): Promise<void> {
  */
 export async function expectTokenColour(
 	el: Element,
-	property: "background-color" | "color" | "border-top-color",
+	property: "background-color" | "color" | "border-top-color" | "outline-color",
 	utility: string,
 ): Promise<void> {
 	await settle(el);
@@ -197,4 +197,36 @@ export async function expectSolidLayer(el: Element): Promise<void> {
 /** Waits until focus is on `el` or inside it (focus moves after an overlay's entry or exit animation). */
 export async function expectFocusWithin(el: Element): Promise<void> {
 	await waitFor(() => expect(el.contains(document.activeElement)).toBe(true));
+}
+
+/**
+ * The colour `top` (any CSS colour, possibly translucent) composited over the opaque `bottom`, as sRGB. For an
+ * opaque colour, `composite(c, c)` resolves it to sRGB.
+ */
+export function composite(top: string, bottom: string): Rgb {
+	const canvas = document.createElement("canvas");
+	canvas.width = 1;
+	canvas.height = 1;
+	const ctx = canvas.getContext("2d");
+	if (!ctx) throw new Error("no 2D canvas");
+	ctx.fillStyle = bottom;
+	ctx.fillRect(0, 0, 1, 1);
+	ctx.fillStyle = top;
+	ctx.fillRect(0, 0, 1, 1);
+	const [r = 0, g = 0, b = 0] = ctx.getImageData(0, 0, 1, 1).data;
+	return [r, g, b];
+}
+
+/** The resolved colour of a token utility (for example "bg-surface"), measured on a probe in `near`'s context. */
+export function tokenColour(
+	near: Element,
+	utility: string,
+	property: "background-color" | "color" = "background-color",
+): string {
+	const probe = document.createElement("span");
+	probe.className = utility;
+	(near.parentElement ?? document.body).appendChild(probe);
+	const value = getComputedStyle(probe).getPropertyValue(property);
+	probe.remove();
+	return value;
 }

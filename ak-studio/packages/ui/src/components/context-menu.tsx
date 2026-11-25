@@ -7,13 +7,16 @@
 // Opening: a right click (or long press) anywhere in the region opens the menu at the pointer; Shift+F10 or the
 // ContextMenu key opens it at the focused element. The target is the row it is in: the nearest row with a
 // `data-key` (React Aria puts one on every collection row, and on table cells, so rows win), passed to `menu` and `onAction` as a string; `null` for the region
-// itself. Events from inside the open menu (a portal, but a React child of the region) are ignored. Keyboard
+// itself. A right click first moves focus to the row; while the menu is open the row is marked (data-menu-open,
+// drawn by the `menu-target` utility in Tree and DataTable rows), and focus returns to it when the menu closes.
+// Events from inside the open menu (a portal, but a React child of the region) are ignored. Keyboard
 // inside the menu as in Menu (focus starts on the first item); Escape or running an item closes
 // it, and focus returns to the row it was opened from.
 import {
 	type KeyboardEvent,
 	type MouseEvent,
 	type ReactNode,
+	useEffect,
 	useRef,
 	useState,
 } from "react";
@@ -69,6 +72,14 @@ export function ContextMenu({
 	const [opened, setOpened] = useState<Opened | null>(null);
 	const [isOpen, setIsOpen] = useState(false);
 
+	// The row the menu is open for: marked with data-menu-open while the menu shows (the `menu-target` utility).
+	const [targetRow, setTargetRow] = useState<HTMLElement | null>(null);
+	useEffect(() => {
+		if (!isOpen || !targetRow) return;
+		targetRow.setAttribute("data-menu-open", "");
+		return () => targetRow.removeAttribute("data-menu-open");
+	}, [isOpen, targetRow]);
+
 	function open(anchor: Element, from: EventTarget | null) {
 		const region = regionRef.current;
 		if (!region) return;
@@ -77,6 +88,7 @@ export function ContextMenu({
 		const items = menu(target);
 		if (items === null || items === undefined) return;
 		anchorRef.current = anchor;
+		setTargetRow(row);
 		setOpened({ target, items });
 		setIsOpen(true);
 	}
@@ -85,8 +97,16 @@ export function ContextMenu({
 		const region = regionRef.current;
 		if (!region || !pointRef.current || !fromRegion(region, e.target)) return;
 		e.preventDefault();
+		// The row takes focus first, so the menu returns focus to it when it closes.
+		const row = targetOf(region, e.target);
+		if (row && row.tabIndex >= -1 && document.activeElement !== row)
+			row.focus({ preventScroll: true });
+		// The point is in the region's own coordinates, including how far it is scrolled.
 		const rect = region.getBoundingClientRect();
-		setPoint({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+		setPoint({
+			x: e.clientX - rect.left - region.clientLeft + region.scrollLeft,
+			y: e.clientY - rect.top - region.clientTop + region.scrollTop,
+		});
 		open(pointRef.current, e.target);
 	}
 

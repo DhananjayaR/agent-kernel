@@ -1,13 +1,14 @@
 // Tree: a hierarchy of items, such as the Code tab's file tree. Spike S1: shadcn's registry has no tree, so this
 // is written by hand on React Aria `Tree` in the same style, to Spectrum 2's TreeView: 40 px rows with a 4 px
 // radius, 16 px indent per level, a chevron that turns when the item is expanded, an optional icon, the title, and
-// markers at the end for changed or new files: a letter shown, its label added to the row's name (never a dot).
+// markers at the end for changed or new files: a letter shown, its label added to the row's name and kept as
+// visually hidden text on the marker itself (never a dot). Show a legend near the tree (the Default story does).
 //
-// Rows: hover moves the fill a stop; a selected row takes a stronger fill and a 2 px start edge in
+// Rows: hover moves the fill a stop; a selected row takes the neutral fill (8%, 12% while hovered) and a 2 px start edge in
 // text-accent-primary (not colour alone, at least 3:1 on every surface); disabled rows take the disabled text
 // colour. Colours: `rowColours` and `rowEdgeColour` (lib/state.ts). Rows show `text`-coloured content only.
 //
-// Keyboard model (React Aria Tree, APG treegrid rows; asserted by the Keyboard story):
+// Keyboard model (React Aria Tree, APG treegrid rows; asserted by the Keyboard, SelectAll and InAModal stories):
 // - Tab enters the tree once, on the last focused row (the first row the first time); the next Tab leaves it.
 // - ArrowDown and ArrowUp move to the next and previous visible row; Home and End to the first and last. With
 //   `selectionMode`, selection follows focus (Spectrum's highlight selection, `selectionBehavior="replace"`, the
@@ -18,6 +19,9 @@
 // - Enter runs `onAction` (open the file).
 // - Typing a letter moves focus (not the selection) to the next visible row whose title starts with it (a Space
 //   typed within a second continues that search).
+// - Escape: inside an overlay (Modal, Popover) it closes the overlay, even with rows selected (the collection does
+//   not take it); outside, it clears a non-empty selection. Mod+A (Ctrl+A, Cmd+A on macOS) selects all visible rows with
+//   `selectionMode="multiple"` and does nothing otherwise.
 // The chevron is a pointer target only (not in the Tab order); Shift+F10 opens a ContextMenu wrapped around it.
 import { ChevronRightIcon } from "lucide-react";
 import type { ReactNode } from "react";
@@ -29,6 +33,7 @@ import {
 	Button,
 	TreeItemContent,
 } from "react-aria-components";
+import { useInOverlay } from "../lib/overlay";
 import { rowColours, rowEdgeColour } from "../lib/state";
 import { motion } from "../lib/styles";
 import { cn } from "../lib/utils";
@@ -46,12 +51,17 @@ export type TreeProps<T extends object> = Omit<
 export function Tree<T extends object>({
 	className,
 	selectionBehavior = "replace",
+	escapeKeyBehavior,
 	...props
 }: TreeProps<T>) {
+	const inOverlay = useInOverlay();
 	return (
 		<AriaTree
 			data-slot="tree"
 			selectionBehavior={selectionBehavior}
+			escapeKeyBehavior={
+				escapeKeyBehavior ?? (inOverlay ? "none" : "clearSelection")
+			}
 			className={cn("flex flex-col overflow-auto outline-none", className)}
 			{...props}
 		/>
@@ -92,7 +102,7 @@ export function TreeItem<T extends object = object>({
 				cn(
 					"tree-indent relative flex h-row cursor-default items-center gap-text-to-visual rounded-sm pe-edge",
 					"text-ui outline-none select-none",
-					"focus-ring-inset",
+					"focus-ring-inset menu-target",
 					motion,
 					rowColours({
 						hovered: isHovered,
@@ -148,13 +158,11 @@ export function TreeItem<T extends object = object>({
 							) : null}
 							<span className="min-w-0 flex-1 truncate">{title}</span>
 							{markers?.length ? (
-								<span
-									aria-hidden="true"
-									className="flex shrink-0 items-center gap-1 font-mono text-ui-sm font-control"
-								>
+								<span className="flex shrink-0 items-center gap-1 font-mono text-ui-sm font-control">
 									{markers.map((m) => (
 										<span key={m.label} data-slot="tree-marker" title={m.label}>
-											{m.letter}
+											<span aria-hidden="true">{m.letter}</span>
+											<span className="sr-only">{m.label}</span>
 										</span>
 									))}
 								</span>

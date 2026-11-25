@@ -105,7 +105,8 @@ React Aria cannot make read-only, renders as a read-only Input showing the selec
 of the components (status labels, "Copy path", ...) are in `src/strings.ts`, each overridable by a prop. Shared
 class recipes are in `src/lib/styles.ts`; `theme.css` adds the state colours they use (`accent-primary-hover`,
 `status-danger-hover`, the neutral `fill` steps derived from `text`, the `disabled-*` colours and the modal
-`scrim`) and the `focus-ring` / `focus-ring-inset` / `focus-outline`, `press` and `tree-indent` utilities. Muted
+`scrim`) and the `focus-ring` / `focus-ring-inset` / `focus-outline`, `press`, `tree-indent` and `menu-target`
+utilities. Muted
 text never sits on a neutral fill (it drops below 4.5:1), so table and tree rows show `text`-coloured content
 only. Every component has stories (default, hover, focus, disabled, invalid where they apply; keyboard tests
 for Select, Combobox, Checkbox, Switch, SegmentedControl, PathChip, Modal, ConfirmModal, Popover, Menu,
@@ -115,22 +116,34 @@ sets `data-theme` on `<html>` as the app does, so popovers and tooltips (portall
 
 **Overlays and structure.** Floating layers (Modal, Popover, Menu, ContextMenu, Toast) are solid: the overlay
 surface, a decorative hairline and the measured `shadow-elevated`, asserted by `expectSolidLayer` in both themes.
-Focus moves into a Modal or Popover when it opens and back to its trigger when it closes; Escape closes them. A
-ConfirmModal is an alert dialog whose action says what happens; the destructive variant names what it affects
-and enables its danger action only when the thing's name is typed exactly, and focus never starts on that
-action (Escape and Cancel close it without acting; a scrim click does nothing). Toast is React Aria's toast
+Focus moves into a Modal or Popover when it opens, Tab and Shift+Tab wrap inside a Modal, and focus goes back to
+the trigger (or into the modal underneath) when it closes; Escape closes the top one; the page does not scroll
+behind a Modal. A Modal's body scrolls between its header and footer and is a focusable named region while it
+overflows. The modal scrim is z-40 and toasts z-50, so a toast stays visible above an open modal. In light theme
+the scrim separates the modal's fill from the page by at least 1.5:1; in dark theme no existing colour can (the
+scrim is already the darkest surface), so the dark modal edge is `border-control`, at least 3:1 against the
+scrimmed page (both asserted). A ConfirmModal is an alert dialog whose action says what happens; "what will
+happen" and "This affects" are its accessible description, and its buttons sit in the Modal footer. The
+destructive variant names what it affects and enables its danger action only when the thing's name is typed
+exactly (an empty name never matches, and `confirmName=""` does not compile); focus never starts on that action
+(Escape and Cancel close it without acting; a scrim click does nothing). Toast is React Aria's toast
 (`UNSTABLE_ToastRegion`, pinned with react-aria-components 1.22.1), not sonner as P0 D1 records (the record needs
 the owner's change): sonner injects a global stylesheet whose base toast rule, active even when unstyled, sets
-400 ms transitions, absolute positioning and a fixed width. A toast is only for a background result
-(`notifyBackgroundResult`); a toast with an action stays until dismissed; F6 reaches the region. ContextMenu
-wraps a region (a Tree or DataTable) and opens for the row under the pointer or the focused row (Shift+F10, the
-ContextMenu key). ResizablePanels (react-resizable-panels 4.24.1, P0 D1) never stores anything: `defaultLayout`
-restores a layout and `onLayoutChange` reports the one to remember. DataTable and Tree use highlight selection
-(selection follows focus, Space toggles, Enter runs the row action) and draw a selected row's 2 px start edge in
-`text-accent-primary` so selection is not colour alone; their keyboard models are written at the top of
-`data-table.tsx` and `tree.tsx` and asserted by their Keyboard stories. DataTable is not virtualised. The Menu
-stories disable axe's `label-content-name-mismatch` rule: it counts a visible shortcut ("Ctrl+E") as label text,
-while React Aria exposes it as the item's description (asserted).
+400 ms transitions, absolute positioning and a fixed width. A toast reports background work
+(`notifyBackgroundResult`): a job that finished, or one that needs an answer (`info` with a "Show" action, which
+never times out; the owning tab's badge carries it too). F6 reaches the toast region, and F6 or Shift+F6 there goes
+back to where focus was. ContextMenu wraps a region (a Tree or DataTable) and opens for the row under the pointer
+(which takes focus) or the focused row (Shift+F10, the ContextMenu key); the row is marked while the menu is open
+(`menu-target`), and focus returns to it. ResizablePanels (react-resizable-panels 4.24.1, P0 D1) never stores
+anything: `defaultLayout` restores a layout and `onLayoutChange` reports the one to remember; a disabled handle
+is a dashed rule with no tab stop. DataTable and Tree use highlight selection (selection follows focus, Space
+toggles, Enter runs the row action, Mod+A selects all with multiple selection) and draw a selected row's 2 px
+start edge in `text-accent-primary` so selection is not colour alone. Escape clears their selection, except
+inside a Modal or Popover, where it closes the overlay. Their keyboard models are written at the top of
+`data-table.tsx` and `tree.tsx` and asserted by their stories. DataTable is not virtualised; a sortable column
+shows an up-down icon at rest. The Menu `Shortcuts` story disables axe's `label-content-name-mismatch` rule: it
+counts a visible shortcut ("Ctrl+E") as label text, while React Aria exposes it as the item's description
+(asserted).
 
 **check-palette: known limits.** It reads source as text, so it cannot see class names built at run time
 (template strings such as `` `bg-${tone}-500` ``, or concatenation such as `"bg-" + tone`), and it does not flag

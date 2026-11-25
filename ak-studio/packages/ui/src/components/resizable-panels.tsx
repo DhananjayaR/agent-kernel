@@ -2,7 +2,8 @@
 // inspector; "panels resize and remember their size"). Added with the shadcn CLI as `resizable`, on
 // react-resizable-panels 4.24.1 (P0 D1: one of the two components that use a second library), restyled: a 1 px
 // decorative rule between panels that turns into a 2 px line in the control colour while hovered or dragged, and
-// the 2 px focus ring while it has keyboard focus. The library keeps a larger invisible hit area around it.
+// the 2 px focus ring while it has keyboard focus. The library keeps a larger invisible hit area around it. A
+// `disabled` handle is a dashed rule in the disabled colour, has no tab stop and does not react to the pointer.
 //
 // Sizes are remembered by the caller, not here: `defaultLayout` restores them and `onLayoutChange` reports the
 // layout the person asked for after each resize (pointer released or key pressed), as panel id to percentage.
@@ -106,6 +107,9 @@ export function ResizableHandle({
 				"group/handle relative flex shrink-0 items-center justify-center bg-border-default outline-none",
 				"aria-[orientation=vertical]:w-px aria-[orientation=horizontal]:h-px",
 				"focus-visible:focus-outline",
+				// Fixed: a dashed rule in the disabled colour, so the person sees it cannot be dragged.
+				"data-[separator=disabled]:bg-transparent data-[separator=disabled]:border-dashed data-[separator=disabled]:border-disabled-border",
+				"aria-[orientation=vertical]:data-[separator=disabled]:border-s aria-[orientation=horizontal]:data-[separator=disabled]:border-t",
 			)}
 		>
 			<span

@@ -131,16 +131,18 @@ export function tabIndicatorColour(s: ControlState): string | null {
 }
 
 /**
- * A row of a DataTable or Tree: its fill and text. Disabled wins (no fill, disabled text). Selected takes the
- * fill-hover stop (fill-pressed while hovered or pressed); an unselected row takes `fill` on hover and
- * fill-hover on press. Only `text`-coloured content sits on a row (muted text drops below 4.5:1 on any fill).
+ * A row of a DataTable or Tree: its fill and text. Disabled wins (no fill, disabled text). Selected takes `fill`
+ * (8%, the scale's closest step to S1's measured 7%) and fill-hover (12%, closest to S1's 10%) while hovered or
+ * pressed; an unselected row takes `fill` on hover and fill-hover on press. A selected row at rest and an
+ * unselected hovered one share the fill; the selection edge (`rowEdgeColour`) tells them apart. Only
+ * `text`-coloured content sits on a row (muted text drops below 4.5:1 on any fill).
  */
 export function rowColours(s: ControlState): string {
 	if (s.disabled) return "bg-transparent text-disabled-text";
 	const fill = s.selected
 		? s.hovered || s.pressed
-			? "bg-fill-pressed"
-			: "bg-fill-hover"
+			? "bg-fill-hover"
+			: "bg-fill"
 		: s.pressed
 			? "bg-fill-hover"
 			: s.hovered

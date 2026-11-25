@@ -14,6 +14,7 @@ import {
 	type DialogTriggerProps,
 	Heading,
 } from "react-aria-components";
+import { InOverlayContext } from "../lib/overlay";
 import { floatingLayer, floatingMotion } from "../lib/styles";
 import { cn } from "../lib/utils";
 
@@ -67,14 +68,14 @@ export function Popover({
 					className="flex flex-col gap-2 outline-none"
 				>
 					{({ close }) => (
-						<>
+						<InOverlayContext.Provider value={true}>
 							{title ? (
 								<Heading slot="title" className="font-ui text-ui font-control">
 									{title}
 								</Heading>
 							) : null}
 							{typeof children === "function" ? children(close) : children}
-						</>
+						</InOverlayContext.Provider>
 					)}
 				</Dialog>
 			</AriaPopover>

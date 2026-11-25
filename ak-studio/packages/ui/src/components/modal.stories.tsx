@@ -1,7 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
+import { contrastRatio } from "../contrast";
 import {
+	composite,
 	expectFocusRing,
 	expectFocusWithin,
 	expectSolidLayer,
@@ -9,6 +11,7 @@ import {
 	expectTokenColour,
 	settle,
 	tabTo,
+	tokenColour,
 } from "../lib/story-checks";
 import { Button } from "./button";
 import { Modal } from "./modal";
@@ -62,6 +65,34 @@ export const Open: Story = {
 		const overlay = surface.closest("[data-slot=modal-overlay]") as HTMLElement;
 		await expectTokenColour(overlay, "background-color", "bg-scrim");
 		await expect(el).toHaveAccessibleName("Python environment");
+		// A short body is not a tab stop.
+		await expect(
+			el.querySelector("[data-slot=modal-body]"),
+		).not.toHaveAttribute("tabindex");
+		// Separation from the scrimmed page (whatever surface the page is on): in light theme the fills differ by
+		// at least 1.5:1; in dark theme no existing colour can do that (theme.css), so the edge holds 3:1.
+		const dark = document.documentElement.dataset.theme === "dark";
+		const scrim = getComputedStyle(overlay).backgroundColor;
+		const fillColour = getComputedStyle(surface).backgroundColor;
+		const edgeColour = getComputedStyle(surface).borderTopColor;
+		const fill = composite(fillColour, fillColour);
+		const edge = composite(edgeColour, edgeColour);
+		for (const page of [
+			"bg-surface",
+			"bg-surface-raised",
+			"bg-surface-overlay",
+		]) {
+			const behind = composite(scrim, tokenColour(surface, page));
+			if (dark) {
+				await expect(contrastRatio(edge, behind), page).toBeGreaterThanOrEqual(
+					3,
+				);
+			} else {
+				await expect(contrastRatio(fill, behind), page).toBeGreaterThanOrEqual(
+					1.5,
+				);
+			}
+		}
 	},
 };
 
@@ -73,11 +104,18 @@ export const KeyboardAndEscape: Story = {
 		await userEvent.keyboard("{Enter}");
 		const el = await dialog();
 		await expectFocusWithin(el);
-		// Focus is contained: Tab cycles inside the dialog.
+		// Focus is contained: Tab and Shift+Tab wrap inside the dialog.
+		const close = within(el).getByRole("button", { name: "Close" });
+		const done = within(el).getByRole("button", { name: "Done" });
 		await userEvent.tab();
 		await expectFocusWithin(el);
 		await userEvent.tab();
 		await expectFocusWithin(el);
+		close.focus();
+		await userEvent.tab({ shift: true });
+		await expect(done).toHaveFocus();
+		await userEvent.tab();
+		await expect(close).toHaveFocus();
 		await userEvent.keyboard("{Escape}");
 		await waitFor(() => expect(el).not.toBeInTheDocument());
 		await waitFor(() => expect(trigger).toHaveFocus());
@@ -170,5 +208,91 @@ export const Controlled: Story = {
 		await expect(openChanged).toHaveBeenCalledWith(false);
 		await waitFor(() => expect(el).not.toBeInTheDocument());
 		await waitFor(() => expect(opener).toHaveFocus());
+	},
+};
+
+/** The page behind an open modal does not scroll; it scrolls again when the modal closes. */
+export const ScrollLock: Story = {
+	play: async ({ canvasElement }) => {
+		const html = document.documentElement;
+		const before = getComputedStyle(html).overflow;
+		await userEvent.click(triggerOf(canvasElement));
+		const el = await dialog();
+		await waitFor(() => expect(getComputedStyle(html).overflow).toBe("hidden"));
+		await userEvent.keyboard("{Escape}");
+		await waitFor(() => expect(el).not.toBeInTheDocument());
+		await waitFor(() => expect(getComputedStyle(html).overflow).toBe(before));
+	},
+};
+
+/** A modal opened from a modal: Escape closes only the top one, and focus returns into the first. */
+export const ModalOnModal: Story = {
+	args: {
+		children: (
+			<div className="flex flex-col items-start gap-3">
+				<p>The project runs on Python 3.12 from .venv.</p>
+				<Modal title="Installed extras" trigger={<Button>Show extras</Button>}>
+					<p>OpenAI Agents, LangGraph.</p>
+				</Modal>
+			</div>
+		),
+	},
+	play: async ({ canvasElement }) => {
+		await userEvent.click(triggerOf(canvasElement));
+		const first = await within(document.body).findByRole("dialog", {
+			name: "Python environment",
+		});
+		const showExtras = within(first).getByRole("button", {
+			name: "Show extras",
+		});
+		await tabTo(showExtras);
+		await userEvent.keyboard("{Enter}");
+		const second = await within(document.body).findByRole("dialog", {
+			name: "Installed extras",
+		});
+		await expectFocusWithin(second);
+		await userEvent.keyboard("{Escape}");
+		await waitFor(() => expect(second).not.toBeInTheDocument());
+		await expect(first).toBeInTheDocument();
+		await waitFor(() => expect(showExtras).toHaveFocus());
+	},
+};
+
+/**
+ * A body taller than the window scrolls between the header and the footer, which stay visible; with nothing
+ * focusable in it, it becomes a named, focusable region so the keyboard can scroll it.
+ */
+export const LongBody: Story = {
+	args: {
+		defaultOpen: true,
+		children: (
+			<div className="flex flex-col gap-3">
+				{Array.from({ length: 40 }, (_, i) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: static filler lines
+					<p key={i}>Line {i + 1} of the environment report.</p>
+				))}
+			</div>
+		),
+	},
+	render: (args) => (
+		<div className="h-96">
+			<Modal {...args} />
+		</div>
+	),
+	play: async () => {
+		const el = await dialog();
+		const body = el.querySelector("[data-slot=modal-body]") as HTMLElement;
+		await waitFor(() => expect(body).toHaveAttribute("tabindex", "0"));
+		await expect(body).toHaveAttribute("role", "region");
+		await expect(body).toHaveAccessibleName("Python environment");
+		await expect(body.scrollHeight).toBeGreaterThan(body.clientHeight);
+		const done = within(el).getByRole("button", { name: "Done" });
+		const surface = el.closest("[data-slot=modal]") as HTMLElement;
+		await expect(done.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+			surface.getBoundingClientRect().bottom,
+		);
+		await tabTo(body);
+		await expect(body.matches(":focus-visible")).toBe(true);
+		await expect(getComputedStyle(body).outlineStyle).toBe("solid");
 	},
 };

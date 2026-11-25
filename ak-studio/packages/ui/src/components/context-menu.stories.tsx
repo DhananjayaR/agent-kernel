@@ -11,6 +11,8 @@ import {
 import {
 	expectInsetFocusRing,
 	expectSolidLayer,
+	expectTokenColour,
+	settle,
 	tabTo,
 } from "../lib/story-checks";
 import { FileTreeItem, projectFiles } from "../lib/story-fixtures";
@@ -196,28 +198,65 @@ export const RightClick: Story = {
 	play: async ({ canvasElement, args }) => {
 		const triage = row(canvasElement, /^triage\.py/);
 		const rowBox = triage.getBoundingClientRect();
-		// A right click at a point on the row (user-event's pointer gives no coordinates).
-		fireEvent.contextMenu(triage, {
-			button: 2,
+		const coords = {
 			clientX: rowBox.left + 40,
 			clientY: rowBox.top + rowBox.height / 2,
-		});
+		};
+		// A real pointer sequence: pointerdown, mousedown, contextmenu, pointerup, mouseup, with the right button.
+		await userEvent.pointer({ keys: "[MouseRight]", target: triage, coords });
 		const el = await menu();
 		const layer = el.closest("[data-slot=context-menu-popover]") as HTMLElement;
 		const layerBox = layer.getBoundingClientRect();
 		// Placed at the pointer: just below it, starting at its x.
-		await expect(layerBox.top).toBeGreaterThanOrEqual(
-			rowBox.top + rowBox.height / 2,
-		);
+		await expect(layerBox.top).toBeGreaterThanOrEqual(coords.clientY);
 		await expect(layerBox.top).toBeLessThanOrEqual(rowBox.bottom);
-		await expect(Math.round(layerBox.left)).toBe(Math.round(rowBox.left + 40));
+		await expect(Math.round(layerBox.left)).toBe(Math.round(coords.clientX));
+		// The row the menu is for is marked while it is open.
+		await expect(triage).toHaveAttribute("data-menu-open");
+		await settle(triage);
+		await expect(getComputedStyle(triage).outlineStyle).toBe("solid");
+		await expectTokenColour(triage, "outline-color", "outline-border-control");
+		await userEvent.keyboard("{Escape}");
+		await waitFor(() => expect(el).not.toBeInTheDocument());
+		// Focus returns to the right-clicked row, and the mark goes.
+		await waitFor(() => expect(triage).toHaveFocus());
+		await expect(triage).not.toHaveAttribute("data-menu-open");
+		await userEvent.pointer({ keys: "[MouseRight]", target: triage, coords });
+		const again = await menu();
 		await userEvent.click(
-			within(el).getByRole("menuitem", { name: "Open in editor" }),
+			within(again).getByRole("menuitem", { name: "Open in editor" }),
 		);
 		await expect(args.onAction).toHaveBeenCalledWith(
 			"open-editor",
 			"agents/triage.py",
 		);
+		await waitFor(() => expect(again).not.toBeInTheDocument());
+	},
+};
+
+/** In a scrolled region the menu still opens at the pointer (the point counts the region's scroll offset). */
+export const ScrolledRegion: Story = {
+	args: { className: "h-40 overflow-auto" },
+	play: async ({ canvasElement }) => {
+		const region = canvasElement.querySelector(
+			"[data-slot=context-menu-region]",
+		) as HTMLElement;
+		region.scrollTop = 120;
+		const target = row(canvasElement, /^config\.yaml/);
+		const box = target.getBoundingClientRect();
+		const coords = {
+			clientX: box.left + 30,
+			clientY: box.top + box.height / 2,
+		};
+		await userEvent.pointer({ keys: "[MouseRight]", target, coords });
+		const el = await menu();
+		const layer = el.closest("[data-slot=context-menu-popover]") as HTMLElement;
+		const layerBox = layer.getBoundingClientRect();
+		await expect(Math.round(layerBox.left)).toBe(Math.round(coords.clientX));
+		await expect(Math.abs(layerBox.top - coords.clientY)).toBeLessThanOrEqual(
+			4,
+		);
+		await userEvent.keyboard("{Escape}");
 		await waitFor(() => expect(el).not.toBeInTheDocument());
 	},
 };

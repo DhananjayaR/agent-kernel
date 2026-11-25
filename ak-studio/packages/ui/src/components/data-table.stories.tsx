@@ -21,6 +21,7 @@ import {
 	type DataTableProps,
 	DataTableRow,
 } from "./data-table";
+import { Modal } from "./modal";
 import { StatusChip } from "./status-chip";
 
 type Run = {
@@ -129,6 +130,16 @@ export const Default: Story = {
 		await expectStyle(header, "padding-left", "16px");
 		await expect(header).toHaveAttribute("aria-sort", "ascending");
 		await expect(header.querySelector("svg")).not.toBeNull();
+		// A sortable column at rest shows an up-down icon (3:1 on the header); a column that does not sort shows none.
+		const duration = column(canvasElement, /Duration/);
+		const resting = duration.querySelector(
+			"[data-slot=sort-icon]",
+		) as SVGElement;
+		await expect(resting).toHaveClass("lucide-chevrons-up-down");
+		await expectNonTextContrastOnSurfaces(resting, "color");
+		await expect(
+			column(canvasElement, /Status/).querySelector("[data-slot=sort-icon]"),
+		).toBeNull();
 		const headerRow = header.closest("thead") as HTMLElement;
 		await expectTokenColour(headerRow, "background-color", "bg-surface-raised");
 		const first = rowNamed(canvasElement, /ak inspect/);
@@ -170,7 +181,7 @@ export const Hover: Story = {
 };
 
 /**
- * Selected: a stronger fill and a 2 px start edge in text-accent-primary, 3:1 on every surface, so selection is
+ * Selected: the neutral fill and a 2 px start edge in text-accent-primary, 3:1 on every surface, so selection is
  * not colour alone.
  */
 export const Selected: Story = {
@@ -178,7 +189,7 @@ export const Selected: Story = {
 	play: async ({ canvasElement }) => {
 		const row = rowNamed(canvasElement, /ak inspect/);
 		await expect(row).toHaveAttribute("aria-selected", "true");
-		await expectTokenColour(row, "background-color", "bg-fill-hover");
+		await expectTokenColour(row, "background-color", "bg-fill");
 		const edges = canvasElement.querySelectorAll("[data-slot=selection-edge]");
 		await expect(edges).toHaveLength(1);
 		const edge = edges[0] as HTMLElement;
@@ -255,10 +266,65 @@ export const Keyboard: Story = {
 		await waitFor(() =>
 			expect(command).toHaveAttribute("aria-sort", "descending"),
 		);
+		// Escape (outside an overlay) clears the selection; Mod+A does nothing with single selection.
+		await userEvent.keyboard("{ArrowDown}");
+		await expect(
+			canvasElement.querySelectorAll('[aria-selected="true"]'),
+		).toHaveLength(1);
+		await userEvent.keyboard("{Escape}");
+		await expect(
+			canvasElement.querySelectorAll('[aria-selected="true"]'),
+		).toHaveLength(0);
+		await userEvent.keyboard("{Control>}a{/Control}");
+		await expect(
+			canvasElement.querySelectorAll('[aria-selected="true"]'),
+		).toHaveLength(0);
 		// One Tab stop: Tab leaves the table.
 		await userEvent.tab();
 		await expect(
 			within(canvasElement).getByRole("button", { name: "After the table" }),
 		).toHaveFocus();
+	},
+};
+
+/** Multiple selection: Mod+A selects every row; Escape clears the selection. */
+export const SelectAll: Story = {
+	args: { selectionMode: "multiple" },
+	play: async ({ canvasElement }) => {
+		const selected = () =>
+			canvasElement.querySelectorAll('[role="row"][aria-selected="true"]');
+		await tabTo(rowNamed(canvasElement, /ak inspect/));
+		await userEvent.keyboard("{Control>}a{/Control}");
+		await expect(selected()).toHaveLength(runs.length);
+		await userEvent.keyboard("{Escape}");
+		await expect(selected()).toHaveLength(0);
+	},
+};
+
+/**
+ * Inside a modal, Escape closes the modal even while a row is selected: the table leaves Escape to the overlay
+ * instead of clearing its selection.
+ */
+export const InAModal: Story = {
+	args: { selectionMode: "single", defaultSelectedKeys: ["r3"] },
+	render: (args) => (
+		<Modal title="Commands run" trigger={<Button>Show commands</Button>}>
+			<Runs {...args} />
+		</Modal>
+	),
+	play: async ({ canvasElement }) => {
+		const opener = within(canvasElement).getByRole("button", {
+			name: "Show commands",
+		});
+		await tabTo(opener);
+		await userEvent.keyboard("{Enter}");
+		const dialog = await within(document.body).findByRole("dialog");
+		const row = within(dialog).getByRole("row", { name: /ak inspect/ });
+		await expect(row).toHaveAttribute("aria-selected", "true");
+		row.focus();
+		await expect(row).toHaveFocus();
+		await userEvent.keyboard("{Escape}");
+		await waitFor(() => expect(dialog).not.toBeInTheDocument());
+		await waitFor(() => expect(opener).toHaveFocus());
 	},
 };

@@ -76,8 +76,11 @@ export function Select<T extends object>({
 					isRequired={props.isRequired}
 					className={className}
 				/>
-				{/* The editable Select submits the selected key under `name`; so does the read-only one. */}
-				{props.name && key !== null && key !== undefined ? (
+				{/* The editable Select submits the selected key under `name` (not when disabled); so does this one. */}
+				{props.name &&
+				!props.isDisabled &&
+				key !== null &&
+				key !== undefined ? (
 					<input
 						type="hidden"
 						name={props.name}

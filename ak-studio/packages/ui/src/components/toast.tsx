@@ -1,7 +1,8 @@
-// Toast: a short notice that something finished in the background, with an optional "Show" action (the
-// background job notice pattern). Feedback placement: inline for a field, a banner for a view, a toast only for
-// something that finished in the background. A job waiting for the person is never only a toast: the owning tab
-// shows a badge and the job itself shows the approval, so this API has no "waiting" tone.
+// Toast: a short notice about background work, with an optional "Show" action (the background job notice
+// pattern: a job finishes, or needs an answer, while the person is on another tab). Feedback placement: inline for
+// a field, a banner for a view, a toast only for something that happened in the background. A job that needs an
+// answer is never only a toast: the owning tab also shows a badge, and the job itself shows the approval. Its
+// toast uses the `info` tone with a "Show" action, so it stays until dismissed (it never times out).
 //
 // Built on React Aria's toast (`UNSTABLE_ToastRegion`, `UNSTABLE_Toast`, `UNSTABLE_ToastQueue`; pinned at 1.22.1),
 // not on sonner 2.0.8, which P0 D1 names (a departure the decision record still has to take in): sonner injects
@@ -12,10 +13,14 @@
 //
 // Look: the solid floating layer (overlay surface, decorative hairline, elevated shadow) at most 336 px wide, a
 // 4 px start edge and an icon in the tone's colour (never colour alone), title, description, action, dismiss.
-// Keyboard (React Aria): F6 moves focus to the notifications region and back; Tab moves through a toast's
+// Toasts sit above modal scrims (z-50 against the scrim's z-40), so a notice shown before a modal opens stays
+// visible and reachable.
+// Keyboard (React Aria): F6 moves focus to the notifications region; F6 or Shift+F6 there goes back to where focus
+// was (`useLandmarkReturn`); Tab moves through a toast's
 // buttons; when a focused toast closes, focus moves to the next toast or back to where it came from. A toast with
 // an action stays until dismissed (WCAG 2.2.1); one without closes after 8 s, paused while hovered or focused.
 import { CircleCheckIcon, CircleXIcon, InfoIcon, XIcon } from "lucide-react";
+import { type RefObject, useEffect, useRef } from "react";
 import {
 	UNSTABLE_Toast as AriaToast,
 	UNSTABLE_ToastContent as AriaToastContent,
@@ -30,7 +35,7 @@ import { Button, IconButton } from "./button";
 
 export type ToastTone = "info" | "success" | "danger";
 
-/** A result of work that finished in the background. */
+/** A notice about background work: it finished, or it needs an answer. */
 export type BackgroundResult = {
 	tone: ToastTone;
 	/** What finished, in one line ("Tests passed"). */
@@ -51,7 +56,10 @@ export function createToastQueue(): ToastQueue {
 	return new AriaToastQueue<BackgroundResult>({ maxVisibleToasts: 3 });
 }
 
-/** Shows a background result. Returns the toast's key (for `queue.close`). */
+/**
+ * Shows a background notice: a job that finished, or one that needs an answer (`info` with a "Show" action, which
+ * never times out; the owning tab's badge carries it too). Returns the toast's key (for `queue.close`).
+ */
 export function notifyBackgroundResult(
 	queue: ToastQueue,
 	result: BackgroundResult,
@@ -60,16 +68,16 @@ export function notifyBackgroundResult(
 }
 
 const TONES = {
-	info: { Icon: InfoIcon, icon: "text-text", edge: "border-l-border-control" },
+	info: { Icon: InfoIcon, icon: "text-text", edge: "border-s-border-control" },
 	success: {
 		Icon: CircleCheckIcon,
 		icon: "text-text-status-success",
-		edge: "border-l-text-status-success",
+		edge: "border-s-text-status-success",
 	},
 	danger: {
 		Icon: CircleXIcon,
 		icon: "text-text-status-danger",
-		edge: "border-l-text-status-danger",
+		edge: "border-s-text-status-danger",
 	},
 } as const;
 
@@ -81,14 +89,47 @@ export type ToastRegionProps = {
 };
 
 /**
+ * F6 and Shift+F6 from the notifications region go back to where focus was before it entered, when there is no
+ * other landmark to go to. React Aria cycles F6 through its own landmarks only; with the region as the only one,
+ * it would wrap to itself, so its wrap event (`react-aria-landmark-navigation`, cancelable) is taken here.
+ */
+function useLandmarkReturn(regionRef: RefObject<HTMLDivElement | null>) {
+	useEffect(() => {
+		let returnTo: HTMLElement | null = null;
+		const inRegion = (node: EventTarget | null) =>
+			node instanceof Node && Boolean(regionRef.current?.contains(node));
+		const onFocusIn = (e: FocusEvent) => {
+			if (inRegion(e.target) && !inRegion(e.relatedTarget)) {
+				returnTo =
+					e.relatedTarget instanceof HTMLElement ? e.relatedTarget : null;
+			}
+		};
+		const onWrap = (e: Event) => {
+			if (!inRegion(e.target) || !returnTo?.isConnected) return;
+			e.preventDefault();
+			returnTo.focus();
+		};
+		document.addEventListener("focusin", onFocusIn);
+		document.addEventListener("react-aria-landmark-navigation", onWrap);
+		return () => {
+			document.removeEventListener("focusin", onFocusIn);
+			document.removeEventListener("react-aria-landmark-navigation", onWrap);
+		};
+	}, [regionRef]);
+}
+
+/**
  * Where the toasts appear: once per window, at the bottom end. Its name is React Aria's own ("3 notifications"),
  * which changes with the count: React Aria registers the region for F6 only when its name changes after the
  * first toast renders, so a fixed `aria-label` would leave it unreachable by F6 (react-aria 1.22.1).
  */
 export function ToastRegion({ queue, strings, className }: ToastRegionProps) {
 	const text = { ...uiStrings.toast, ...strings };
+	const regionRef = useRef<HTMLDivElement>(null);
+	useLandmarkReturn(regionRef);
 	return (
 		<AriaToastRegion
+			ref={regionRef}
 			data-slot="toast-region"
 			queue={queue}
 			className={cn(
@@ -106,8 +147,8 @@ export function ToastRegion({ queue, strings, className }: ToastRegionProps) {
 						data-tone={toast.content.tone}
 						toast={toast}
 						className={cn(
-							"flex w-popover-s max-w-full items-start gap-3 rounded-control border border-l-4 border-border-default",
-							"bg-surface-overlay py-3 pr-2 pl-edge text-ui text-text shadow-elevated outline-none",
+							"flex w-popover-s max-w-full items-start gap-3 rounded-control border border-s-4 border-border-default",
+							"bg-surface-overlay py-3 pe-2 ps-edge text-ui text-text shadow-elevated outline-none",
 							"data-focus-visible:focus-outline animate-in fade-in-0",
 							floatingMotion,
 							edge,

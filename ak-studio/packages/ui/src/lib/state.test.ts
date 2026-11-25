@@ -213,8 +213,8 @@ describe("row (DataTable, Tree)", () => {
 			expect(fill(classes)).toBe(
 				s.selected
 					? s.hovered || s.pressed
-						? "bg-fill-pressed"
-						: "bg-fill-hover"
+						? "bg-fill-hover"
+						: "bg-fill"
 					: s.pressed
 						? "bg-fill-hover"
 						: s.hovered

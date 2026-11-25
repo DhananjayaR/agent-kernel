@@ -35,11 +35,7 @@ const meta = {
 	render: (args) => (
 		<div className="flex h-72 items-start">
 			<Menu {...args}>
-				<MenuItem
-					id="open-editor"
-					icon={<ExternalLinkIcon />}
-					shortcut="Ctrl+E"
-				>
+				<MenuItem id="open-editor" icon={<ExternalLinkIcon />}>
 					Open in editor
 				</MenuItem>
 				<MenuItem id="reveal" icon={<FolderOpenIcon />}>
@@ -55,16 +51,6 @@ const meta = {
 			</Menu>
 		</div>
 	),
-	parameters: {
-		// axe's label-content-name-mismatch counts a menu item's visible shortcut ("Ctrl+E") as label text. It is
-		// not part of the label (WCAG 2.5.3 concerns the label): React Aria exposes it as the item's description,
-		// as Spectrum does, and the Open story asserts the name and the description.
-		a11y: {
-			config: {
-				rules: [{ id: "label-content-name-mismatch", enabled: false }],
-			},
-		},
-	},
 } satisfies Meta<typeof Menu>;
 
 export default meta;
@@ -74,7 +60,7 @@ const triggerOf = (canvasElement: HTMLElement) =>
 	within(canvasElement).getByRole("button", { name: "Project actions" });
 const menu = () => within(document.body).findByRole("menu");
 
-/** Open: the solid floating layer, 32 px items with an 8 px radius, a shortcut, a disabled item. */
+/** Open: the solid floating layer, 32 px items with an 8 px radius, a disabled item. */
 export const Open: Story = {
 	args: { defaultOpen: true },
 	play: async () => {
@@ -88,9 +74,7 @@ export const Open: Story = {
 		const first = items[0] as HTMLElement;
 		await expectHeight(first, 32);
 		await expectStyle(first, "border-top-left-radius", "8px");
-		await expect(first).toHaveTextContent("Ctrl+E");
 		await expect(first).toHaveAccessibleName("Open in editor");
-		await expect(first).toHaveAccessibleDescription("Ctrl+E");
 		const disabled = items[3] as HTMLElement;
 		await expect(disabled).toHaveAttribute("aria-disabled", "true");
 		await expectTokenColour(disabled, "color", "text-disabled-text");
@@ -178,5 +162,44 @@ export const Selection: Story = {
 				.getByRole("menuitemradio", { name: "Light" })
 				.querySelector("svg"),
 		).toBeNull();
+	},
+};
+
+/**
+ * Shortcuts: an item shows its keyboard shortcut; React Aria exposes it as the item's description, so the name
+ * stays the label. axe's label-content-name-mismatch counts the visible shortcut as label text (WCAG 2.5.3
+ * concerns the label, not a shortcut hint), so it is off for this story only.
+ */
+export const Shortcuts: Story = {
+	args: { defaultOpen: true },
+	parameters: {
+		a11y: {
+			config: {
+				rules: [{ id: "label-content-name-mismatch", enabled: false }],
+			},
+		},
+	},
+	render: (args) => (
+		<div className="flex h-72 items-start">
+			<Menu {...args}>
+				<MenuItem
+					id="open-editor"
+					icon={<ExternalLinkIcon />}
+					shortcut="Ctrl+E"
+				>
+					Open in editor
+				</MenuItem>
+				<MenuItem id="reveal" icon={<FolderOpenIcon />} shortcut="Ctrl+R">
+					Reveal in file manager
+				</MenuItem>
+			</Menu>
+		</div>
+	),
+	play: async () => {
+		const el = await menu();
+		const first = within(el).getAllByRole("menuitem")[0] as HTMLElement;
+		await expect(first).toHaveTextContent("Ctrl+E");
+		await expect(first).toHaveAccessibleName("Open in editor");
+		await expect(first).toHaveAccessibleDescription("Ctrl+E");
 	},
 };

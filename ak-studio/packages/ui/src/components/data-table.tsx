@@ -5,13 +5,13 @@
 // every row. Virtualising it (React Aria `Virtualizer` with `TableLayout`, as spike S1 did) is left to the
 // first table that needs thousands of rows.
 //
-// Rows: hover moves the fill a stop; a selected row takes a stronger fill and a 2 px start edge in
+// Rows: hover moves the fill a stop; a selected row takes the neutral fill (8%, 12% while hovered) and a 2 px start edge in
 // text-accent-primary, so selection is not colour alone and holds 3:1 on every surface; disabled rows take the
 // disabled text colour. Colours come from `rowColours` and `rowEdgeColour` (lib/state.ts). Cells show `text`-
-// coloured content only: muted text drops below 4.5:1 on a row fill. Sortable columns show the direction with an
-// arrow icon (and `aria-sort`).
+// coloured content only: muted text drops below 4.5:1 on a row fill. A sortable column shows an up-down icon at
+// rest and the direction with an arrow once sorted (and `aria-sort`).
 //
-// Keyboard model (React Aria Table, APG grid; every line is asserted by the Keyboard story):
+// Keyboard model (React Aria Table, APG grid; asserted by the Keyboard, SelectAll and InAModal stories):
 // - Tab enters the table once, on the last focused row (the first row the first time); the next Tab leaves it.
 // - ArrowDown and ArrowUp move between rows; Home and End to the first and last row. With `selectionMode`,
 //   selection follows focus (Spectrum's highlight selection, `selectionBehavior="replace"`, the default here);
@@ -19,7 +19,10 @@
 // - Enter runs `onRowAction` on the focused row.
 // - ArrowRight moves from a row into its cells, ArrowLeft back to the row; ArrowUp from a cell in the first row
 //   reaches the column header, where Enter sorts a sortable column (again: the other direction).
-import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
+// - Escape: inside an overlay (Modal, Popover) it closes the overlay, even with rows selected (the collection does
+//   not take it); outside, it clears a non-empty selection. Mod+A (Ctrl+A, Cmd+A on macOS) selects all rows with
+//   `selectionMode="multiple"` and does nothing otherwise.
+import { ArrowDownIcon, ArrowUpIcon, ChevronsUpDownIcon } from "lucide-react";
 import { createContext, type ReactNode, useContext } from "react";
 import {
 	Table as AriaTable,
@@ -35,6 +38,7 @@ import {
 	TableHeader,
 	type TableHeaderProps,
 } from "react-aria-components";
+import { useInOverlay } from "../lib/overlay";
 import { rowColours, rowEdgeColour } from "../lib/state";
 import { motion } from "../lib/styles";
 import { cn } from "../lib/utils";
@@ -62,9 +66,11 @@ export type DataTableProps = Omit<
 export function DataTable({
 	density = "regular",
 	selectionBehavior = "replace",
+	escapeKeyBehavior,
 	className,
 	...props
 }: DataTableProps) {
+	const inOverlay = useInOverlay();
 	return (
 		<DensityContext.Provider value={density}>
 			<div
@@ -78,6 +84,9 @@ export function DataTable({
 					data-slot="data-table"
 					data-density={density}
 					selectionBehavior={selectionBehavior}
+					escapeKeyBehavior={
+						escapeKeyBehavior ?? (inOverlay ? "none" : "clearSelection")
+					}
 					className="w-full border-collapse text-left text-ui text-text"
 					{...props}
 				/>
@@ -130,13 +139,28 @@ export function DataTableColumn({
 			}
 			{...props}
 		>
-			{({ sortDirection }) => (
+			{({ sortDirection, allowsSorting }) => (
 				<span className="flex items-center gap-text-to-visual">
 					{children}
 					{sortDirection === "ascending" ? (
-						<ArrowUpIcon aria-hidden="true" className="size-4 shrink-0" />
+						<ArrowUpIcon
+							data-slot="sort-icon"
+							aria-hidden="true"
+							className="size-4 shrink-0"
+						/>
 					) : sortDirection === "descending" ? (
-						<ArrowDownIcon aria-hidden="true" className="size-4 shrink-0" />
+						<ArrowDownIcon
+							data-slot="sort-icon"
+							aria-hidden="true"
+							className="size-4 shrink-0"
+						/>
+					) : allowsSorting ? (
+						// At rest a sortable column shows that it sorts (a non-text cue, at least 3:1 on the header).
+						<ChevronsUpDownIcon
+							data-slot="sort-icon"
+							aria-hidden="true"
+							className="size-4 shrink-0 text-text-muted"
+						/>
 					) : null}
 				</span>
 			)}
@@ -170,7 +194,7 @@ export function DataTableRow<T extends object>({
 			data-slot="data-table-row"
 			className={({ isHovered, isPressed, isSelected, isDisabled }) =>
 				cn(
-					"border-b border-border-default",
+					"menu-target border-b border-border-default",
 					density === "compact" ? "h-row-compact" : "h-row",
 					insetFocus,
 					motion,

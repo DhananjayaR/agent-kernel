@@ -87,8 +87,12 @@
 	--role-border-control: #597eae; /* from --ak-border #173964 */
 	--role-focus-ring: #ff5e32; /* --ak-primary */
 
-	/* Behind a modal: the dark surface at 70%, so the page recedes into the ground it sits on. */
-	--role-scrim: color-mix(in oklab, var(--role-surface) 70%, transparent);
+	/*
+	 * Behind a modal: the darkest surface at 85%. No existing dark colour is darker than the surface, so the scrim
+	 * alone cannot separate the modal's fill from the page by 1.5:1 (the ceiling is 1.42:1); the dark modal also
+	 * draws its edge in border-control, which holds 3:1 against the scrimmed page (modal.tsx).
+	 */
+	--role-scrim: color-mix(in oklab, var(--role-surface) 85%, transparent);
 }
 
 [data-theme="light"] {
@@ -323,6 +327,17 @@
 		(var(--tree-item-level, 1) - 1) *
 		var(--spacing-tree-indent)
 	);
+}
+
+/*
+ * The row a context menu is open for (ContextMenu sets data-menu-open on it): a 2 px inset outline in the
+ * control colour, so the row stays marked when the pointer or the focus is in the menu.
+ */
+@utility menu-target {
+	&[data-menu-open] {
+		outline: var(--spacing-focus-ring) solid var(--color-border-control);
+		outline-offset: calc(var(--spacing-focus-ring) * -1);
+	}
 }
 
 /* Numbers in JetBrains Mono with tabular figures, so columns of durations, counts and money line up. */

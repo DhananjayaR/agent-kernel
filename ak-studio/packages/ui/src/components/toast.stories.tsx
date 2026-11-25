@@ -9,6 +9,7 @@ import {
 	tabTo,
 } from "../lib/story-checks";
 import { Button } from "./button";
+import { Modal } from "./modal";
 import {
 	type BackgroundResult,
 	createToastQueue,
@@ -105,10 +106,15 @@ export const Keyboard: Story = {
 		});
 		await tabTo(before);
 		const { region } = await toasts();
+		// F6 moves to the region, which shows the focus ring; Shift+F6 goes back.
 		await userEvent.keyboard("{F6}");
-		await waitFor(() =>
-			expect(region.contains(document.activeElement)).toBe(true),
-		);
+		await waitFor(() => expect(region).toHaveFocus());
+		await expectFocusRing(region);
+		await userEvent.keyboard("{Shift>}{F6}{/Shift}");
+		await waitFor(() => expect(before).toHaveFocus());
+		await userEvent.keyboard("{F6}");
+		await waitFor(() => expect(region).toHaveFocus());
+		// Tab reaches a toast's action; Enter runs it and closes the toast; focus moves to the next toast.
 		const show = within(region).getByRole("button", { name: "Show" });
 		await tabTo(show);
 		await expectFocusRing(show);
@@ -117,14 +123,46 @@ export const Keyboard: Story = {
 		await waitFor(() =>
 			expect(within(region).getAllByRole("alertdialog")).toHaveLength(2),
 		);
-		await waitFor(() => expect(document.activeElement).not.toBe(document.body));
-		// Dismiss closes a toast without acting.
-		const dismiss = within(region).getAllByRole("button", {
-			name: "Dismiss",
-		})[0] as HTMLElement;
-		await userEvent.click(dismiss);
+		const next = document.activeElement as HTMLElement;
+		await expect(next).toHaveAttribute("role", "alertdialog");
+		await expectFocusRing(next);
+		// Dismissing the rest: when the last toast closes, focus returns to where it was before F6.
+		await userEvent.keyboard("{Tab}{Enter}");
 		await waitFor(() =>
-			expect(within(region).queryAllByRole("alertdialog")).toHaveLength(1),
+			expect(within(region).getAllByRole("alertdialog")).toHaveLength(1),
 		);
+		await userEvent.keyboard("{Tab}{Enter}");
+		await waitFor(() => expect(before).toHaveFocus());
+		await expect(showResults).toHaveBeenCalledOnce();
+	},
+};
+
+/** A toast shown before a modal opens stays visible above the modal's scrim. */
+export const AboveAModal: Story = {
+	args: { results: [tones[1] as BackgroundResult] },
+	render: (args) => (
+		<>
+			<Harness {...args} />
+			<Modal
+				defaultOpen
+				title="Python environment"
+				trigger={<Button>Show environment</Button>}
+			>
+				<p>The project runs on Python 3.12.</p>
+			</Modal>
+		</>
+	),
+	play: async () => {
+		const region = await within(document.body).findByRole("region", {
+			name: /notification/i,
+		});
+		const toast = within(region).getByRole("alertdialog");
+		await within(document.body).findByRole("dialog");
+		const box = toast.getBoundingClientRect();
+		const top = document.elementFromPoint(
+			box.left + box.width / 2,
+			box.top + box.height / 2,
+		);
+		await expect(toast.contains(top)).toBe(true);
 	},
 };

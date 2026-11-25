@@ -125,6 +125,37 @@ export const Keyboard: Story = {
 	},
 };
 
+/** Disabled: a fixed handle is a dashed rule in the disabled colour, with no tab stop and no hover state. */
+export const Disabled: Story = {
+	render: (args) => (
+		<div className="h-80 w-full max-w-3xl border border-border-default">
+			<ResizablePanels {...args}>
+				<ResizablePanel id="canvas" defaultSize="70%">
+					<div className="p-4">Canvas</div>
+				</ResizablePanel>
+				<ResizableHandle aria-label="Resize the inspector" disabled />
+				<ResizablePanel id="inspector" defaultSize="30%">
+					<div className="p-4">Inspector</div>
+				</ResizablePanel>
+			</ResizablePanels>
+			<button type="button">After</button>
+		</div>
+	),
+	play: async ({ canvasElement }) => {
+		const el = handle(canvasElement);
+		await expect(el).toHaveAttribute("data-separator", "disabled");
+		await expect(el).not.toHaveAttribute("tabindex");
+		await expect(getComputedStyle(el).borderLeftStyle).toBe("dashed");
+		await expectTokenColour(el, "border-top-color", "border-disabled-border");
+		const box = el.getBoundingClientRect();
+		fireEvent.pointerMove(el, {
+			clientX: box.left + 2,
+			clientY: box.top + box.height / 2,
+		});
+		await expect(el).toHaveAttribute("data-separator", "disabled");
+	},
+};
+
 /** Stacked: the shell's bottom panel. The rule runs across. */
 export const Vertical: Story = {
 	args: { orientation: "vertical", id: "shell" },
