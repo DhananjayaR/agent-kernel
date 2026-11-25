@@ -50,7 +50,7 @@ export const listItem = [
 	"text-ui text-text outline-none select-none",
 	// Spectrum 2's next stop; the scale's 12% step stands in for the spike's 14% mix (no 14% step exists).
 	"data-hovered:bg-fill-hover data-focused:bg-fill-hover",
-	"data-focus-visible:outline-2 data-focus-visible:-outline-offset-2 data-focus-visible:outline-focus-ring",
+	"focus-ring-inset",
 	"data-disabled:text-disabled-text",
 	"[&_svg]:size-4 [&_svg]:shrink-0",
 ].join(" ");

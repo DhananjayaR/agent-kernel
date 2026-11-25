@@ -69,6 +69,16 @@ export async function expectFocusRing(el: Element): Promise<void> {
 	await expect(style.outlineOffset).toBe("2px");
 }
 
+/** The focus indicator of an item inside a list, menu, table or tree: 2 px solid, drawn 2 px inside its edge. */
+export async function expectInsetFocusRing(el: Element): Promise<void> {
+	await waitFor(() => expect(el).toHaveAttribute("data-focus-visible"));
+	await settle(el);
+	const style = getComputedStyle(el);
+	await expect(style.outlineStyle).toBe("solid");
+	await expect(style.outlineWidth).toBe("2px");
+	await expect(style.outlineOffset).toBe("-2px");
+}
+
 /** No focus indicator (for example after a pointer click on a text field). */
 export async function expectNoFocusRing(el: Element): Promise<void> {
 	await settle(el);
@@ -127,7 +137,11 @@ function rgbOf(value: string): Rgb {
  */
 export async function expectNonTextContrastOnSurfaces(
 	el: Element,
-	property: "background-color" | "border-top-color" | "color",
+	property:
+		| "background-color"
+		| "border-top-color"
+		| "border-left-color"
+		| "color",
 ): Promise<void> {
 	await settle(el);
 	const colour = rgbOf(getComputedStyle(el).getPropertyValue(property));
@@ -160,4 +174,27 @@ export async function expectPlaceholderColour(
 	const expected = getComputedStyle(probe).color;
 	probe.remove();
 	await expect(getComputedStyle(input, "::placeholder").color).toBe(expected);
+}
+
+/**
+ * A floating layer is solid (decided in P0): the overlay surface, fully opaque, no backdrop blur, and the
+ * measured elevated shadow. `el` is the layer itself (it may be portalled to <body>; the theme is on <html>).
+ */
+export async function expectSolidLayer(el: Element): Promise<void> {
+	await settle(el);
+	await expectTokenColour(el, "background-color", "bg-surface-overlay");
+	const style = getComputedStyle(el);
+	await expect(style.opacity).toBe("1");
+	await expect(style.backdropFilter).toBe("none");
+	const probe = document.createElement("span");
+	probe.className = "shadow-elevated";
+	(el.parentElement ?? document.body).appendChild(probe);
+	const shadow = getComputedStyle(probe).boxShadow;
+	probe.remove();
+	await expect(style.boxShadow).toBe(shadow);
+}
+
+/** Waits until focus is on `el` or inside it (focus moves after an overlay's entry or exit animation). */
+export async function expectFocusWithin(el: Element): Promise<void> {
+	await waitFor(() => expect(el.contains(document.activeElement)).toBe(true));
 }

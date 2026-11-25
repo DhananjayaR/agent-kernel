@@ -221,6 +221,7 @@
 	--spacing-focus-ring: 2px; /* focus-indicator-thickness */
 	--spacing-focus-gap: 2px; /* focus-indicator-gap (outline-offset) */
 	--spacing-border-field: 2px; /* border-width-200 (fields) */
+	--spacing-tree-indent: 16px; /* TreeView indent per level (S, not measured in S1) */
 
 	/* Radii (T corner-radius-*) */
 	--radius-sm: 4px; /* small: tree row, tab focus */
@@ -278,6 +279,16 @@
 		outline-offset: var(--spacing-focus-gap);
 	}
 }
+/*
+ * The same ring drawn inside the element's edge, for items that sit edge to edge (list, menu, table and tree
+ * rows and cells), where an outside ring would be clipped or overlap the neighbour.
+ */
+@utility focus-ring-inset {
+	&[data-focus-visible] {
+		outline: var(--spacing-focus-ring) solid var(--color-focus-ring);
+		outline-offset: calc(var(--spacing-focus-ring) * -1);
+	}
+}
 
 /*
  * Spectrum 2's press: the control pushes in 2 px while [data-pressed] (S pressScale; perspective is the
@@ -288,6 +299,18 @@
 		transform: perspective(var(--spacing-control-m))
 			translate3d(0, 0, var(--press-depth));
 	}
+}
+
+/*
+ * A TreeView row's indent: one step per level below the top (React Aria sets --tree-item-level on each row).
+ * The 12 px edge padding is added so a top-level row lines up with the other rows of the Studio.
+ */
+@utility tree-indent {
+	padding-inline-start: calc(
+		var(--spacing-edge) +
+		(var(--tree-item-level, 1) - 1) *
+		var(--spacing-tree-indent)
+	);
 }
 
 /* Numbers in JetBrains Mono with tabular figures, so columns of durations, counts and money line up. */

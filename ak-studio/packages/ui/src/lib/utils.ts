@@ -45,6 +45,7 @@ export const THEME_KEYS = {
 		"focus-ring",
 		"focus-gap",
 		"border-field",
+		"tree-indent",
 	],
 	"font-weight": ["control", "action"],
 	font: ["ui", "heading", "mono"],

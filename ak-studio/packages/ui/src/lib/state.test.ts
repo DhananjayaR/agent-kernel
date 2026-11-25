@@ -5,8 +5,12 @@ import {
 	type ControlState,
 	fieldBoxColours,
 	fieldValueColour,
+	rowColours,
+	rowEdgeColour,
 	segmentColours,
 	switchThumbColour,
+	tabColour,
+	tabIndicatorColour,
 	toggleIndicatorColours,
 } from "./state";
 
@@ -170,6 +174,54 @@ describe("segment (SegmentedControl)", () => {
 			expect(fill(classes)).toBe(
 				s.pressed ? "bg-fill-hover" : s.hovered ? "bg-fill" : "bg-transparent",
 			);
+		});
+	}
+});
+
+describe("tab (Tabs)", () => {
+	const states = combinations(["hovered", "pressed", "selected", "disabled"]);
+	for (const s of states) {
+		it(describeState(s), () => {
+			const label = tabColour(s);
+			const indicator = tabIndicatorColour(s);
+			if (s.disabled) {
+				expect(label).toBe("text-disabled-text");
+				expect(indicator).toBe(s.selected ? "bg-disabled-text" : null);
+				return;
+			}
+			expect(label).toBe(
+				s.selected || s.hovered || s.pressed ? "text-text" : "text-text-muted",
+			);
+			expect(indicator).toBe(s.selected ? "bg-text-accent-primary" : null);
+		});
+	}
+});
+
+describe("row (DataTable, Tree)", () => {
+	const states = combinations(["hovered", "pressed", "selected", "disabled"]);
+	for (const s of states) {
+		it(describeState(s), () => {
+			const classes = rowColours(s);
+			const edge = rowEdgeColour(s);
+			if (s.disabled) {
+				expectOnlyDisabledColours(classes);
+				expect(edge).toBeNull();
+				return;
+			}
+			expect(classes).toContain("text-text");
+			expect(classes).not.toContain("muted");
+			expect(fill(classes)).toBe(
+				s.selected
+					? s.hovered || s.pressed
+						? "bg-fill-pressed"
+						: "bg-fill-hover"
+					: s.pressed
+						? "bg-fill-hover"
+						: s.hovered
+							? "bg-fill"
+							: "bg-transparent",
+			);
+			expect(edge).toBe(s.selected ? "bg-text-accent-primary" : null);
 		});
 	}
 });
