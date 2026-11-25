@@ -2,10 +2,13 @@
 // gate. It exists to prove the bridge and the theme preference work end to end.
 import type { ThemePreference } from "@ak-studio/contract";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
 import { getTransportKind, isStudioFailure } from "../bridge/client";
-import { appInfoQueryKey, fetchAppInfo, storeTheme } from "../queries";
-import { applyTheme, browserThemeEnvironment } from "../theme";
+import {
+	appInfoQueryKey,
+	cacheStoredTheme,
+	fetchAppInfo,
+	storeTheme,
+} from "../queries";
 
 const THEMES: readonly ThemePreference[] = ["system", "dark", "light"];
 
@@ -18,17 +21,8 @@ export function Home() {
 	const info = useQuery({ queryKey: appInfoQueryKey, queryFn: fetchAppInfo });
 	const setTheme = useMutation({
 		mutationFn: storeTheme,
-		onSuccess: (stored) =>
-			queryClient.setQueryData(appInfoQueryKey, (old) =>
-				old ? { ...old, theme: stored.theme } : old,
-			),
+		onSuccess: (stored) => cacheStoredTheme(queryClient, stored),
 	});
-
-	const theme = info.data?.theme;
-	useEffect(
-		() => (theme ? applyTheme(theme, browserThemeEnvironment()) : undefined),
-		[theme],
-	);
 
 	return (
 		<main>

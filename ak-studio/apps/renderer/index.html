@@ -1,8 +1,18 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en">
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta name="color-scheme" content="light dark" />
+		<!-- Native controls follow the applied theme (data-theme is set by main.tsx before first paint). -->
+		<style>
+			:root[data-theme="dark"] {
+				color-scheme: dark;
+			}
+			:root[data-theme="light"] {
+				color-scheme: light;
+			}
+		</style>
 		<title>Agent Kernel Studio</title>
 	</head>
 	<body>
