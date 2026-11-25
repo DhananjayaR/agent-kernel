@@ -77,7 +77,8 @@ type tokens are Spectrum 2 medium, one density (32 px controls, 40 px rows, 14 p
 `font-ui` (Inter, the page default and button labels), `font-heading` (Archivo, the default for headings),
 `font-mono` (JetBrains Mono) and `mono-figures` (JetBrains Mono with tabular figures, for durations, counts and
 money). The default theme preference is `system`, which follows the OS and is dark when the OS reports neither
-(`apps/renderer/src/theme.ts`).
+(`apps/renderer/src/theme.ts`). Chromium reports light when the OS gives no signal (for example bare Linux), so in practice such a machine
+opens light; the dark fallback applies only where neither scheme is reported.
 The fonts are under the SIL Open Font License 1.1: their copyright lines and the licence text are in
 `apps/desktop/resources/THIRD-PARTY-NOTICES.txt`, which the packaged app ships in its `resources/` folder. The renderer imports the
 tokens from `apps/renderer/src/styles.css`; Storybook from `packages/ui/.storybook/preview.css`. The token story

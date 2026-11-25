@@ -28,6 +28,9 @@ export type SystemScheme = ResolvedTheme | "unknown";
 /**
  * The theme for a preference. `system` follows the system's scheme, and is dark when the system reports neither
  * (decided at the P1a design gate: dark matches the brand's navy ground).
+ * In practice Chromium reports light when the OS gives no signal (bare Linux included), so the dark fallback
+ * applies only where matchMedia is missing or reports neither scheme. Main cannot tell either: nativeTheme exposes
+ * only a dark/not-dark boolean.
  */
 export function resolveTheme(
 	preference: ThemePreference,
