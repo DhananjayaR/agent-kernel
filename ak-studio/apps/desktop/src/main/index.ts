@@ -36,6 +36,7 @@ import {
 	persistWindowState,
 	readWindowState,
 	WINDOW_STATE_FILE,
+	windowBackground,
 } from "./window";
 
 /**
@@ -122,6 +123,8 @@ function createWindow(): BrowserWindow {
 		minHeight: MIN_SIZE.height,
 		show: false,
 		title: "Agent Kernel Studio",
+		// The stored theme is already applied (startBridge sets nativeTheme.themeSource first): no white flash.
+		backgroundColor: windowBackground(nativeTheme.shouldUseDarkColors),
 		webPreferences: {
 			preload: preloadPath,
 			contextIsolation: true,
@@ -167,6 +170,7 @@ function startBridge(): void {
 			preferencesFile: join(app.getPath("userData"), PREFERENCES_FILE),
 			onThemeChange: (theme) => {
 				nativeTheme.themeSource = theme;
+				syncWindowBackground();
 			},
 		},
 	});
@@ -179,6 +183,13 @@ function startBridge(): void {
 		// The renderer loaded from app:// (or the dev server), its preload works, and main answered it.
 		onFirstAnswer: () => console.log("[studio] bridge ready"),
 	}).install(ipcMain);
+}
+
+/** Keeps the window's background on the applied theme (a stored change, or the system's for `system`). */
+function syncWindowBackground(): void {
+	mainWindow?.setBackgroundColor(
+		windowBackground(nativeTheme.shouldUseDarkColors),
+	);
 }
 
 function focusMainWindow(): void {
@@ -195,6 +206,7 @@ function start(): void {
 		hardenWebContents(contents, devServerUrl),
 	);
 	app.on("second-instance", focusMainWindow);
+	nativeTheme.on("updated", syncWindowBackground);
 
 	void app.whenReady().then(() => {
 		const ses = session.defaultSession;

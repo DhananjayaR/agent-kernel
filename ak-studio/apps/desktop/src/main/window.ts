@@ -20,6 +20,21 @@ export interface WindowState {
 	isMaximized: boolean;
 }
 
+/**
+ * The window's background before the renderer paints (and behind it while resizing): the theme's surface colour,
+ * `--role-surface` in packages/ui/src/theme.css (window.test.ts keeps the two equal). Without it a dark theme
+ * opens with a white flash.
+ */
+export const WINDOW_BACKGROUND = { dark: "#011428", light: "#ffffff" } as const;
+
+/**
+ * The background for the theme main has applied: `nativeTheme.shouldUseDarkColors`, which follows the stored
+ * preference (`themeSource`), and the system's setting for `system`.
+ */
+export function windowBackground(useDarkColors: boolean): string {
+	return useDarkColors ? WINDOW_BACKGROUND.dark : WINDOW_BACKGROUND.light;
+}
+
 export const DEFAULT_SIZE = { width: 1280, height: 800 } as const;
 export const MIN_SIZE = { width: 800, height: 600 } as const;
 export const WINDOW_STATE_FILE = "window-state.json";

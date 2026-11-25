@@ -8,6 +8,8 @@ import {
 	parseWindowState,
 	type Rect,
 	readWindowState,
+	WINDOW_BACKGROUND,
+	windowBackground,
 	writeWindowState,
 } from "./window";
 
@@ -145,5 +147,28 @@ describe("readWindowState / writeWindowState", () => {
 		const corrupt = join(dir, "corrupt.json");
 		writeFileSync(corrupt, "{not json");
 		expect(readWindowState(corrupt)).toBeNull();
+	});
+});
+
+describe("windowBackground", () => {
+	it("is the theme's surface colour", () => {
+		expect(windowBackground(true)).toBe(WINDOW_BACKGROUND.dark);
+		expect(windowBackground(false)).toBe(WINDOW_BACKGROUND.light);
+	});
+
+	it("matches --role-surface in the design tokens, so the first paint does not change colour", () => {
+		const css = readFileSync(
+			join(import.meta.dirname, "../../../../packages/ui/src/theme.css"),
+			"utf8",
+		);
+		const surface = (selector: string) => {
+			const start = css.indexOf(selector);
+			const block = css.slice(start, css.indexOf("}", start));
+			return /--role-surface:\s*(#[0-9a-f]{6})/i
+				.exec(block)?.[1]
+				?.toLowerCase();
+		};
+		expect(surface(':root,\n[data-theme="dark"]')).toBe(WINDOW_BACKGROUND.dark);
+		expect(surface('[data-theme="light"] {')).toBe(WINDOW_BACKGROUND.light);
 	});
 });
