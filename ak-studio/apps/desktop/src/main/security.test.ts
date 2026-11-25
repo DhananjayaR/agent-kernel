@@ -1,9 +1,11 @@
+import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import type { WebContents } from "electron";
 import { describe, expect, it } from "vitest";
 import {
 	APP_URL,
 	buildCsp,
+	DEV_REACT_PREAMBLE_HASH,
 	describeOrigin,
 	hardenWebContents,
 	isLoopbackDevServerUrl,
@@ -26,9 +28,21 @@ describe("buildCsp", () => {
 
 	it("also lets the dev server connect, over HTTP and WebSocket, in development", () => {
 		expect(buildCsp(`${DEV}/`)).toBe(
-			"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
-				"font-src 'self'; connect-src 'self' http://localhost:5173 ws://localhost:5173",
+			`default-src 'self'; script-src 'self' ${DEV_REACT_PREAMBLE_HASH}; style-src 'self' 'unsafe-inline'; ` +
+				"img-src 'self' data:; font-src 'self'; connect-src 'self' http://localhost:5173 ws://localhost:5173",
 		);
+	});
+
+	it("allows no inline script hash in production", () => {
+		expect(buildCsp()).not.toContain("sha256");
+	});
+
+	it("pins the hash of the installed plugin's fast-refresh preamble", async () => {
+		const { default: react } = await import("@vitejs/plugin-react");
+		const hash = createHash("sha256")
+			.update(react.preambleCode.replace("__BASE__", "/"))
+			.digest("base64");
+		expect(DEV_REACT_PREAMBLE_HASH).toBe(`'sha256-${hash}'`);
 	});
 });
 

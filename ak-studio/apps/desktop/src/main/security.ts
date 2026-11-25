@@ -18,16 +18,28 @@ const BASE_CSP: ReadonlyArray<readonly [string, string]> = [
 ];
 
 /**
+ * Development only: SHA-256 of the inline module script `@vitejs/plugin-react` puts in index.html for fast
+ * refresh (its `preambleCode` with base "/"). security.test.ts recomputes it from the installed plugin, so a
+ * plugin upgrade that changes the script fails a test instead of the dev window.
+ */
+export const DEV_REACT_PREAMBLE_HASH =
+	"'sha256-Z2/iFzh9VMlVkEOar1f/oSHWwQk3ve1qk/C2WdsC4Xk='";
+
+/**
  * The content security policy. In development `devServerUrl` (electron-vite's dev server) is also allowed to
- * connect, over HTTP and its WebSocket (Vite's hot reload).
+ * connect, over HTTP and its WebSocket (Vite's hot reload), and the one known inline fast-refresh script may
+ * run. Production is unchanged: `script-src 'self'`.
  */
 export function buildCsp(devServerUrl?: string): string {
 	const dev = devServerUrl ? devOrigins(devServerUrl) : [];
-	return BASE_CSP.map(([directive, value]) =>
-		directive === "connect-src" && dev.length > 0
-			? `${directive} ${value} ${dev.join(" ")}`
-			: `${directive} ${value}`,
-	).join("; ");
+	return BASE_CSP.map(([directive, value]) => {
+		if (dev.length === 0) return `${directive} ${value}`;
+		if (directive === "connect-src")
+			return `${directive} ${value} ${dev.join(" ")}`;
+		if (directive === "script-src")
+			return `${directive} ${value} ${DEV_REACT_PREAMBLE_HASH}`;
+		return `${directive} ${value}`;
+	}).join("; ");
 }
 
 /** The dev server's HTTP origin and the matching WebSocket origin. */
