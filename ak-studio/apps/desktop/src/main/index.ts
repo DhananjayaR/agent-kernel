@@ -50,15 +50,19 @@ declare global {
 	var __akStudioTestHooks: StudioTestHooks | undefined;
 }
 
-// A packaged build refuses the remote-debugging switches (the DevTools protocol, unauthenticated; no fuse covers
+// A release build: packaged (checked at run time), or a production build (`__STUDIO_DEV__` false, set at build
+// time). Either check alone makes it one, so a packaged app that `app.isPackaged` misjudges still counts.
+const releaseBuild = app.isPackaged || !__STUDIO_DEV__;
+
+// A release build refuses the remote-debugging switches (the DevTools protocol, unauthenticated; no fuse covers
 // it). Checked first and synchronously, so the app exits (below, before the single-instance lock) before
 // Chromium opens the port.
 let startupError: string | undefined;
-const refusedSwitch = refusedPackagedSwitch(app.isPackaged, (name) =>
+const refusedSwitch = refusedPackagedSwitch(releaseBuild, (name) =>
 	app.commandLine.hasSwitch(name),
 );
 if (refusedSwitch) {
-	startupError = `--${refusedSwitch} is not accepted by a packaged build`;
+	startupError = `--${refusedSwitch} is not accepted by a packaged or production build`;
 }
 
 // The electron-vite dev server: trusted only in development and e2e builds (`__STUDIO_DEV__`, set at build time,
@@ -128,7 +132,7 @@ function createWindow(): BrowserWindow {
 			webviewTag: false,
 			// The spellchecker downloads dictionaries; the app makes no network calls.
 			spellcheck: false,
-			devTools: !app.isPackaged,
+			devTools: !releaseBuild,
 		},
 	});
 	appContents.add(win.webContents);
@@ -204,7 +208,7 @@ function start(): void {
 			Menu.buildFromTemplate(
 				buildMenuTemplate({
 					platform: process.platform,
-					isPackaged: app.isPackaged,
+					isPackaged: releaseBuild,
 				}),
 			),
 		);

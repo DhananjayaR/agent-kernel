@@ -1,6 +1,7 @@
-// Electron smoke test: the built, unpackaged app (apps/desktop/out/, from `pnpm build`) with the real main
+// Electron smoke test: the built, unpackaged app (apps/desktop/out/, from `pnpm build:e2e`) with the real main
 // process. Started with AK_STUDIO_TEST_HOOKS=1 so main exposes the request gate's counter, and with a fresh
-// --user-data-dir per test. Packaged builds have neither the hooks nor the --inspect support Playwright needs.
+// --user-data-dir per test. Production and packaged builds have no hooks, and packaged builds lack the --inspect
+// support Playwright needs.
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
@@ -35,7 +36,7 @@ async function withStudio(body: (studio: Studio) => Promise<void>) {
 	const mainEntry = join(desktopDir, "out/main/index.js");
 	if (!existsSync(mainEntry)) {
 		throw new Error(
-			`${mainEntry} is missing: run \`pnpm build\` first (pnpm test:e2e does)`,
+			`${mainEntry} is missing: run \`pnpm build:e2e\` first (pnpm test:e2e does)`,
 		);
 	}
 	// The `electron` package's main export is the path of the binary it downloaded.
@@ -85,7 +86,10 @@ function cancelledRequests(
 ): Promise<{ count: number; urls: readonly string[] }> {
 	return app.evaluate(() => {
 		const hooks = (globalThis as WithHooks).__akStudioTestHooks;
-		if (!hooks) throw new Error("test hooks missing: AK_STUDIO_TEST_HOOKS=1?");
+		if (!hooks)
+			throw new Error(
+				"test hooks missing: built with `pnpm build:e2e`, started with AK_STUDIO_TEST_HOOKS=1?",
+			);
 		return {
 			count: hooks.cancelledRequestCount(),
 			urls: hooks.cancelledRequestUrls(),
