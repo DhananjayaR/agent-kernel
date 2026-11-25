@@ -2,7 +2,7 @@
 
 **Date:** 24 November 2026. **Gate steps covered:** 1 (requirements), 2 (review of the sketch) and 3 (options),
 for the subjects in [P1a](../P1a-app-foundation.md#design-gate) that need no prototype to decide. Shell layout and
-the base component set need step 4 (stories) and are not settled here. **Nothing here is approved.** The owner
+the base component set need step 4 (stories) and are not settled here. **Approved 25 November 2026 by Dhananjaya Rajasinghe: all four recommendations (palette A, fonts 1, density I, follow the system with dark when unknown).** Before that, nothing here was approved. The owner
 picks; the pick is recorded in the P1a sign-off table and the README decision log.
 
 ## Sources

@@ -55,7 +55,7 @@ canvas. Options for palette, fonts, density and theme, with measured contrast:
 | Subject | Options explored | Decision | Approved by | Date |
 |---|---|---|---|---|
 | Style reference: how closely to follow Spectrum 2 (floating layers are solid, decided in P0) | | | | |
-| Palette, tokens, density, theme | | | | |
+| Palette, tokens, density, theme | 3 palettes, 2 font pairings, 3 densities, 3 default themes ([options](research/p1a-design-gate-options.md)) | Option A palette: Agent Kernel's current brand. Orange `#FF5E32` primary (dark text on fills), ice `#B1CDFF` / dusk `#3F598A` for the coding agent, navy ground; every role gets per-surface text variants tuned to 4.5:1. Fonts: Inter for UI, Archivo for headings, JetBrains Mono for code. Density: one, Spectrum 2 medium (32 px controls, 40 px rows, 14 px text, 48 px top bar). Default theme: follow the system setting, dark when unknown | Dhananjaya Rajasinghe | 25 Nov 2026 |
 | Shell layout | | | | |
 | Base component set | | | | |
 

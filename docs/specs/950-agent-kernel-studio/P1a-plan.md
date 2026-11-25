@@ -246,7 +246,7 @@ triggers.
 - [x] **Step 5:** Run every command locally on Linux and record the results. Mark the workflow and the Windows
   and macOS rows **Deferred (not executed)**. Commit.
 
-### Task 8: Tokens with the chosen palette (waits for the design gate)
+### Task 8: Tokens with the chosen palette (gate row signed off 25 Nov 2026)
 
 Replace the provisional token values with the approved palette, fonts, density and default theme. Add the
 per-surface text variants the options note calls for, each checked at 4.5:1 by the token story. Not dispatched
