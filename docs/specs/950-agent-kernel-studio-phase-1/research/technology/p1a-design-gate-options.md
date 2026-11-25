@@ -8,7 +8,7 @@ picks; the pick is recorded in the P1a sign-off table and the README decision lo
 ## Sources
 
 - The briefs: `00-project-brief.md` and `01-app-components.md`, read on `feature/950-agent-kernel-studio-phase-1`
-  (unapproved input). They are now in this folder: [00](../../00-project-brief.md), [01](../../01-app-components.md).
+  (unapproved input). They are now in the spec folder: [00](../../00-project-brief.md), [01](../../01-app-components.md).
 - The repository's current brand tokens: `docs/src/css/custom.css` (after the Open Agent Kernel rebrand).
 - The Spectrum 2 measurements from spike S1 ([spike-s1-components.md](spike-s1-components.md)).
 - Contrast is the WCAG 2 ratio, computed from the hex values below. Surfaces are the docs site's own:

@@ -9,7 +9,7 @@ the gate once; each phase doc lists only its screens, the questions to settle an
   [Phase 1 PRD](../PHASE-1-PRD.md) (revised 25 November 2026), which
   supersedes [issue #950](https://github.com/yaalalabs/agent-kernel/issues/950) where they differ, and from
   the screen's brief. The gate does not reopen those requirements. It decides how the screen delivers them.
-- **Existing designs are input, not a contract.** The briefs (00 to 09) in this folder
+- **Existing designs are input, not a contract.** The briefs (00 to 09) in the spec folder
   ([README](../README.md#phase-1-files)) and the
   Claude Design canvas are input. Use them as a starting sketch. Keep what works, change what does not, and
   do not spend time defending or attacking them.

@@ -55,8 +55,9 @@ outlives the app.
 Later phases are not planned here. Their briefs are parked in [later-phases/](later-phases/).
 
 **Phase 1 milestones.** The PRD splits Phase 1 into six milestones (section 5). The implementation calls
-Phase 1 "Release 1" and builds it in phases P0 to P12, in the milestones' order. The outcome column is the
-team's build order, kept here.
+Phase 1 "Release 1" and builds it in phases P0 to P12, in the milestones' order. The outcomes of milestones 1
+to 6 are the team's build order, kept here; the "Before 1" and "None" rows come from the implementation
+plan.
 
 | PRD milestone | Outcome | Implementation phases |
 |---|---|---|
@@ -107,8 +108,8 @@ by the app is an ordinary OAK project that works without the app.
 
 ## Principles
 
-The first five are the PRD's requirements that apply everywhere (section 4); this plan adds the sixth. Every
-implementation phase keeps them. The additions from the implementation's decision log are marked.
+Items 1 to 4 and 6 are the PRD's requirements that apply everywhere (section 4); item 5 is this plan's own.
+Every implementation phase keeps them. The additions from the implementation's decision log are marked.
 
 1. **Files are the source of truth.** The canvas and the Config tab are views of the files. If a file changes
    on disk, in an editor or by the coding agent, the app re-reads it.
@@ -161,14 +162,11 @@ Phase 1 builds neither, but its seams are shaped so that both are additions, not
 
 ## Architecture sketch
 
-**Decided in P0** (no longer an assumption): Electron with a React and TypeScript renderer. The renderer is
-browser-safe and has no file or process access. It reaches the main process only through one typed bridge
-whose transport can change (Electron IPC now, WebSocket later). Main-process services, one per domain, own the
-project files, the commands, the local run, the coding-agent adapter, rules, deploy and secrets; only the
-command runner starts a process, and every command runs inside the working directory. The design, with its
-layers, services, contract shapes and jobs, is [implementation/architecture.md](implementation/architecture.md).
-The rules service calls `ak rules check` (one implementation, in Python) rather than computing the same checks
-itself ([decision log](README.md#decision-log), 25 Nov 2026).
+**Decided in P0:** Electron with a React and TypeScript renderer. A browser-safe renderer reaches the main
+process only through one typed bridge with a changeable transport. Main-process services, one per domain, own
+files, commands, the local run, the coding agent, rules, deploy and secrets; only the command runner starts a
+process. The rules service calls `ak rules check` rather than repeating its checks. The design is
+[implementation/architecture.md](implementation/architecture.md).
 
 ## Local toolchain
 
@@ -224,6 +222,8 @@ editing is its costliest part. Nothing is dropped by the order.
 ## Assumptions to confirm
 
 Each item now says where it stands. Open ones link to the README's [open decisions](README.md#open-decisions).
+"Settled by the PRD" means settled for the implementation: the PRD is the source of scope by the 25 Nov 2026
+ruling, although it is still a draft for review.
 
 1. The deep configuration pages are parked, and Phase 1 reaches those settings through the inspector, the
    Config tab and the coding agent. **Settled** by the PRD section 3 (decision T1).

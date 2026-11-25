@@ -18,7 +18,7 @@ describe("contrastRatio", () => {
 		expect(ratio("#ff5e32", "#02284f")).toBe(ratio("#02284f", "#ff5e32"));
 	});
 
-	// Cross-check against the measured table in research/p1a-design-gate-options.md.
+	// Cross-check against the measured table in research/technology/p1a-design-gate-options.md.
 	it.each([
 		["#ff5e32", "#011428", 6.09],
 		["#ff5e32", "#02284f", 4.86],
