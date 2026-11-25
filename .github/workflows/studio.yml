@@ -1,6 +1,6 @@
 name: Studio
 
-# Agent Kernel Studio (ak-studio/, issue #950): lint, type-check, boundary checks, unit tests, Storybook
+# OAK Studio, Open Agent Kernel Studio (ak-studio/, issue #950): lint, type-check, boundary checks, unit tests, Storybook
 # accessibility run, end-to-end tests, and an unsigned installer whose app is started before upload, on Linux,
 # Windows and macOS.
 # P1a: written and parsed, not yet run (Windows, macOS and CI were deferred; see ak-studio/README.md).
