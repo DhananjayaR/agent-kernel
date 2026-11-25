@@ -141,7 +141,7 @@ The brand red `#DB4444` fails as a fill with both navy (4.35) and white (4.27) t
 darkened to `#D43D3E` with white text. Every other fill keeps the pure brand colour.
 
 Ratios below are computed from the hex values in `theme.css` with the WCAG 2 formula (the same code as the token
-story) and truncated to two decimals, as axe reports them. The token story renders every text and on-fill pair
+story), rounded to two decimals. The token story renders every text and on-fill pair
 as 14 px text in both themes; `pnpm test:storybook` fails when any drops to 4.5:1 or below (axe's
 `color-contrast` rule and the story's own assertion), or when `border-control` or `focus-ring` drops below 3:1.
 
@@ -150,24 +150,24 @@ as 14 px text in both themes; `pnpm test:storybook` fails when any drops to 4.5:
 | `surface` | surface | `#011428` | | `#FFFFFF` | | |
 | `surface-raised` | surface | `#02284F` | | `#F1F5FA` | | |
 | `surface-overlay` | surface | `#0D315A` | | `#E7EEF7` | | |
-| `text` | text (4.5) | `#EAF3F8` | 16.49 / 13.16 / 11.64 | `#02284F` | 14.79 / 13.51 / 12.66 | 11.64 |
-| `text-muted` | text (4.5) | `#889ABD` | 6.54 / 5.21 / 4.61 | `#576A92` | 5.40 / 4.94 / 4.62 | 4.61 |
-| `text-accent-primary` | text (4.5) | `#FF8260` | 7.60 / 6.07 / 5.37 | `#C53500` | 5.40 / 4.93 / 4.62 | 4.62 |
-| `text-accent-ai` | text (4.5) | `#B1CDFF` | 11.52 / 9.19 / 8.13 | `#3F598A` | 6.98 / 6.37 / 5.97 | 5.97 |
-| `text-status-success` | text (4.5) | `#32AF55` | 6.53 / 5.21 / 4.61 | `#007B31` | 5.41 / 4.94 / 4.63 | 4.61 |
-| `text-status-warning` | text (4.5) | `#F7A544` | 9.20 / 7.34 / 6.49 | `#995C00` | 5.40 / 4.93 / 4.62 | 4.62 |
-| `text-status-danger` | text (4.5) | `#FF6863` | 6.54 / 5.22 / 4.62 | `#B11221` | 7.05 / 6.44 / 6.03 | 4.62 |
-| `border-control` | non-text (3) | `#597EAE` | 4.43 / 3.53 / 3.12 | `#7D8794` | 3.64 / 3.32 / 3.11 | 3.11 |
-| `focus-ring` | non-text (3) | `#FF5E32` | 6.09 / 4.86 / 4.30 | `#EF4E20` | 3.63 / 3.31 / 3.10 | 3.10 |
-| `border-default` | decorative | `#173964` | 1.59 / 1.27 / 1.12 | `#D3DEEC` | 1.36 / 1.24 / 1.16 | n/a (decorative) |
+| `text` | text (4.5) | `#EAF3F8` | 16.50 / 13.16 / 11.64 | `#02284F` | 14.80 / 13.52 / 12.66 | 11.64 |
+| `text-muted` | text (4.5) | `#889ABD` | 6.54 / 5.22 / 4.62 | `#576A92` | 5.41 / 4.94 / 4.63 | 4.62 |
+| `text-accent-primary` | text (4.5) | `#FF8260` | 7.61 / 6.07 / 5.37 | `#C53500` | 5.41 / 4.94 / 4.63 | 4.63 |
+| `text-accent-ai` | text (4.5) | `#B1CDFF` | 11.52 / 9.19 / 8.13 | `#3F598A` | 6.98 / 6.38 / 5.98 | 5.98 |
+| `text-status-success` | text (4.5) | `#32AF55` | 6.54 / 5.21 / 4.61 | `#007B31` | 5.42 / 4.95 / 4.63 | 4.61 |
+| `text-status-warning` | text (4.5) | `#F7A544` | 9.21 / 7.34 / 6.50 | `#995C00` | 5.40 / 4.94 / 4.63 | 4.63 |
+| `text-status-danger` | text (4.5) | `#FF6863` | 6.55 / 5.22 / 4.62 | `#B11221` | 7.05 / 6.44 / 6.03 | 4.62 |
+| `border-control` | non-text (3) | `#597EAE` | 4.43 / 3.54 / 3.13 | `#7D8794` | 3.64 / 3.33 / 3.12 | 3.12 |
+| `focus-ring` | non-text (3) | `#FF5E32` | 6.09 / 4.86 / 4.30 | `#EF4E20` | 3.63 / 3.32 / 3.11 | 3.11 |
+| `border-default` | decorative | `#173964` | 1.60 / 1.27 / 1.13 | `#D3DEEC` | 1.36 / 1.24 / 1.16 | n/a (decorative) |
 
 | Fill | Dark fill / on-fill | ratio | Light fill / on-fill | ratio |
 |---|---|---|---|---|
 | `accent-primary` / `on-accent-primary` | `#FF5E32` / `#011428` | 6.09 | `#FF5E32` / `#011428` | 6.09 |
 | `accent-ai` / `on-accent-ai` | `#B1CDFF` / `#011428` | 11.52 | `#3F598A` / `#FFFFFF` | 6.98 |
-| `status-success` / `on-status-success` | `#26A64D` / `#011428` | 5.86 | `#26A64D` / `#011428` | 5.86 |
-| `status-warning` / `on-status-warning` | `#F7A544` / `#011428` | 9.20 | `#F7A544` / `#011428` | 9.20 |
-| `status-danger` / `on-status-danger` | `#D43D3E` / `#FFFFFF` | 4.62 | `#D43D3E` / `#FFFFFF` | 4.62 |
+| `status-success` / `on-status-success` | `#26A64D` / `#011428` | 5.87 | `#26A64D` / `#011428` | 5.87 |
+| `status-warning` / `on-status-warning` | `#F7A544` / `#011428` | 9.21 | `#F7A544` / `#011428` | 9.21 |
+| `status-danger` / `on-status-danger` | `#D43D3E` / `#FFFFFF` | 4.63 | `#D43D3E` / `#FFFFFF` | 4.63 |
 
 `border-default` is a decorative divider only (panel edges, table rules); a control's boundary uses
 `border-control`.
