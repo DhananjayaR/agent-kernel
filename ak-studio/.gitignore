@@ -7,3 +7,6 @@ test-results/
 playwright-report/
 *.tsbuildinfo
 !tools/depcruise-selftest/fixture/apps/renderer/node_modules/
+# The root .gitignore ignores every assets/ folder; source assets here (icons, images) are committed. Build
+# output that holds an assets/ folder (out/, dist/, storybook-static/) stays ignored through its parent.
+!assets/

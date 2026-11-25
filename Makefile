@@ -1,4 +1,4 @@
-.PHONY: dev-setup lint lint-check lint-examples lint-examples-check lint-all lint-check-all lock-bounds-check deploy-inject deploy-revert studio-dev studio-build studio-test studio-lint help
+.PHONY: dev-setup lint lint-check lint-examples lint-examples-check lint-all lint-check-all lock-bounds-check deploy-inject deploy-revert studio-dev studio-build studio-test studio-lint studio-storybook studio-package help
 
 EXAMPLE_DIRS := examples
 
@@ -43,7 +43,9 @@ help:
 	@echo "  studio-dev          - Runs Agent Kernel Studio in development mode (ak-studio)"
 	@echo "  studio-build        - Builds Agent Kernel Studio (ak-studio)"
 	@echo "  studio-test         - Runs Agent Kernel Studio tests (ak-studio)"
-	@echo "  studio-lint         - Lints Agent Kernel Studio with Biome (ak-studio)"
+	@echo "  studio-lint         - Lints Agent Kernel Studio: Biome, palette check, boundary rules (ak-studio)"
+	@echo "  studio-storybook    - Runs the Agent Kernel Studio Storybook on 127.0.0.1:6006 (ak-studio)"
+	@echo "  studio-package      - Builds an unsigned Agent Kernel Studio installer for this system (ak-studio)"
 	@echo "  help                - Show this help message"
 
 dev-setup:
@@ -137,3 +139,9 @@ studio-test:
 
 studio-lint:
 	pnpm --dir ak-studio lint
+
+studio-storybook:
+	pnpm --dir ak-studio storybook
+
+studio-package:
+	pnpm --dir ak-studio package

@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - develop
+    # Agent Kernel Studio (ak-studio/) documents itself in ak-studio/README.md and docs/specs/; a Studio-only
+    # merge has nothing for the skills and docs this workflow syncs. A merge that also touches other paths runs.
+    paths-ignore:
+      - 'ak-studio/**'
+      - '.github/workflows/studio.yml'
 
 permissions:
   contents: read
