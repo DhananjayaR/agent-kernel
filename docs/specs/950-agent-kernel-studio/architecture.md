@@ -132,7 +132,10 @@ export const configWriteSection = command({
 });
 ```
 
-- Inputs are validated with zod in the main process. Stream chunks are typed but not validated one by one.
+- Inputs are validated with zod in the main process. Outputs are checked against their schema too.
+- Every stream event is validated against the stream's schema, in the main process and in the mock. An invalid
+  event ends the stream with an error. P1b's high-volume streams (for example batched log chunks) may need a
+  cheaper check; that is decided when they are designed.
 - Every operation names the error codes it can return, so the UI can handle each one.
 - An operation that needs a kernel feature names its capability id; the main process refuses it with
   `kernel.capabilityUnavailable` when the project's version lacks it.

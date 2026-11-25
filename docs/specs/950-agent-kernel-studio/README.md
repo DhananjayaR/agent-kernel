@@ -18,7 +18,7 @@ Status values: Not started, Design, In progress, In review, Done.
 | Phase | Business aspect | Issue milestone | Status | Design signed off | Doc |
 |---|---|---|---|---|---|
 | P0 | Technology selection | Before 1 | In review (spikes ran on Linux; record drafted; Windows and macOS deferred by the owner; spike S5 added; no turn has run on a subscription yet) | n/a | [P0](P0-technology-selection.md) |
-| P1a | App foundation: workspace, shell, bridge, design system | Before 1 | Started 24 Nov 2026: plan written; design-gate options drafted, waiting for the owner; non-UI tasks proceed | No | [P1a](P1a-app-foundation.md), [plan](P1a-plan.md) |
+| P1a | App foundation: workspace, shell, bridge, design system | Before 1 | Started 24 Nov 2026: Tasks 1–7 done on Linux; 8–10 wait for the design gate (options drafted, waiting for the owner) | No | [P1a](P1a-app-foundation.md), [plan](P1a-plan.md) |
 | P1b | Data and feature layer, shared patterns, Studio skills | Before 1 | Not started | No | [P1b](P1b-data-layer-and-patterns.md) |
 | P2 | Open a project and know its Agent Kernel version | 1 | Not started | No | [P2](P2-project-and-kernel-version.md) |
 | P3 | See the project: read-only Canvas, Code, Config | 1 | Not started | No | [P3](P3-read-only-builder.md) |

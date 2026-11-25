@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Started 24 November 2026. [Execution plan](P1a-plan.md); design gate at step 3 (options), waiting for the owner |
+| Status | Started 24 November 2026. Tasks 1–7 done on Linux; 8–10 wait for the design gate. [Execution plan](P1a-plan.md); design gate at step 3 (options), waiting for the owner |
 | Business aspect | The Studio exists: it builds locally, opens a window, and looks like Agent Kernel |
 | Issue milestone | Before milestone 1 |
 | Depends on | [P0](P0-technology-selection.md). The stack and pinned versions are in its [decision record](P0-technology-selection.md#decision-record), which is in owner review: the choices of Vite and shadcn/ui were the owner's from the start, and D1a, D5 and D12 were approved after the spikes; everything else is pending. Windows and macOS were never run; CI on three systems must pass before this phase relies on those results. |
@@ -63,7 +63,8 @@ canvas. Options for palette, fonts, density and theme, with measured contrast:
 
 ### 1.1 Workspace
 
-- [ ] `ak-studio/` at the repository root, beside `ak-py/`, as a pnpm workspace:
+- [x] `ak-studio/` at the repository root, beside `ak-py/`, as a pnpm workspace (the five members and the README;
+      the items marked P1b come in P1b):
 
   ```
   ak-studio/
@@ -81,43 +82,49 @@ canvas. Options for palette, fonts, density and theme, with measured contrast:
     README.md         Build, run, test, package
   ```
 
-- [ ] Commands: `dev`, `build`, `test`, `lint`, `storybook`, `package`. Add matching targets to the root
-      `Makefile` and a section to `DEVELOPER_GUIDE.md`.
-- [ ] Exact dependency versions pinned, starting from the P0 decision record. Biome (not ESLint) lints; TypeScript 7.
-- [ ] A lint rule that fails the build if `apps/renderer` or `packages/ui` imports `electron` or a Node
+- [x] Commands: `dev`, `build`, `test`, `lint`, `storybook`, `package`. Add matching targets to the root
+      `Makefile` and a section to `DEVELOPER_GUIDE.md`. (The `make` targets were checked by running their
+      `pnpm --dir ak-studio` commands on Linux; `make` itself was not installed.)
+- [x] Exact dependency versions pinned, starting from the P0 decision record. Biome (not ESLint) lints; TypeScript 7.
+      Pins added in P1a are recorded in the record's D1, D2, D3, D9 and D10 rows.
+- [x] A lint rule that fails the build if `apps/renderer` or `packages/ui` imports `electron` or a Node
       built-in: dependency-cruiser 18.9.0 with `@swc/core` 1.16.22, plus its self-test as a CI step (without
-      `@swc/core` it passes silently; P0 D13).
+      `@swc/core` it passes silently; P0 D13). Both run in `pnpm lint`, locally and in CI (CI run: Deferred).
 
 ### 1.2 Electron main and preload
 
-- [ ] One window; size and position remembered.
-- [ ] Security baseline: context isolation on, sandbox on, Node integration off, a content security policy, the
+- [x] One window; size and position remembered. (Linux; restoring the maximised state is not proven under Xvfb.)
+- [x] Security baseline: context isolation on, sandbox on, Node integration off, a content security policy, the
       app served from a custom protocol, navigation and new windows blocked, sender checked on every message.
-- [ ] The preload exposes the bridge transport and nothing else.
-- [ ] Single-instance lock. Application menu per platform.
-- [ ] The app makes no network calls of its own.
+- [x] The preload exposes the bridge transport and nothing else.
+- [x] Single-instance lock. Application menu per platform. (Run on Linux; the macOS app menu is written, not run.)
+- [x] The app makes no network calls of its own. (Checked on Chromium's network stack; Node networking in the
+      main process is not covered by the check.)
 
 ### 1.3 The bridge
 
-- [ ] `packages/contract`: every call and every stream is declared once, with a schema for its input and
+- [x] `packages/contract`: every call and every stream is declared once, with a schema for its input and
       output.
-- [ ] The contract is the in-house zod contract with the `Transport` interface (P0 D5), not oRPC. The transport carries two primitives, `request` (one answer) and `subscribe` (a stream with cancel).
+- [x] The contract is the in-house zod contract with the `Transport` interface (P0 D5), not oRPC. The transport carries two primitives, `request` (one answer) and `subscribe` (a stream with cancel).
       P1a ships the transport and one plain request; the contract's operation shapes (query, command, job,
       session) are built on it in [P1b](P1b-data-layer-and-patterns.md).
-- [ ] A `Transport` interface with two implementations: Electron IPC (sender checked on every message), and a mock for the browser and tests. The same renderer code runs on both.
-- [ ] Services in the main process are classes registered against the contract. P1a ships one: `AppService`
+- [x] A `Transport` interface with two implementations: Electron IPC (sender checked on every message), and a mock for the browser and tests. The same renderer code runs on both.
+- [x] Services in the main process are classes registered against the contract. P1a ships one: `AppService`
       (app version, platform, theme preference).
-- [ ] Errors cross the bridge as typed `StudioError` values, not as thrown strings.
-- [ ] Contract test: every declared operation has a handler; inputs are validated in the main process.
+- [x] Errors cross the bridge as typed `StudioError` values, not as thrown strings.
+- [x] Contract test: every declared operation has a handler; inputs are validated in the main process.
 
 ### 1.4 Design system (`packages/ui`)
 
 - [ ] Size, shape, spacing and state tokens that follow Spectrum 2, from the table measured in P0 and the
-      decisions at the design gate. Adobe's icons, fonts and brand colours are not used.
+      decisions at the design gate. Adobe's icons, fonts and brand colours are not used. (Mechanism done with
+      provisional Spectrum 2 medium values; the values wait for the design gate, Task 8.)
 - [ ] Tokens as CSS variables, dark and light, from the decisions at the design gate, declared in Tailwind's
-      `@theme` with **Tailwind's default colour palette removed**, so only design-system colours exist.
-- [ ] Fonts bundled with the app (no network font loading).
-- [ ] Base components, each with stories for default, hover, focus and disabled:
+      `@theme` with **Tailwind's default colour palette removed**, so only design-system colours exist. (Done
+      with stand-in values from the docs site, marked provisional; the values wait for the design gate, Task 8.)
+- [x] Fonts bundled with the app (no network font loading). Their SIL OFL notices ship with the app.
+- [ ] Base components, each with stories for default, hover, focus and disabled (waits for the design gate,
+      Task 9):
   - Controls: Button (primary, secondary, outline, ghost, danger, icon), Input, Textarea, Select, Combobox,
     Checkbox, Radio, Toggle, Segmented control.
   - Display: Tag, Badge, Status chip, Path chip, Card, Code block, Tooltip, Skeleton, Spinner, Empty state,
@@ -126,21 +133,26 @@ canvas. Options for palette, fonts, density and theme, with measured contrast:
   - Structure: Tabs, Resizable panels, Data table, Tree.
 - [ ] Components that only a later phase needs (canvas nodes, chat cards, trace views, plan summary) are built
       in that phase, in this package.
-- [ ] An accessibility check runs on every story in CI.
+- [ ] An accessibility check runs on every story in CI. (Written; runs on every story on Linux with
+      `pnpm test:storybook`; the CI run is Deferred, not executed.)
 
 ### 1.5 Desktop shell (`apps/renderer`)
 
 - [ ] `DesktopShell` with `TopBar`, `AppTabs` (Canvas, Code, Config, Test & Trace, Deploy), `BottomPanel`
-      (Problems, Run log, Commands), `StatusBar`.
-- [ ] Each tab shows an empty state naming the phase that fills it.
-- [ ] Routing with in-memory or hash history. Theme switch. Panel sizes remembered.
-- [ ] Runs in a browser against the mock transport.
+      (Problems, Run log, Commands), `StatusBar`. (Waits for the design gate, Task 10.)
+- [ ] Each tab shows an empty state naming the phase that fills it. (Task 10.)
+- [ ] Routing with in-memory or hash history. Theme switch. Panel sizes remembered. (Hash-history routing and
+      the theme switch are done on the placeholder page; panel sizes come with the shell, Task 10.)
+- [x] Runs in a browser against the mock transport.
 
 ### 1.6 Continuous integration
 
 - [ ] A workflow that runs on changes under `ak-studio/` only, on Windows, macOS and Linux: lint, type-check,
       unit tests, Storybook build, an end-to-end smoke test, and an unsigned installer as a build artifact.
-- [ ] The existing Python workflows do not run on Studio-only changes, and the reverse.
+      (`studio.yml` is written and parsed, and starts the packaged app before it uploads the installer; it has
+      not run: Deferred, not executed.)
+- [x] The existing Python workflows do not run on Studio-only changes, and the reverse. (Test, Code Quality
+      and Auto Sync Skills and Docs ignore `ak-studio/**`; `studio.yml` runs only on Studio paths.)
 
 ## Version awareness
 
@@ -150,15 +162,18 @@ in the status bar where P2 shows the version.
 ## Verification
 
 - [ ] `pnpm install` then `pnpm dev` opens the app on all three operating systems, from a clean clone.
-      (Linux now; Windows and macOS deferred.)
-- [ ] The renderer opens in a browser with the mock transport.
-- [ ] The lint rule catches an `electron` import in the renderer.
-- [ ] Contract test passes; a missing handler fails it.
-- [ ] End-to-end smoke test: the app starts, each tab opens, the theme switches.
-- [ ] Every story passes the accessibility check and the [UX checklist](design-process.md).
+      (Linux now; Windows and macOS deferred.) Linux: done, 25 Nov 2026. Windows and macOS: Deferred (not
+      executed).
+- [x] The renderer opens in a browser with the mock transport.
+- [x] The lint rule catches an `electron` import in the renderer.
+- [x] Contract test passes; a missing handler fails it.
+- [ ] End-to-end smoke test: the app starts, each tab opens, the theme switches. (Starts and theme switch:
+      done on Linux, and the packaged app starts. Tabs: Task 10.)
+- [ ] Every story passes the accessibility check and the [UX checklist](design-process.md). (The three token
+      stories pass the accessibility check on Linux; the UX checklist applies to the components of Task 9.)
 - [ ] CI is green on three operating systems and uploads three installers. (Deferred: needs push access
       and the owner's go-ahead for Windows and macOS.)
-- [ ] A class from Tailwind's default palette (`text-blue-500`) fails the build.
+- [x] A class from Tailwind's default palette (`text-blue-500`) fails the build.
 
 ## Open decisions
 

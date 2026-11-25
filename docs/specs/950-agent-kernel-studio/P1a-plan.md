@@ -93,6 +93,8 @@ ak-studio/
 
 ### Task 1: Workspace and tooling
 
+**Done on Linux** (commits `f3a32376..2af7b265`; whole-branch review fixes after `8b26ed48`).
+
 **Files:** create `ak-studio/package.json`, `pnpm-workspace.yaml`, `biome.json`, `tsconfig.base.json`,
 `README.md`, one `package.json` and `tsconfig.json` per member; modify `Makefile`, `DEVELOPER_GUIDE.md`,
 `docs/specs/950-agent-kernel-studio/P0-technology-selection.md` (D8 versions).
@@ -101,36 +103,41 @@ ak-studio/
 `pnpm storybook`, `pnpm package` at `ak-studio/`; package names `@ak-studio/desktop`, `@ak-studio/renderer`,
 `@ak-studio/contract`, `@ak-studio/ui`, `@ak-studio/kernel-catalog`.
 
-- [ ] **Step 1:** Create the workspace with the five members and the pinned versions from Global Constraints.
+- [x] **Step 1:** Create the workspace with the five members and the pinned versions from Global Constraints.
   `packageManager: "pnpm@12.4.1"`, `engines.node: "24.22.1"`. pnpm's `minimumReleaseAge` stays on.
-- [ ] **Step 2:** Pin D8: look up the latest `zustand`, `@tanstack/react-query` and `@tanstack/react-router`
+- [x] **Step 2:** Pin D8: look up the latest `zustand`, `@tanstack/react-query` and `@tanstack/react-router`
   releases at least two weeks old (`pnpm view <pkg> time --json`); add them to `apps/renderer`; write the
   versions and the date into the D8 row of the P0 decision record.
-- [ ] **Step 3:** Biome lints and formats TS and TSX; TypeScript 7 project references; `pnpm typecheck` runs
+- [x] **Step 3:** Biome lints and formats TS and TSX; TypeScript 7 project references; `pnpm typecheck` runs
   `tsc -b`.
-- [ ] **Step 4:** Root `Makefile` gains `studio-dev`, `studio-build`, `studio-test`, `studio-lint`, which run the
-  matching `pnpm --dir ak-studio` command, and a `help` line each. `DEVELOPER_GUIDE.md` gains a short "Agent
-  Kernel Studio" section pointing to `ak-studio/README.md`.
-- [ ] **Step 5:** Verify: `pnpm install --frozen-lockfile` from a clean clone, then `pnpm lint`, `pnpm typecheck`
+- [x] **Step 4:** Root `Makefile` gains `studio-dev`, `studio-build`, `studio-test`, `studio-lint`, which run the
+  matching `pnpm --dir ak-studio` command, and a `help` line each. (The whole-branch review added
+  `studio-storybook` and `studio-package`, so every command the spec names has a target.)
+  `DEVELOPER_GUIDE.md` gains a short "Agent Kernel Studio" section pointing to `ak-studio/README.md`.
+- [x] **Step 5:** Verify: `pnpm install --frozen-lockfile` from a clean clone, then `pnpm lint`, `pnpm typecheck`
   pass with the empty members. Commit.
 
 ### Task 2: Boundary checks
+
+**Done on Linux** (commits `2af7b265..7c90e25f`; whole-branch review fixes after `8b26ed48`).
 
 **Files:** `ak-studio/.dependency-cruiser.cjs`, `ak-studio/tools/depcruise-selftest/`, root `package.json`
 scripts `depcruise` and `depcruise:selftest`.
 
 **Consumes:** Task 1's members.
 
-- [ ] **Step 1:** Rules: `apps/renderer` and `packages/ui` must not import `electron` or any Node built-in;
+- [x] **Step 1:** Rules: `apps/renderer` and `packages/ui` must not import `electron` or any Node built-in;
   `packages/contract` imports only `zod`; `packages/ui` does not import `apps/*` or `@ak-studio/contract`;
   nothing imports `apps/desktop` except itself. Parser: swc (`@swc/core` 1.16.22).
-- [ ] **Step 2:** Self-test: a fixture renderer file importing `electron`, checked by the same rules; the script
+- [x] **Step 2:** Self-test: a fixture renderer file importing `electron`, checked by the same rules; the script
   fails unless that violation is reported. It also fails if dependency-cruiser reports fewer than 2 modules
   (the silent-pass hazard from P0 D13).
-- [ ] **Step 3:** Verify: `pnpm depcruise` clean; `pnpm depcruise:selftest` passes; uninstall `@swc/core`
+- [x] **Step 3:** Verify: `pnpm depcruise` clean; `pnpm depcruise:selftest` passes; uninstall `@swc/core`
   temporarily and confirm the self-test fails. Commit.
 
 ### Task 3: Electron main and preload
+
+**Done on Linux** (commits `7c90e25f..0d4bed5a`; whole-branch review fixes after `8b26ed48`).
 
 **Files:** `apps/desktop/src/main/{index,window,protocol,security}.ts`, `apps/desktop/src/preload/index.ts`,
 `apps/desktop/electron.vite.config.ts`, unit tests beside each file.
@@ -139,20 +146,22 @@ scripts `depcruise` and `depcruise:selftest`.
 one global, `window.studio`, with `request(op, input)` and `subscribe(op, input, onEvent) => unsubscribe`
 (wired in Task 4).
 
-- [ ] **Step 1:** One window; size, position and maximised state saved to the app's data folder and restored,
+- [x] **Step 1:** One window; size, position and maximised state saved to the app's data folder and restored,
   clamped to a visible display.
-- [ ] **Step 2:** Security baseline from Global Constraints. CSP: `default-src 'self'; script-src 'self';
+- [x] **Step 2:** Security baseline from Global Constraints. CSP: `default-src 'self'; script-src 'self';
   style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'` (in
   development, also the electron-vite dev server origin). `will-navigate` and `setWindowOpenHandler` deny
   everything; external links are not opened in P1a.
-- [ ] **Step 3:** `app.requestSingleInstanceLock()`; a second launch focuses the first window. Application menu
+- [x] **Step 3:** `app.requestSingleInstanceLock()`; a second launch focuses the first window. Application menu
   per platform (macOS app menu; Edit and View menus everywhere; no developer tools in packaged builds).
-- [ ] **Step 4:** No network: `session.defaultSession.webRequest.onBeforeRequest` cancels any request whose
+- [x] **Step 4:** No network: `session.defaultSession.webRequest.onBeforeRequest` cancels any request whose
   scheme is not `app:`, `devtools:` or (development only) the dev server. A test counts cancelled requests.
-- [ ] **Step 5:** Verify with unit tests where Electron is not needed, and with Task 7's Electron smoke test.
+- [x] **Step 5:** Verify with unit tests where Electron is not needed, and with Task 7's Electron smoke test.
   Commit.
 
 ### Task 4: Contract and transport
+
+**Done on Linux** (commits `0d4bed5a..6e20a745`; whole-branch review fixes after `8b26ed48`).
 
 **Files:** `packages/contract/src/{operations,transport,errors,index}.ts`;
 `apps/desktop/src/main/bridge/{registry,ipcServer}.ts`; `apps/desktop/src/main/services/AppService.ts`;
@@ -168,66 +177,73 @@ one global, `window.studio`, with `request(op, input)` and `subscribe(op, input,
 - `class ServiceRegistry` that fails start-up if any declared operation has no handler, parses every input in
   the main process, parses every output against its schema, and turns an exception into a `StudioError`.
 
-- [ ] **Step 1:** Contract and `StudioError` with unit tests (valid and invalid input; output stripping of
+- [x] **Step 1:** Contract and `StudioError` with unit tests (valid and invalid input; output stripping of
   undeclared fields).
-- [ ] **Step 2:** IPC server: one `ipcMain.handle('bridge:request')` and one `bridge:subscribe` channel pair;
+- [x] **Step 2:** IPC server: one `ipcMain.handle('bridge:request')` and one `bridge:subscribe` channel pair;
   every message checks `event.senderFrame` belongs to the app's own window and `app://` origin, else rejects.
-- [ ] **Step 3:** `AppService` (version, platform, theme preference stored in the app's data folder).
-- [ ] **Step 4:** Renderer `ipcTransport` over `window.studio`, and `mockTransport` with fixture answers; the
+- [x] **Step 3:** `AppService` (version, platform, theme preference stored in the app's data folder).
+- [x] **Step 4:** Renderer `ipcTransport` over `window.studio`, and `mockTransport` with fixture answers; the
   renderer picks the mock when `window.studio` is absent.
-- [ ] **Step 5:** Contract test: every operation has a handler (a missing one fails); a request from a foreign
+- [x] **Step 5:** Contract test: every operation has a handler (a missing one fails); a request from a foreign
   frame is rejected (unit test with a fake event). Commit.
 
 ### Task 5: Renderer skeleton
+
+**Done on Linux** (commits `6e20a745..6d2c48b7`; whole-branch review fixes after `8b26ed48`).
 
 **Files:** `apps/renderer/src/{main,App}.tsx`, `apps/renderer/src/routes/`, `apps/renderer/index.html`.
 
 **Consumes:** Task 4's client. **Not in this task:** the shell layout, tabs and styling (Task 10, after the gate).
 
-- [ ] **Step 1:** TanStack Router with hash history, one route; TanStack Query client; the theme preference read
+- [x] **Step 1:** TanStack Router with hash history, one route; TanStack Query client; the theme preference read
   through `app.info` and applied as `data-theme` on `<html>` (`system` follows `prefers-color-scheme`).
-- [ ] **Step 2:** One unstyled page that shows the app version and platform from `app.info`, and a theme switch
+- [x] **Step 2:** One unstyled page that shows the app version and platform from `app.info`, and a theme switch
   that calls `app.setTheme`. Marked as a placeholder to be replaced by the shell.
-- [ ] **Step 3:** `pnpm --filter @ak-studio/renderer dev` serves it in a browser on the mock transport. Commit.
+- [x] **Step 3:** `pnpm --filter @ak-studio/renderer dev` serves it in a browser on the mock transport. Commit.
 
 ### Task 6: Design-system and Storybook mechanism
+
+**Done on Linux** (commits `6d2c48b7..8617ac9b`; whole-branch review fixes after `8b26ed48`).
 
 **Files:** `packages/ui/src/theme.css`, `packages/ui/src/fonts.css`, `packages/ui/.storybook/`,
 `packages/ui/src/tokens.stories.tsx`, `packages/ui/scripts/check-palette.mjs`, `components.json`.
 
-- [ ] **Step 1:** Tailwind 4 `@theme` with `--color-*: initial` so the default palette is removed; role tokens
+- [x] **Step 1:** Tailwind 4 `@theme` with `--color-*: initial` so the default palette is removed; role tokens
   (`surface`, `surface-raised`, `surface-overlay`, `text`, `text-muted`, `border-default`, `accent-primary`,
   `accent-ai`, `status-success`, `status-warning`, `status-danger`) for dark and light, each value marked
   provisional and taken from `docs/src/css/custom.css`. Size, radius and spacing tokens from the S1 table
   (Spectrum 2 medium).
-- [ ] **Step 2:** Fonts bundled through `@fontsource` packages (Archivo, Inter, JetBrains Mono; all SIL OFL),
+- [x] **Step 2:** Fonts bundled through `@fontsource` packages (Archivo, Inter, JetBrains Mono; all SIL OFL),
   no network loading. Which family is used where waits for the gate.
-- [ ] **Step 3:** shadcn CLI configured against `packages/ui` (`components.json`, React Aria base, style
+- [x] **Step 3:** shadcn CLI configured against `packages/ui` (`components.json`, React Aria base, style
   `aria-nova`); no component added yet.
-- [ ] **Step 4:** Storybook 10 with a token story (swatches with contrast ratios computed in the story, dark and
+- [x] **Step 4:** Storybook 10 with a token story (swatches with contrast ratios computed in the story, dark and
   light) and the accessibility addon running on every story in the test runner.
-- [ ] **Step 5:** `check-palette` fails the build on a Tailwind default-palette class (`text-blue-500`) or an
+- [x] **Step 5:** `check-palette` fails the build on a Tailwind default-palette class (`text-blue-500`) or an
   arbitrary value (`p-[13px]`) anywhere under `apps/renderer` or `packages/ui`; a test plants one of each in a
   fixture and expects failure. Commit.
 
 ### Task 7: Tests, packaging and CI
 
+**Done on Linux** (commits `8617ac9b..8b26ed48`; whole-branch review fixes after `8b26ed48`). Windows, macOS and the CI run: Deferred (not executed).
+
 **Files:** `ak-studio/tests/e2e/{browser,electron}.spec.ts`, `ak-studio/playwright.config.ts`,
 `apps/desktop/electron-builder.yml`, `.github/workflows/studio.yml`; modify the existing Python workflows'
 triggers.
 
-- [ ] **Step 1:** Playwright browser test: the renderer on the mock transport shows the version and switches
+- [x] **Step 1:** Playwright browser test: the renderer on the mock transport shows the version and switches
   theme. Electron smoke test (`xvfb-run -a` on Linux): the built app starts, shows the version from the real
   main process, switches theme, and makes no network request (Task 3's counter is zero).
-- [ ] **Step 2:** `pnpm package` builds an unsigned Linux AppImage and an unpacked directory with
+- [x] **Step 2:** `pnpm package` builds an unsigned Linux AppImage and an unpacked directory with
   electron-builder 26.18.0; record the size. Windows (NSIS) and macOS (dmg) targets are configured, not built.
-- [ ] **Step 3:** `.github/workflows/studio.yml`: on pull requests and pushes touching `ak-studio/**`; matrix
+- [x] **Step 3:** `.github/workflows/studio.yml`: on pull requests and pushes touching `ak-studio/**`; matrix
   `ubuntu-latest`, `windows-latest`, `macos-latest`; steps: pnpm install, lint, typecheck, depcruise and its
   self-test, unit tests, Storybook build and accessibility run, Playwright, package, upload the installer.
+  (The whole-branch review added a packaged smoke check, `pnpm test:packaged`, between package and upload.)
   Least-privilege `permissions: contents: read`. Parse it with `actionlint` if available.
-- [ ] **Step 4:** Add `paths-ignore: ['ak-studio/**']` to the Python test and quality workflows that run on every
+- [x] **Step 4:** Add `paths-ignore: ['ak-studio/**']` to the Python test and quality workflows that run on every
   change (check each trigger first; only add it where a Studio-only change would otherwise run them).
-- [ ] **Step 5:** Run every command locally on Linux and record the results. Mark the workflow and the Windows
+- [x] **Step 5:** Run every command locally on Linux and record the results. Mark the workflow and the Windows
   and macOS rows **Deferred (not executed)**. Commit.
 
 ### Task 8: Tokens with the chosen palette (waits for the design gate)
