@@ -1,7 +1,9 @@
 // The mock Transport, for the browser, tests and Storybook: answers from fixture handlers, with the same
-// contract checks as the main process (input parsed, output parsed and stripped, exceptions turned into
-// StudioErrors), so the renderer behaves the same against it as against the app.
+// contract checks as the main process (input parsed, output and stream events parsed and stripped, exceptions
+// turned into StudioErrors), so the renderer behaves the same against it as against the app.
 import {
+	type Contract,
+	contract,
 	type HandlerInputOf,
 	type HandlerResultOf,
 	type InputOf,
@@ -9,21 +11,17 @@ import {
 	type OperationName,
 	type Operations,
 	type OutputOf,
-	operations,
-	parseInput,
 	runOperation,
 	type StreamEventOf,
 	type StreamHandlerEventOf,
 	type StreamHandlerInputOf,
 	type StreamInputOf,
-	type StreamMap,
 	type StreamName,
 	type Streams,
 	StudioFailure,
-	streams,
+	startStream,
 	type ThemePreference,
 	type Transport,
-	toStudioError,
 	unknownOperationError,
 } from "@ak-studio/contract";
 import { logStreamError, type StreamErrorHandler } from "./ipcTransport";
@@ -62,6 +60,8 @@ export interface MockTransportOptions {
 	/** Replace any of the default fixture handlers. */
 	handlers?: Partial<MockHandlers>;
 	streams?: Partial<MockStreamHandlers>;
+	/** The contract to serve (default: the app's). Tests pass a test-local one; P1a's declares no stream. */
+	contract?: Contract;
 	/** Delay before each answer, to show pending states (default 0). */
 	latencyMs?: number;
 	onStreamError?: StreamErrorHandler;
@@ -77,13 +77,14 @@ export function createMockTransport(
 	const streamHandlers: Partial<MockStreamHandlers> = { ...options.streams };
 	const onStreamError = options.onStreamError ?? logStreamError;
 	const latencyMs = options.latencyMs ?? 0;
+	const served: Contract = options.contract ?? contract;
 
 	return {
 		async request<N extends OperationName>(
 			name: N,
 			input: InputOf<N>,
 		): Promise<OutputOf<N>> {
-			const op = lookup(operations, name);
+			const op = lookup(served.operations, name);
 			const handler = lookup(handlers, name) as
 				| ((input: unknown) => unknown)
 				| undefined;
@@ -99,7 +100,7 @@ export function createMockTransport(
 			input: StreamInputOf<N>,
 			onEvent: (event: StreamEventOf<N>) => void,
 		): () => void {
-			const stream = lookup(streams as StreamMap, name);
+			const stream = lookup(served.streams, name);
 			const handler = lookup(streamHandlers, name) as
 				| ((input: unknown, emit: (event: unknown) => void) => () => void)
 				| undefined;
@@ -107,26 +108,16 @@ export function createMockTransport(
 				onStreamError(name, unknownOperationError(name));
 				return () => {};
 			}
-			const parsed = parseInput(stream.input, name, input);
-			if (!parsed.ok) {
-				onStreamError(name, parsed.error);
+			// Same checks as the main process: input parsed, each event parsed; an invalid event ends the stream.
+			const result = startStream(stream, handler, input, (message) => {
+				if (message.ok) onEvent(message.event as StreamEventOf<N>);
+				else onStreamError(name, message.error);
+			});
+			if (!result.ok) {
+				onStreamError(name, result.error);
 				return () => {};
 			}
-			let open = true;
-			let stop: () => void;
-			try {
-				stop = handler(parsed.value, (event) => {
-					if (open) onEvent(event as StreamEventOf<N>);
-				});
-			} catch (err) {
-				onStreamError(name, toStudioError(err));
-				return () => {};
-			}
-			return () => {
-				if (!open) return;
-				open = false;
-				stop();
-			};
+			return result.value;
 		},
 	};
 }

@@ -217,12 +217,12 @@ describe("ServiceRegistry.subscribe", () => {
 			>["handleStream"]
 		>[1],
 	) {
-		const { registry } = testRegistry();
+		const { registry, log } = testRegistry();
 		registry
 			.handle("t.echo", (input) => input)
 			.handleStream("t.ticks", handler);
 		registry.start();
-		return registry;
+		return Object.assign(registry, { log });
 	}
 
 	it("delivers events until stopped, then stops the handler once", () => {
@@ -274,5 +274,52 @@ describe("ServiceRegistry.subscribe", () => {
 				error: { code: ERROR_CODES.internal, detail: "no ticks today" },
 			},
 		);
+	});
+
+	it("parses each event: strips undeclared fields; an invalid event ends the stream, logged", () => {
+		let emit: ((event: { n: number }) => void) | undefined;
+		const stopHandler = vi.fn();
+		const registry = started((_input, e) => {
+			emit = e;
+			return stopHandler;
+		});
+		const sent: StreamMessage[] = [];
+		registry.subscribe("t.ticks", { count: 1 }, (m) => sent.push(m));
+		emit?.({ n: 1, secret: "x" } as { n: number });
+		emit?.({ n: "two" } as unknown as { n: number });
+		emit?.({ n: 3 });
+		expect(sent).toEqual([
+			{ ok: true, event: { n: 1 } },
+			{
+				ok: false,
+				error: expect.objectContaining({ code: ERROR_CODES.invalidOutput }),
+			},
+		]);
+		expect(stopHandler).toHaveBeenCalledOnce();
+		expect(registry.log).toHaveBeenCalledOnce();
+	});
+});
+
+describe("ServiceRegistry validation that throws", () => {
+	it("logs a throwing output transform as invalidOutput", async () => {
+		const throwing = defineOperation({
+			name: "t.throws",
+			input: z.object({}),
+			output: z.object({}).transform(() => {
+				throw new Error("transform broke");
+			}),
+		});
+		const log = vi.fn();
+		const registry = new ServiceRegistry(
+			{ operations: { "t.throws": throwing }, streams: {} },
+			log,
+		);
+		registry.handle("t.throws", () => ({}));
+		registry.start();
+		await expect(registry.request("t.throws", {})).resolves.toMatchObject({
+			ok: false,
+			error: { code: ERROR_CODES.invalidOutput },
+		});
+		expect(log).toHaveBeenCalledOnce();
 	});
 });

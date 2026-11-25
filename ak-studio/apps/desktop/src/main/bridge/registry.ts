@@ -13,8 +13,6 @@ import {
 	type Operation,
 	type OperationMap,
 	type Operations,
-	ok,
-	parseInput,
 	runOperation,
 	type Stream,
 	type StreamHandlerEventOf,
@@ -22,8 +20,8 @@ import {
 	type StreamMap,
 	type StreamMessage,
 	type Streams,
+	startStream,
 	contract as studioContract,
-	toStudioError,
 	unknownOperationError,
 } from "@ak-studio/contract";
 
@@ -139,8 +137,9 @@ export class ServiceRegistry<
 	}
 
 	/**
-	 * Starts a stream. Each event reaches `send` as `{ ok: true, event }`. On success, answers the function that
-	 * stops it (idempotent; no event is sent after it). On failure, answers the StudioError and starts nothing.
+	 * Starts a stream (see `startStream`): each event is parsed against its schema and reaches `send` as
+	 * `{ ok: true, event }`; an invalid event ends the stream with one `bridge.invalidOutput` message, logged. On
+	 * success, answers the function that stops it. On failure, answers the StudioError and starts nothing.
 	 */
 	subscribe(
 		name: unknown,
@@ -151,29 +150,18 @@ export class ServiceRegistry<
 		const stream = lookup(this.#contract.streams, name);
 		const handler = typeof name === "string" && this.#streams.get(name);
 		if (!stream || !handler) return fail(unknownOperationError(name));
-		const parsed = parseInput(stream.input, stream.name, input);
-		if (!parsed.ok) return parsed;
-		let open = true;
-		let stop: () => void;
-		try {
-			stop = handler(parsed.value, (event) => {
-				if (open) send({ ok: true, event });
-			});
-		} catch (err) {
-			open = false;
-			const error = toStudioError(err);
-			this.#logFailure(stream.name, error);
-			return fail(error);
-		}
-		return ok(() => {
-			if (!open) return;
-			open = false;
-			try {
-				stop();
-			} catch (err) {
-				this.#log(`stopping ${stream.name} failed: ${String(err)}`);
-			}
-		});
+		const result = startStream(
+			stream,
+			handler,
+			input,
+			(message) => {
+				if (!message.ok) this.#logFailure(stream.name, message.error);
+				send(message);
+			},
+			(err) => this.#log(`stopping ${stream.name} failed: ${String(err)}`),
+		);
+		if (!result.ok) this.#logFailure(stream.name, result.error);
+		return result;
 	}
 
 	#assertRegistrable(name: string, declared: unknown): void {

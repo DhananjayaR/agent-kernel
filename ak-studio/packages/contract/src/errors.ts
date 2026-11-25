@@ -1,5 +1,6 @@
 // StudioError: how a failure crosses the bridge. It is always a plain value inside a result envelope; an
 // exception never crosses the bridge (the main-process registry converts it).
+import "./zodConfig";
 import { z } from "zod";
 
 export const studioErrorSchema = z.object({

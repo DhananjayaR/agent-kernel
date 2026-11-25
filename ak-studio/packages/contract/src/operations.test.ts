@@ -8,8 +8,10 @@ import {
 	defineOperation,
 	lookup,
 	operations,
+	platformSchema,
 	runOperation,
 	streams,
+	themePreferenceSchema,
 	toStudioError,
 } from "./operations";
 import {
@@ -54,6 +56,20 @@ describe("the operations map", () => {
 		});
 		expect(appSetTheme.input.safeParse({ theme: "Light" }).success).toBe(false);
 		expect(appSetTheme.input.safeParse({}).success).toBe(false);
+	});
+
+	it("uses one schema each for platform and theme", () => {
+		const shape = appInfo.output.shape;
+		expect(shape.platform).toBe(platformSchema);
+		expect(shape.theme).toBe(themePreferenceSchema);
+		expect(appSetTheme.input.shape.theme).toBe(themePreferenceSchema);
+		expect(platformSchema.options).toEqual([
+			"linux",
+			"darwin",
+			"win32",
+			"browser",
+		]);
+		expect(themePreferenceSchema.options).toEqual(["system", "dark", "light"]);
 	});
 
 	it("freezes defined operations", () => {
@@ -116,17 +132,59 @@ describe("runOperation", () => {
 		expect(result.ok).toBe(false);
 	});
 
-	it("strips undeclared input fields before the handler sees them", async () => {
-		let seen: unknown;
-		await runOperation(
-			appInfo,
-			(input) => {
-				seen = input;
-				return info;
+	it("rejects undeclared input fields (strict inputs, D12)", async () => {
+		let called = false;
+		const handler = () => {
+			called = true;
+			return info;
+		};
+		const result = await runOperation(appInfo, handler, { extra: 1 });
+		expect(result).toMatchObject({
+			ok: false,
+			error: { code: ERROR_CODES.invalidInput },
+		});
+		const theme = await runOperation(appSetTheme, () => ({ theme: "dark" }), {
+			theme: "dark",
+			extra: 1,
+		});
+		expect(theme.ok).toBe(false);
+		expect(called).toBe(false);
+	});
+
+	it("turns a throwing input refine into invalidInput, as a value", async () => {
+		const op = defineOperation({
+			name: "t.refine",
+			input: z.object({}).refine(() => {
+				throw new Error("refine broke");
+			}),
+			output: z.object({}),
+		});
+		const result = await runOperation(op, () => ({}), {});
+		expect(result).toMatchObject({
+			ok: false,
+			error: {
+				code: ERROR_CODES.invalidInput,
+				detail: "validation threw: refine broke",
 			},
-			{ extra: "x" },
-		);
-		expect(seen).toEqual({});
+		});
+	});
+
+	it("turns a throwing output transform into invalidOutput, as a value", async () => {
+		const op = defineOperation({
+			name: "t.transform",
+			input: z.object({}),
+			output: z.object({ a: z.string() }).transform(() => {
+				throw new Error("transform broke");
+			}),
+		});
+		const result = await runOperation(op, () => ({ a: "x" }), {});
+		expect(result).toMatchObject({
+			ok: false,
+			error: {
+				code: ERROR_CODES.invalidOutput,
+				detail: "validation threw: transform broke",
+			},
+		});
 	});
 
 	it("strips undeclared output fields", async () => {

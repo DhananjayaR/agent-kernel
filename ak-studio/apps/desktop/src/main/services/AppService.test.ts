@@ -44,6 +44,13 @@ describe("AppService", () => {
 			ok: true,
 			value: { version: "1.2.3", platform: "linux", theme: "system" },
 		});
+		// Strict inputs: an unknown key is refused, not dropped.
+		await expect(
+			registry.request("app.info", { extra: 1 }),
+		).resolves.toMatchObject({
+			ok: false,
+			error: { code: ERROR_CODES.invalidInput },
+		});
 	});
 
 	it("stores the theme in the data folder, and a new service reads it back", async () => {

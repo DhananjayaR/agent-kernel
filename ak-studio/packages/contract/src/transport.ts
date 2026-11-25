@@ -1,5 +1,6 @@
 // The renderer's only way to reach the main process. Two implementations: Electron IPC (over `window.studio`)
 // and a mock for the browser and tests. The same renderer code runs on both.
+import "./zodConfig";
 import { z } from "zod";
 import { ERROR_CODES, type StudioError, studioErrorSchema } from "./errors";
 import type {

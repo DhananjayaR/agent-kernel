@@ -9,6 +9,13 @@ const RENDERER_OR_UI = {
 	pathNot: "(^|/)(node_modules|dist)/",
 };
 
+// What contract source may import: itself and zod (unresolved or resolved).
+const CONTRACT_ALLOWED = [
+	"^packages/contract/src/",
+	"^zod($|/)",
+	"(^|/)node_modules/zod/",
+];
+
 /** @type {import('dependency-cruiser').IConfiguration} */
 module.exports = {
 	forbidden: [
@@ -31,15 +38,22 @@ module.exports = {
 		},
 		{
 			name: "contract-only-zod",
-			comment:
-				"packages/contract imports only zod (and itself). Its unit tests (*.test.ts) may also import vitest.",
+			comment: "packages/contract imports only zod (and itself).",
 			severity: "error",
 			from: { path: "^packages/contract/src/", pathNot: "\\.test\\.ts$" },
+			to: { pathNot: CONTRACT_ALLOWED },
+		},
+		{
+			name: "contract-tests-only-zod-vitest",
+			comment:
+				"packages/contract unit tests (*.test.ts) import only zod, vitest and the contract itself.",
+			severity: "error",
+			from: { path: "^packages/contract/src/.*\\.test\\.ts$" },
 			to: {
 				pathNot: [
-					"^packages/contract/src/",
-					"^zod($|/)",
-					"(^|/)node_modules/zod/",
+					...CONTRACT_ALLOWED,
+					"^vitest($|/)",
+					"(^|/)node_modules/vitest/",
 				],
 			},
 		},

@@ -1,9 +1,11 @@
 import type { StudioBridge } from "@ak-studio/contract";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+	BRIDGE_MISSING_ERROR,
 	getTransport,
 	getTransportKind,
 	readStudioGlobal,
+	StudioFailure,
 	selectTransport,
 	setTransport,
 } from "./client";
@@ -20,6 +22,7 @@ function fakeStudio(): StudioBridge {
 
 afterEach(() => {
 	vi.unstubAllGlobals();
+	vi.restoreAllMocks();
 	setTransport(undefined);
 });
 
@@ -62,5 +65,38 @@ describe("client", () => {
 	it("selectTransport maps presence to the kind", () => {
 		expect(selectTransport(undefined).kind).toBe("mock");
 		expect(selectTransport(fakeStudio()).kind).toBe("ipc");
+	});
+
+	it("never uses fixtures on the app's own page: no window.studio there is bridge.unavailable", async () => {
+		vi.stubGlobal("window", {});
+		vi.stubGlobal("location", { protocol: "app:" });
+		vi.spyOn(console, "error").mockImplementation(() => {});
+		expect(getTransportKind()).toBe("unavailable");
+		const err = await getTransport()
+			.request("app.info", {})
+			.catch((e: unknown) => e);
+		expect(err).toBeInstanceOf(StudioFailure);
+		expect((err as StudioFailure).error).toEqual(BRIDGE_MISSING_ERROR);
+		expect((err as StudioFailure).error.code).toBe("bridge.unavailable");
+		const subscribe = getTransport().subscribe as (
+			name: string,
+			input: unknown,
+			onEvent: (event: unknown) => void,
+		) => () => void;
+		const onEvent = vi.fn();
+		expect(() => subscribe("t.ticks", {}, onEvent)()).not.toThrow();
+		expect(onEvent).not.toHaveBeenCalled();
+		expect(console.error).toHaveBeenCalledOnce();
+	});
+
+	it("still uses IPC on the app's page, and the mock on a browser page", () => {
+		vi.stubGlobal("window", { studio: fakeStudio() });
+		vi.stubGlobal("location", { protocol: "app:" });
+		expect(getTransportKind()).toBe("ipc");
+		setTransport(undefined);
+		vi.stubGlobal("window", {});
+		vi.stubGlobal("location", { protocol: "http:" });
+		expect(getTransportKind()).toBe("mock");
+		expect(selectTransport(undefined, true).kind).toBe("unavailable");
 	});
 });

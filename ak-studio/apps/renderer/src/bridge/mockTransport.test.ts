@@ -1,4 +1,9 @@
-import { ERROR_CODES, StudioFailure } from "@ak-studio/contract";
+import {
+	contract,
+	defineStream,
+	ERROR_CODES,
+	StudioFailure,
+} from "@ak-studio/contract";
 import { describe, expect, it, vi } from "vitest";
 import { createMockTransport, MOCK_VERSION } from "./mockTransport";
 
@@ -122,5 +127,51 @@ describe("mockTransport", () => {
 		expect(onStreamError.mock.calls[0]?.[1]).toMatchObject({
 			code: ERROR_CODES.unknownOperation,
 		});
+	});
+
+	it("parses stream events like main: strips, and ends on an invalid event", () => {
+		// The renderer has no zod; the test stream's schemas come from contract schemas.
+		const ticks = defineStream({
+			name: "t.ticks",
+			input: contract.operations["app.info"].input,
+			event: contract.operations["app.setTheme"].output,
+		});
+		let emit: (event: unknown) => void = () => {};
+		const stop = vi.fn();
+		const onStreamError = vi.fn();
+		const transport = createMockTransport({
+			contract: {
+				operations: contract.operations,
+				streams: { "t.ticks": ticks },
+			},
+			streams: {
+				"t.ticks": (_input: unknown, e: (event: unknown) => void) => {
+					emit = e;
+					return stop;
+				},
+			} as never,
+			onStreamError,
+		});
+		const subscribe = transport.subscribe as (
+			name: string,
+			input: unknown,
+			onEvent: (event: unknown) => void,
+		) => () => void;
+		const onEvent = vi.fn();
+		expect(subscribe("t.ticks", { extra: 1 }, onEvent)).toBeTypeOf("function");
+		expect(onStreamError.mock.calls[0]?.[1]).toMatchObject({
+			code: ERROR_CODES.invalidInput,
+		});
+
+		const unsubscribe = subscribe("t.ticks", {}, onEvent);
+		emit({ theme: "dark", secret: "x" });
+		emit({ theme: "purple" });
+		emit({ theme: "light" });
+		unsubscribe();
+		expect(onEvent).toHaveBeenCalledExactlyOnceWith({ theme: "dark" });
+		expect(onStreamError.mock.calls[1]?.[1]).toMatchObject({
+			code: ERROR_CODES.invalidOutput,
+		});
+		expect(stop).toHaveBeenCalledOnce();
 	});
 });

@@ -3,8 +3,10 @@
 //
 // P1a ships two primitives: a request (one answer) and a stream (events until cancelled). The operation shapes
 // (query, command, job, session) are built on them in P1b. P1a declares no stream.
+import "./zodConfig";
 import { z } from "zod";
 import { ERROR_CODES, isStudioFailure, type StudioError } from "./errors";
+import type { StreamMessage } from "./transport";
 
 /** A request: one input, one answer. */
 export interface Operation<
@@ -18,7 +20,7 @@ export interface Operation<
 	readonly output: Output;
 }
 
-/** A stream: one input, then events until the subscriber cancels. Events are typed but not validated. */
+/** A stream: one input, then events until the subscriber cancels. Every event is parsed against `event`. */
 export interface Stream<
 	Name extends string = string,
 	Input extends z.ZodType = z.ZodType,
@@ -80,21 +82,24 @@ export type ThemePreference = z.infer<typeof themePreferenceSchema>;
 export const platformSchema = z.enum(["linux", "darwin", "win32", "browser"]);
 export type Platform = z.infer<typeof platformSchema>;
 
+// Inputs are strict objects: an unknown key is `bridge.invalidInput`, not silently dropped (P0 D12, strict
+// validation). Outputs are plain objects, so undeclared fields are stripped before they cross the bridge.
+
 /** App version, platform ("browser" under the mock transport) and the stored theme preference. */
 export const appInfo = defineOperation({
 	name: "app.info",
-	input: z.object({}),
+	input: z.strictObject({}),
 	output: z.object({
 		version: z.string(),
-		platform: z.enum(["linux", "darwin", "win32", "browser"]),
-		theme: z.enum(["system", "dark", "light"]),
+		platform: platformSchema,
+		theme: themePreferenceSchema,
 	}),
 });
 
 /** Stores the theme preference in the app's data folder and answers with the stored value. */
 export const appSetTheme = defineOperation({
 	name: "app.setTheme",
-	input: z.object({ theme: themePreferenceSchema }),
+	input: z.strictObject({ theme: themePreferenceSchema }),
 	output: z.object({ theme: themePreferenceSchema }),
 });
 
@@ -165,19 +170,45 @@ export function toStudioError(err: unknown): StudioError {
 	};
 }
 
+/** `schema.safeParse(raw)`, with a throwing refine, transform or getter caught as an error message. */
+function safeParse(
+	schema: z.ZodType,
+	raw: unknown,
+): { success: true; data: unknown } | { success: false; detail: string } {
+	try {
+		const parsed = schema.safeParse(raw);
+		return parsed.success
+			? { success: true, data: parsed.data }
+			: { success: false, detail: z.prettifyError(parsed.error) };
+	} catch (err) {
+		return {
+			success: false,
+			detail: `validation threw: ${err instanceof Error ? err.message : String(err)}`,
+		};
+	}
+}
+
 /** Parses `raw` against `schema`; a failure becomes `bridge.invalidInput` with zod's summary as the detail. */
 export function parseInput(
 	schema: z.ZodType,
 	name: string,
 	raw: unknown,
 ): BridgeResult<unknown> {
-	const parsed = schema.safeParse(raw);
+	const parsed = safeParse(schema, raw);
 	if (parsed.success) return ok(parsed.data);
 	return fail({
 		code: ERROR_CODES.invalidInput,
 		message: `The input for ${name} is not valid.`,
-		detail: z.prettifyError(parsed.error),
+		detail: parsed.detail,
 	});
+}
+
+function invalidOutput(name: string, detail: string): StudioError {
+	return {
+		code: ERROR_CODES.invalidOutput,
+		message: `The app gave an answer to ${name} that does not match the contract.`,
+		detail,
+	};
 }
 
 /**
@@ -197,11 +228,61 @@ export async function runOperation(
 	} catch (err) {
 		return fail(toStudioError(err));
 	}
-	const output = op.output.safeParse(result);
+	const output = safeParse(op.output, result);
 	if (output.success) return ok(output.data);
-	return fail({
-		code: ERROR_CODES.invalidOutput,
-		message: `The app gave an answer to ${op.name} that does not match the contract.`,
-		detail: z.prettifyError(output.error),
+	return fail(invalidOutput(op.name, output.detail));
+}
+
+/**
+ * Starts one stream: parses the input, then calls the handler. Each event the handler emits is parsed against
+ * the stream's event schema (undeclared fields stripped) and sent as `{ ok: true, event }`. An event that fails
+ * the schema is dropped and ends the stream: one `{ ok: false, error: bridge.invalidOutput }` message is sent
+ * and the handler is stopped. On success, answers the function that stops the stream (idempotent; nothing is
+ * sent after it). On failure to start, answers the StudioError and sends nothing. Never throws.
+ */
+export function startStream(
+	stream: Stream,
+	handler: (input: unknown, emit: (event: unknown) => void) => () => void,
+	rawInput: unknown,
+	send: (message: StreamMessage) => void,
+	onStopError: (err: unknown) => void = () => {},
+): BridgeResult<() => void> {
+	const input = parseInput(stream.input, stream.name, rawInput);
+	if (!input.ok) return input;
+	let open = true;
+	let stop: (() => void) | undefined;
+	const callStop = (): void => {
+		try {
+			stop?.();
+		} catch (err) {
+			onStopError(err);
+		}
+	};
+	const emit = (event: unknown): void => {
+		if (!open) return;
+		const parsed = safeParse(stream.event, event);
+		if (parsed.success) {
+			send({ ok: true, event: parsed.data });
+			return;
+		}
+		open = false;
+		send({ ok: false, error: invalidOutput(stream.name, parsed.detail) });
+		callStop(); // A no-op while the handler is still starting; done below once it returns.
+	};
+	try {
+		stop = handler(input.value, emit);
+	} catch (err) {
+		open = false;
+		return fail(toStudioError(err));
+	}
+	if (!open) {
+		// An invalid event arrived while the handler was starting: the stream has already ended.
+		callStop();
+		return ok(() => {});
+	}
+	return ok(() => {
+		if (!open) return;
+		open = false;
+		callStop();
 	});
 }
