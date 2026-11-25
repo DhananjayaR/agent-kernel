@@ -8,6 +8,7 @@
 | Depends on | [P0](P0-technology-selection.md). The stack and pinned versions are in its [decision record](P0-technology-selection.md#decision-record), which is in owner review: the choices of Vite and shadcn/ui were the owner's from the start, and D1a, D5 and D12 were approved after the spikes; everything else is pending. Windows and macOS were never run; CI on three systems must pass before this phase relies on those results. |
 | Unlocks | [P1b](P1b-data-layer-and-patterns.md); P12 reuses the build pipeline |
 | Screens | The desktop shell (top bar, tabs, bottom panel, status bar) and the component library in Storybook |
+| Claude Design | [`TopBar`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-TopBar), [`StatusBar`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-StatusBar), [`BottomPanel`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-BottomPanel) (page System) |
 
 ## Outcome
 

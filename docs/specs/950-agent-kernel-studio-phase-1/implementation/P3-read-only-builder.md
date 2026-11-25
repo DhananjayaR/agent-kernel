@@ -8,6 +8,7 @@
 | Depends on | [P2](P2-project-and-kernel-version.md) |
 | Unlocks | P6 and P7, next in the PRD order (the coding agent's changes appear on this canvas); then P4 and P5 (editing) |
 | Screens | Builder: Canvas tab, Code tab, Config tab, the inspector, the Problems panel |
+| Claude Design | [`Builder-Canvas`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-BuilderCanvas), [`Builder-Canvas-Empty`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-Builder-Canvas-Empty), [`Builder-Canvas-ChangedOnDisk`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-Builder-Canvas-ChangedOnDisk), [`Builder-Canvas-Unreadable`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-Builder-Canvas-Unreadable), [`Builder-Code`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-Builder-Code), [`Builder-Config`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-Builder-Config) (page Builder; drawn editable, this phase builds them read-only) |
 
 ## Outcome
 

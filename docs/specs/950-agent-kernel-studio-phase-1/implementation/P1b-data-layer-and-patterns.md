@@ -8,6 +8,7 @@
 | Depends on | [P1a](P1a-app-foundation.md) |
 | Unlocks | P2 onward |
 | Screens | The shared patterns, in Storybook; a throwaway "About" feature |
+| Claude Design | None of its own. The patterns are drawn from the artboards of P2 to P10 |
 | Design docs | [architecture.md](architecture.md), [conventions-and-skills.md](conventions-and-skills.md) |
 
 ## Outcome

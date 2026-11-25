@@ -9,6 +9,9 @@ and why it is shaped this way. The build plan, in implementation phases P0 to P1
 or a correction before design starts. (Since then: the P1a app shell is built in `ak-studio/`, and most
 assumptions are settled; each says so below. See the README's [Progress](README.md#progress).)
 
+> **Note.** The phases now work from our copy of the canvas, the Claude Design "OAK Studio Phases"
+> (<https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j>), copied on 25 Nov 2026. See [Design status](README.md#design-status).
+
 **Revised 25 November 2026** after the develop merge: the Open Agent Kernel (OAK) name and identity, five
 deploy targets now that Azure Functions is retired, the agent registry, and access rules as a business-rule
 category. The design system and the canvas were brought to the same state that day; neither has been looked at

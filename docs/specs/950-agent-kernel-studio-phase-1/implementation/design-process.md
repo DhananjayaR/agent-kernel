@@ -13,6 +13,11 @@ the gate once; each phase doc lists only its screens, the questions to settle an
   ([README](../README.md#phase-1-files)) and the
   Claude Design canvas are input. Use them as a starting sketch. Keep what works, change what does not, and
   do not spend time defending or attacking them.
+- **Where the design lives: the Claude Design "OAK Studio Phases"** (<https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j>), our copy of the
+  team's canvas of 25 November 2026. Each phase doc's header names its artboards in a **Claude Design** row.
+  Step 2 reviews those artboards; step 3 draws its options on new artboards beside them, on the same page, named
+  `<Artboard>-Option-A`, `-B` and so on; after sign-off the chosen option replaces the artboard, so the canvas
+  shows what was approved, phase by phase. The copy is private until its owner shares it.
 - **A signed-off story supersedes its artboard.** Artboard and component names stay the code names where they
   fit. After each gate, the team gets the list of differences, so the canvas can follow: the PRD lists the
   redrawn canvas as a team deliverable. Who owns it is
@@ -28,8 +33,8 @@ the gate once; each phase doc lists only its screens, the questions to settle an
 | Step | What happens | Output |
 |---|---|---|
 | 1. Requirements | List what the user must be able to do on the screen, from the PRD and the screen's brief. One line each. | Requirement list in the phase doc |
-| 2. Review the sketch | Compare the existing brief and artboards to the list. Mark each requirement covered, partly covered or missing. Note anything drawn that no requirement asks for. | Gap notes |
-| 3. Explore | Where the layout or flow is contested, produce two or three options (static is enough). Otherwise go to step 4. | Options, one picked with a reason |
+| 2. Review the sketch | Compare the existing brief and the phase's artboards in the Claude Design to the list. Mark each requirement covered, partly covered or missing. Note anything drawn that no requirement asks for. | Gap notes |
+| 3. Explore | Where the layout or flow is contested, draw two or three options as artboards in the Claude Design (static is enough). Otherwise go to step 4. | Options, one picked with a reason |
 | 4. Prototype | Build the screen in Storybook with the real components and fixture data: the main state and every state in the checklist. | Stories |
 | 5. Review | Walk the prototype against the checklist. Fix and repeat. | Checklist ticked |
 | 6. Sign-off | The design owner approves. Record the date, the approver and any decisions in the phase doc and in the README decision log. | Sign-off line |

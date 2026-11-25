@@ -8,6 +8,7 @@
 | Depends on | [P1b](P1b-data-layer-and-patterns.md) |
 | Unlocks | Every later phase. All of them ask this phase "what does this project's version support?" |
 | Screens | Welcome, the shell's status bar, the Commands panel |
+| Claude Design | [`Start-Welcome`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-Main), [`Start-Welcome-FirstLaunch`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-Start-Welcome-FirstLaunch), [`Start-Welcome-ToolchainMissing`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-Start-Welcome-ToolchainMissing), [`Start-Welcome-NotAProject`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-Start-Welcome-NotAProject); [`StatusBar`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-StatusBar), [`BottomPanel`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-BottomPanel) (pages Start and System) |
 
 ## Outcome
 
