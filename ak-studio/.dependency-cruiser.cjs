@@ -31,9 +31,10 @@ module.exports = {
 		},
 		{
 			name: "contract-only-zod",
-			comment: "packages/contract imports only zod (and itself).",
+			comment:
+				"packages/contract imports only zod (and itself). Its unit tests (*.test.ts) may also import vitest.",
 			severity: "error",
-			from: { path: "^packages/contract/src/" },
+			from: { path: "^packages/contract/src/", pathNot: "\\.test\\.ts$" },
 			to: {
 				pathNot: [
 					"^packages/contract/src/",

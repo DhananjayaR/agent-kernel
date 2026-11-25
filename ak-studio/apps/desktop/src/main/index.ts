@@ -1,7 +1,19 @@
 // Electron main process: one window serving the renderer from app://studio/, with the security baseline.
 // The only file in src/main that imports Electron values; the others take Electron objects as arguments.
 import { join } from "node:path";
-import { app, BrowserWindow, Menu, protocol, screen, session } from "electron";
+import {
+	app,
+	BrowserWindow,
+	ipcMain,
+	Menu,
+	nativeTheme,
+	protocol,
+	screen,
+	session,
+	type WebContents,
+} from "electron";
+import { BridgeServer, trustedOrigins } from "./bridge/ipcServer";
+import { ServiceRegistry } from "./bridge/registry";
 import { buildMenuTemplate } from "./menu";
 import { createAppProtocolHandler } from "./protocol";
 import {
@@ -15,6 +27,7 @@ import {
 	RequestGate,
 	resolveDevServerUrl,
 } from "./security";
+import { AppService, PREFERENCES_FILE } from "./services/AppService";
 import {
 	clampWindowState,
 	MIN_SIZE,
@@ -68,6 +81,8 @@ protocol.registerSchemesAsPrivileged([
 app.enableSandbox();
 
 let mainWindow: BrowserWindow | null = null;
+/** The web contents of every window the app created: the only senders the bridge accepts. */
+const appContents = new WeakSet<WebContents>();
 
 function createWindow(): BrowserWindow {
 	const stateFile = join(app.getPath("userData"), WINDOW_STATE_FILE);
@@ -101,6 +116,7 @@ function createWindow(): BrowserWindow {
 			devTools: !app.isPackaged,
 		},
 	});
+	appContents.add(win.webContents);
 	win.once("ready-to-show", () => {
 		if (state.isMaximized) win.maximize();
 		win.show();
@@ -114,6 +130,30 @@ function createWindow(): BrowserWindow {
 		console.error(`[studio] could not load ${url}: ${String(err)}`);
 	});
 	return win;
+}
+
+/**
+ * Registers every service against the contract and serves it over IPC. Throws if any declared operation has no
+ * handler, so the app refuses to start.
+ */
+function startBridge(): void {
+	const registry = new ServiceRegistry();
+	const appService = new AppService({
+		version: app.getVersion(),
+		platform: process.platform,
+		preferencesFile: join(app.getPath("userData"), PREFERENCES_FILE),
+		onThemeChange: (theme) => {
+			nativeTheme.themeSource = theme;
+		},
+	});
+	nativeTheme.themeSource = appService.theme;
+	registry.register(appService);
+	registry.start();
+	new BridgeServer({
+		registry,
+		isAppContents: (contents) => appContents.has(contents),
+		allowedOrigins: trustedOrigins(devServerUrl),
+	}).install(ipcMain);
 }
 
 function focusMainWindow(): void {
@@ -147,6 +187,13 @@ function start(): void {
 				}),
 			),
 		);
+		try {
+			startBridge();
+		} catch (err) {
+			console.error(`[studio] refusing to start: ${String(err)}`);
+			app.exit(1);
+			return;
+		}
 		if (!app.isPackaged && process.env.AK_STUDIO_TEST_HOOKS === "1") {
 			globalThis.__akStudioTestHooks = {
 				cancelledRequestCount: () => gate.cancelledCount,

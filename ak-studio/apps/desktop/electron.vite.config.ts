@@ -8,7 +8,12 @@ const rendererRoot = resolve(here, "../renderer");
 
 export default defineConfig({
 	main: {
-		build: { outDir: resolve(here, "out/main") },
+		build: {
+			outDir: resolve(here, "out/main"),
+			// The contract is a workspace package whose entry is TypeScript source: bundle it (and its zod) into
+			// main rather than leave a runtime import that Node cannot load from the packaged app.
+			externalizeDeps: { exclude: ["@ak-studio/contract"] },
+		},
 	},
 	preload: {
 		build: {

@@ -1,5 +1,7 @@
 // The preload exposes exactly one global, `window.studio`, and nothing else (no ipcRenderer, no Node).
-// It runs sandboxed, so it is bundled to CommonJS with no imports but `electron`.
+// It runs sandboxed, so it is bundled to CommonJS with no imports but `electron` (the contract import is types
+// only). The main process answers requests with result envelopes; the preload passes them through unchanged.
+import type { StudioBridge } from "@ak-studio/contract";
 import { contextBridge, type IpcRendererEvent, ipcRenderer } from "electron";
 import {
 	BRIDGE_CHANNELS,
@@ -28,7 +30,7 @@ export function activeSubscriptionCount(): number {
 	return subscribers.size;
 }
 
-const studio = {
+const studio: StudioBridge = {
 	request(op: string, input: unknown): Promise<unknown> {
 		assertOp(op);
 		return ipcRenderer.invoke(BRIDGE_CHANNELS.request, op, input);
