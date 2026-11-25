@@ -4,9 +4,9 @@
 |---|---|
 | Status | Not started |
 | Business aspect | Understanding a project: a visual view of its agents, tools, handoffs, channels and configuration |
-| Issue milestone | 1 (Open and read), second half. Completes the milestone. |
+| PRD milestone | 1 (Open and read), second half. Completes the milestone. |
 | Depends on | [P2](P2-project-and-kernel-version.md) |
-| Unlocks | P4 and P5 (editing), P6 (the coding agent's changes appear on this canvas) |
+| Unlocks | P6 and P7, next in the PRD order (the coding agent's changes appear on this canvas); then P4 and P5 (editing) |
 | Screens | Builder: Canvas tab, Code tab, Config tab, the inspector, the Problems panel |
 
 ## Outcome
@@ -29,17 +29,18 @@ which file is the problem. This is the first phase that showcases Agent Kernel v
 
 **Out**
 
-- Any edit to project files (P4, P5). The Build with AI drawer (P6). Run control (P8).
+- Any edit to project files (P4, P5), including the Code tab's light edits (P4). The Build with AI drawer
+  (P6). Run control (P8).
 
 ## Design gate
 
 Follow [design-process.md](design-process.md). Existing input: brief 04 and the Builder page of the canvas.
 This is the gate that fixes the builder's overall layout, so later phases inherit it.
 
-| Screen | Requirements (from the issue) | Questions to settle |
+| Screen | Requirements (from the PRD and brief 04) | Questions to settle |
 |---|---|---|
 | Builder layout | Canvas, Code, Config, Test & Trace and Deploy tabs; a bottom panel; a Build with AI drawer later. | Where the inspector, the bottom panel and the future AI drawer sit. **Explore three layouts** before choosing; the choice must hold at 1100 px with the drawer open. |
-| Canvas | Agents, tools, handoffs, channels, guardrails and stores are visible. | Node design for each kind, and how the framework of each agent shows. How edges differ by more than colour. How twenty agents stay readable (grouping, auto-layout, mini-map). What a mixed-framework project looks like. How capability groups (connect, remember, guard, scale, observe) are shown without crowding the agent graph. |
+| Canvas | Agents, tools, handoffs, channels, guardrails and stores are visible. | Node design for each kind, and how the framework of each agent shows. How edges differ by more than colour. How twenty agents stay readable (grouping, auto-layout, mini-map). What a mixed-framework project looks like. How capability groups (connect, remember, guard, scale, observe) are shown without crowding the agent graph. How the MCP servers an agent uses are shown (research). What the canvas does not show, said per framework (research). Grouping and filtering for large graphs. |
 | Inspector | Read what a node is and where it lives. | Which properties show per node kind. A "defined in `app.py` line N" link into the Code tab. |
 | Code | Read every generated file. | File tree markers. Whether the viewer is one file at a time or tabbed. |
 | Config | Every `config.yaml` section as a form. | Navigation across about twenty sections. How a default value differs from a set value. How a value set by an `AK_*` environment variable shows. How a section the installed version lacks shows (the P2 pattern). |
@@ -81,7 +82,10 @@ Per "Get data from the kernel, not around it" in [architecture.md](architecture.
     secret fields today (they are plain `str`), so the helper uses the Studio's list of secret field paths
     and hides unknown strings in listed sections by default; see "Get data from the kernel" in
     [architecture.md](architecture.md).
-  - The project graph: agents and their framework, tools, handoffs, hooks.
+  - The project graph: agents and their framework, tools, handoffs, hooks. Start from the agent registry:
+    `AgentDescriptor` (`ak-py/src/agentkernel/core/model.py`) already describes each loaded agent (id,
+    name, version, description, owner, tags, visibility, surfaces, tools, runner, streaming). The helper adds
+    what it lacks: handoffs and hooks.
 - [ ] How the graph is read is decided by a spike at the start of this phase. Two approaches:
 
   | Approach | How | Good | Bad |
@@ -114,8 +118,8 @@ Per "Get data from the kernel, not around it" in [architecture.md](architecture.
 - [ ] The canvas has the keyboard model from [conventions-and-skills.md](conventions-and-skills.md) and a
       scripted keyboard test.
 - [ ] Positions, and nothing else, are saved to `.akstudio/canvas.json`: a documented, versioned, plain-text
-      format with no absolute paths. This is the first file in `.akstudio/`; P3 defines the folder's rules
-      (what is committed, what is ignored).
+      format with no absolute paths. This is the first file in `.akstudio/`. The folder is committed with the
+      project, except `.akstudio/runs/`, which git ignores (the team's rule, adopted 25 November 2026).
 - [ ] Select a node to open the read-only inspector. Zoom, pan, fit, mini-map.
 
 ### 3.4 Code tab
@@ -163,7 +167,8 @@ Per "Get data from the kernel, not around it" in [architecture.md](architecture.
 - Import or static introspection as the primary path (spike in 3.1).
 - The exact output of the kernel-side commands in 3.0. Proposed: the helper's output format becomes their
   first draft, so the switch-over changes no Studio code above the service.
-- Whether `.akstudio/canvas.json` is committed by default.
+- Closed 25 November 2026: `.akstudio/` (and so `canvas.json`) is committed by default; only `.akstudio/runs/`
+  is ignored.
 
 ## Risks
 

@@ -32,10 +32,16 @@ Component names are working names until the P1a design gate.
 
 ### Visual rules
 
-- **The basic style resembles React Spectrum (Spectrum 2):** its control sizes and density, shapes, state
-  styling and spacing rhythm, expressed as the Studio's own tokens. Colours and fonts are Agent Kernel's.
-  When a new component has no precedent in the Studio, look at how Spectrum 2 sizes and states its
-  equivalent before inventing one.
+- **The basic style resembles React Spectrum (Spectrum 2):** its control sizes and density, state styling and
+  spacing rhythm, expressed as the Studio's own tokens. When a new component has no precedent in the Studio,
+  look at how Spectrum 2 sizes and states its equivalent before inventing one.
+- **The brand wins where it is explicit** ([branding/README.md](../../../branding/README.md); branding change
+  of 25 November 2026). Colours are OAK's. Buttons, inputs and tags are rectangular at the 8 px control
+  radius, not Spectrum 2's pill; cards and panels use the 16 px card radius. The logo mark
+  (`branding/logo-mark/`) is the app icon and sits in the top bar, used as supplied: never redrawn,
+  recoloured or stretched.
+- **Type.** Inter for UI text. Archivo for headings and for primary call-to-action labels. JetBrains Mono for
+  code. All three are bundled.
 
 - **Design-system colours only.** Tailwind's default palette is removed, so only role tokens exist
   (`bg-surface`, `text-muted`, `border-default`, `accent-primary`, `status-success`). No arbitrary values
@@ -46,17 +52,25 @@ Component names are working names until the P1a design gate.
 - **Floating layers** (menus, popovers, drawers, modals, toasts) are solid, as in Spectrum 2, not glass.
   Decided in P0 on 23 November 2026 ([P0](P0-technology-selection.md) D1a). Docked surfaces are also solid.
 - **One primary action per view.** Everything else is secondary, outline or ghost.
-- **Icons** come from one line icon set, at two sizes. No emoji.
+- **Icons** are Tabler outline icons, the set the website uses, at two sizes. No emoji. (Decided 25 November
+  2026; it replaces lucide.)
 - **Monospace** for paths, commands, code, identifiers, durations, token counts and money, with tabular
   figures.
 
 ### Copy rules
 
 - Sentence case everywhere in the app.
+- **The product's name.** "Open Agent Kernel" where the full name is read (window and installer titles),
+  "OAK" everywhere else; the working app name is "OAK Studio". The company is not named in the app.
+  Identifiers keep their form: the `agentkernel` package, the `ak` CLI, `AKConfig`, `AK_*` variables,
+  `.akstudio/`, the `ak-*` skills. (The team's brief 00 and the brand's
+  [name rule](../../../branding/README.md#name).)
 - The Studio's coding-agent feature is "Claude Agent"; the Studio never calls itself or its feature
-  "Claude Code" (Anthropic's naming rule for products built on its SDK). "Claude Code" names only the
-  user's installed program ("Sign in to Claude Code"). Raw agent error text is never shown as a message.
-- Agent Kernel's own words: handoff, pre-hook, post-hook, session store, guardrail, execution mode.
+  "Claude Code". Anthropic's Agent SDK branding rule permits "Claude Agent" or "Powered by Claude" and does
+  not permit "Claude Code" as a label. "Claude Code" names only the user's installed program ("Sign in to
+  Claude Code", "Claude Code is not installed"). Raw agent error text is never shown as a message.
+- OAK's own words: handoff, pre-hook, post-hook, session store, guardrail, execution mode, message type,
+  sandbox profile.
 - Buttons say what happens: "Apply plan", not "OK". Destructive buttons name the thing: "Destroy deployment".
 - Errors say what happened and what to do next, in that order. No "Something went wrong".
 - Empty states say what this place is for and offer the first action.
@@ -82,6 +96,8 @@ Component names are working names until the P1a design gate.
 - **Motion:** 150 ms for hover and focus, 250 ms for panels; nothing ambient except progress and the coding
   agent's "just added" pulse. Honour reduced motion.
 - **Layout:** holds at 1100 px wide; panels resize and remember their size; nothing scrolls the page sideways.
+- **Business-rule states, in order of severity:** out of sync, untested, drafted, enforced. A rule shows its
+  most severe state. Untested ranks above drafted because it looks finished but has no evidence.
 
 ## 2. UX patterns catalogue
 

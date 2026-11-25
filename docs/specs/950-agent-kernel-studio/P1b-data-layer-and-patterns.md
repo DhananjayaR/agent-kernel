@@ -4,7 +4,7 @@
 |---|---|
 | Status | Not started |
 | Business aspect | None visible to users. Makes every later feature look and behave the same, whoever writes it. |
-| Issue milestone | Before milestone 1 |
+| PRD milestone | Before milestone 1 |
 | Depends on | [P1a](P1a-app-foundation.md) |
 | Unlocks | P2 onward |
 | Screens | The shared patterns, in Storybook; a throwaway "About" feature |

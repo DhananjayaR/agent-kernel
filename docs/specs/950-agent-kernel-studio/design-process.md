@@ -5,12 +5,18 @@ the gate once; each phase doc lists only its screens, the questions to settle an
 
 ## Ground rules
 
-- **Requirements are fixed, designs are not.** What the user must be able to do comes from
-  [issue #950](https://github.com/yaalalabs/agent-kernel/issues/950). The gate does not reopen those
-  requirements. It decides how the screen delivers them.
-- **Existing designs are input, not a contract.** The briefs (00 to 09) and the Claude Design canvas on
-  `feature/950-agent-kernel-studio-phase-1` are unapproved. Use them as a starting sketch. Keep what works,
-  change what does not, and do not spend time defending or attacking them.
+- **Requirements are fixed, designs are not.** What the user must be able to do comes from the team's
+  [Phase 1 PRD](../950-agent-kernel-studio-phase-1/PHASE-1-PRD.md) (revised 25 November 2026), which
+  supersedes [issue #950](https://github.com/yaalalabs/agent-kernel/issues/950) where they differ, and from
+  the screen's brief. The gate does not reopen those requirements. It decides how the screen delivers them.
+- **Existing designs are input, not a contract.** The briefs (00 to 09) in
+  [`docs/specs/950-agent-kernel-studio-phase-1/`](../950-agent-kernel-studio-phase-1/README.md) and the
+  Claude Design canvas are input. Use them as a starting sketch. Keep what works, change what does not, and
+  do not spend time defending or attacking them.
+- **A signed-off story supersedes its artboard.** Artboard and component names stay the code names where they
+  fit. After each gate, the team gets the list of differences, so the canvas can follow: the PRD lists the
+  redrawn canvas as a team deliverable. Who owns it is
+  [open decision 11](README.md#open-decisions).
 - **Good UX is a deliverable.** A screen is not done because it matches an artboard. It is done when it passes
   the checklist below.
 - **Design in the real components.** Final designs are built in Storybook from the Studio's own component
@@ -21,7 +27,7 @@ the gate once; each phase doc lists only its screens, the questions to settle an
 
 | Step | What happens | Output |
 |---|---|---|
-| 1. Requirements | List what the user must be able to do on the screen, from the issue. One line each. | Requirement list in the phase doc |
+| 1. Requirements | List what the user must be able to do on the screen, from the PRD and the screen's brief. One line each. | Requirement list in the phase doc |
 | 2. Review the sketch | Compare the existing brief and artboards to the list. Mark each requirement covered, partly covered or missing. Note anything drawn that no requirement asks for. | Gap notes |
 | 3. Explore | Where the layout or flow is contested, produce two or three options (static is enough). Otherwise go to step 4. | Options, one picked with a reason |
 | 4. Prototype | Build the screen in Storybook with the real components and fixture data: the main state and every state in the checklist. | Stories |
@@ -47,7 +53,7 @@ wait for the gate.
 - [ ] **State is never colour alone:** an icon or dot plus a label.
 - [ ] **The app's standing promises are visible** where they apply: files are the source of truth, every
       command is shown, real infrastructure needs an explicit yes, secrets are names only.
-- [ ] **Copy is final:** sentence case, Agent Kernel's own vocabulary, no placeholder text.
+- [ ] **Copy is final:** sentence case, OAK's own vocabulary and name rule, no placeholder text.
 - [ ] **Slow and failed operations are designed:** progress for anything over one second, a way to cancel long
       commands, an error that says what to do next.
 - [ ] **Motion respects** the reduced-motion setting.
@@ -64,17 +70,23 @@ Each phase doc carries a table like this, one row per screen:
 
 Recorded so nobody rediscovers them:
 
-- **Style reference changed.** The briefs assume the docs-site look (pill buttons, glass). The Studio's
-  basic style is now set to resemble React Spectrum (Spectrum 2), with Agent Kernel's colours and fonts.
-  Where a brief's styling differs, the Spectrum-like tokens win; the brief's layout and content still apply.
-- **Brand drift.** The briefs and the canvas's design-system tokens use electric blue `#00DDFF` as primary,
-  magenta `#F200FF` for the coding agent, a near-black ground and Inter for body text. The repository's
-  current tokens (`docs/src/css/custom.css`, after the OAK rebrand) use orange `#FF5E32` as primary, a navy
-  ground and Archivo for body text. P1a's design gate settles the Studio palette and fonts.
+- **Style reference.** The Studio's basic style resembles React Spectrum (Spectrum 2) in size, density and
+  states. Where the brand is explicit it wins: rectangular buttons, inputs and tags at the 8 px control
+  radius, Tabler outline icons, OAK's colours ([branding](../../../branding/README.md)). Where a brief's
+  styling differs, the Studio's tokens win; the brief's layout and content still apply.
+- **The team's styling assumptions.** The briefs and canvas were moved to the OAK identity on 25 November
+  2026, with orange primary and solid floating layers, as ours. Three assumptions still differ from our
+  approved gate: 40 px controls (ours 32 px), Archivo for all UI text (ours Inter, with Archivo for headings
+  and primary call-to-action labels) and light when the system gives no answer (ours dark). See
+  [open decision 10](README.md#open-decisions).
+- **The coding agent's name in copy.** The briefs label it "Claude Code". The Studio's feature is "Claude
+  Agent" ([conventions-and-skills.md](conventions-and-skills.md#copy-rules)); "Claude Code" names only the
+  user's installed program.
 - **Fonts are loaded from Google Fonts** on the canvas. The app makes no network calls of its own, so fonts
   are bundled.
-- **Second-pass artboards are not drawn** (listed in the feature branch README).
-- **The canvas was never rendered and checked** at 1440 and 1100 px (the feature branch README says so).
+- **Second-pass artboards are not drawn** (listed in the team's README).
+- **The redrawn canvas is not reviewed.** The team's README says the re-skin of 25 November was not rendered
+  and checked.
 - **No version states.** No brief mentions the project's Agent Kernel version; the designs assume one.
-- **Six deploy targets are assumed.** Azure Functions is being retired
-  (`docs/specs/957-retire-azure-functions/design.md`), so the list depends on the project's version.
+- **Five deploy targets.** The PRD names five; Azure Functions is retired
+  (`docs/specs/957-retire-azure-functions/design.md`). The catalog decides what a project's version offers.

@@ -4,7 +4,7 @@
 |---|---|
 | Status | Not started |
 | Business aspect | Getting into a project: open a folder, see what is installed, know which Agent Kernel features apply |
-| Issue milestone | 1 (Open and read), first half |
+| PRD milestone | 1 (Open and read), first half |
 | Depends on | [P1b](P1b-data-layer-and-patterns.md) |
 | Unlocks | Every later phase. All of them ask this phase "what does this project's version support?" |
 | Screens | Welcome, the shell's status bar, the Commands panel |
@@ -20,8 +20,10 @@ are marked unavailable instead of failing.
 
 **In**
 
-- Welcome screen: open a folder, recent projects, toolchain check, first-launch state.
-- Project detection and the "not an Agent Kernel project" state.
+- Welcome screen: open a folder, recent projects, toolchain check, first-launch state. The entry points
+  "New project" and "Describe a project" (the AI entry) show their not-yet states until P4 and P6 fill them.
+- Project detection and the "not an OAK project" state, with "Create a project here" (wired in P4),
+  "Choose another folder" and "Cancel".
 - Toolchain detection.
 - The command runner and the Commands panel.
 - File watching and the "changed on disk" notice.
@@ -35,12 +37,12 @@ are marked unavailable instead of failing.
 
 Follow [design-process.md](design-process.md). Existing input: briefs 00, 01 and 02 on the feature branch.
 
-| Screen | Requirements (from the issue) | Questions to settle |
+| Screen | Requirements (from the PRD and brief 02) | Questions to settle |
 |---|---|---|
-| Welcome | Open a folder. See recent projects. See a toolchain check. Start a new project (entry point only in this phase). | What a first-time user with nothing installed sees first. Whether a missing optional tool (Terraform, Docker) looks different from a missing required one (Python, `uv`). Where the Agent Kernel version of each recent project is shown. |
+| Welcome | Open a folder. See recent projects. See a toolchain check. Start a new project, or describe one to the coding agent (entry points only in this phase). | What a first-time user with nothing installed sees first. Whether a missing optional tool (Terraform, Docker) looks different from a missing required one (Python, `uv`). Where the Agent Kernel version of each recent project is shown. |
 | Status bar | Working directory, git branch, Python environment state, file sync state. | Where the project's Agent Kernel version lives, and what it looks like when the version is below the supported floor. |
 | Commands panel | Every command with its output and exit status. | How a long output is shown. How a running command is cancelled. How commands run by the app differ from those run by the coding agent (later). |
-| Version states | Not in the issue; needed by the versioning requirement. | One shared pattern for "this needs Agent Kernel ≥ X": on a tab, on a form section, on a palette tile. An upgrade hint that shows the command and never runs it silently. |
+| Version states | Not in the PRD; needed by the versioning requirement. | One shared pattern for "this needs Agent Kernel ≥ X": on a tab, on a form section, on a palette tile. An upgrade hint that shows the command and never runs it silently. |
 
 **Sign-off**
 
@@ -73,13 +75,18 @@ skill: features `welcome`, `commands`, `status`; services `ToolchainService`,
       AWS, Azure and Google Cloud command-line tools.
 - [ ] Three states per tool: found, missing, wrong version. Each has an install link.
 - [ ] Required for everything: Python and `uv`. All others are required only by the feature that uses them.
+      Docker is needed only by targets that ship a container image: both containerized targets and Google
+      Cloud serverless; AWS serverless needs it only when the Lambda is packaged as an image.
+- [ ] The app installs nothing. Detection reads the user's own shell environment; a missing tool shows its
+      install link.
 - [ ] Detection runs through `CommandRunner`, so it is visible.
 
 ### 2.3 Project service
 
 - [ ] Open a folder; keep a recent-projects list in the app's own data folder (not in the project).
-- [ ] Detect an Agent Kernel project: `pyproject.toml` depends on `agentkernel`, or `config.yaml` and `app.py`
-      exist. Record which signal matched.
+- [ ] Detect an OAK project: `pyproject.toml` depends on `agentkernel`, or `config.yaml` and `app.py` exist,
+      or (the team's signal, brief 02) `config.yaml` and a Python file that registers an OAK module. Record
+      which signal matched.
 - [ ] States: Agent Kernel project, Python project without Agent Kernel, empty folder, unreadable folder.
 - [ ] Open creates the project scope from the [architecture](architecture.md); close disposes it. One
       project per window.

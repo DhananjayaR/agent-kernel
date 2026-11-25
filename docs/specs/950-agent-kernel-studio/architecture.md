@@ -77,7 +77,8 @@ keeps a second copy that can silently disagree with it.
 | UI state | Selected node, open panel, active tab, canvas zoom | The renderer | **Feature store** (Zustand), one per feature |
 | Working copies | Canvas node positions while dragging; a config form being edited; an unsent chat message | The renderer, briefly | Feature store or form state, under the working-copy rule below |
 | Preferences | Theme, panel sizes, density | `AppService` (the app's data folder) | Query cache; written through a command |
-| Secrets | Model keys in `.env` | `SecretStore` in the main process only | Names and resolve state only |
+| Secrets | A key name plus the OAK secret provider that resolves it (`secret.provider.type` in `config.yaml`: `env`, `aws_ssm`, `kubernetes` or a dotted path). `.env` is the local store of the `env` provider | The provider. For `env`, `SecretStore` in the main process only | Names, provider and resolve state only. The UI never assumes `.env` is the only store |
+| Per-project agent settings | Coding-agent permissions, the command allow-list ("Always allow this command in this project"), the checkpoint toggle | `.akstudio/` in the project, committed with it; `AgentService` reads and writes it | Query cache. Settings found in a newly opened folder are listed and confirmed before use, like the folder's hooks |
 | The coding agent's sign-in | The user's Claude Code sign-in (normally a subscription) | Claude Code itself; the Studio never holds it | Status only: installed, signed in, version, credential source |
 
 Rules:
@@ -115,7 +116,7 @@ Rules:
 |---|---|---|---|
 | `query` | Reading state; no side effects | `useQuery` via the feature's hook | `config.readSection`, `toolchain.detect` |
 | `command` | One write that normally finishes in under a second | `useMutation` via the feature's hook | `config.writeSection`, `secrets.set` |
-| `job` | Finite work that is slow, cancellable or has steps. It ends. | `useJob` | `project.create`, `tests.run`, `deploy.plan`, `agent.turn` |
+| `job` | Finite work that is slow, cancellable or has steps. It ends. | `useJob` | `project.create`, `tests.run`, `deploy.plan`, `deploy.backend.create`, `agent.turn` |
 | `session` | Something long-lived that runs until stopped. It has no result. | `useSession` | `run.server`, `agent.session`, `trace.receiver` |
 
 Plus one-way **events** from the main process: the domain events above, `job.updated`, `session.updated`,
@@ -191,6 +192,10 @@ type UserRequest = {
   are cancelled and their process trees killed. Jobs marked `survivesQuit: true` (`terraform apply` and
   `destroy`, where killing the process risks the state file) block the quit until they finish, with an
   explicit, warned override.
+- **Creating real infrastructure.** `deploy.backend.create` (the Terraform state backend) is a job whose
+  first step is a `confirm-by-name` request naming the cloud account, as for `deploy.apply`. It creates the
+  backend with the cloud's own command-line tool and writes `deploy/backend.tf`. `deploy.destroy` never
+  removes the backend.
 - **Crash recovery.** Each job writes a small record in the app's data folder when it starts and when it
   ends. A record with no end is shown on the next launch as "interrupted", with the command that was running
   and what to check.
@@ -268,8 +273,13 @@ flowchart LR
 **The agent process**
 
 - **One adapter.** Only the adapter imports the SDK; a boundary rule enforces it. `AgentService` depends on
-  the agent-neutral interface (status, start, prompt, events, permission, interrupt), so tests use a scripted
-  fake and another agent can be added later. (Verified in S5.)
+  the agent-neutral interface, so tests use a scripted fake and another agent can be added later. (Verified
+  in S5.)
+- **The interface is shaped like the Agent Client Protocol (ACP)**, as the team's plan asks: status; start a
+  session in the working directory; send a prompt; stream events; relay permission requests and their
+  answers; report the files a turn changed; interrupt. The event kinds are the interface's own, not Claude's:
+  message, plan step, tool call, file edit, command, permission request. Checkpoints, accept and revert
+  belong to `AgentService`, not to the adapter. A second agent is a new adapter.
 - **The user's installation, not a bundled one.** The adapter finds the user's `claude` executable and points
   the SDK at it (`pathToClaudeCodeExecutable`). The Studio does not ship or modify the executable, which
   also takes the bundled executable out of the installer (767 MB down to 404 MB unpacked on Linux) and removes
@@ -419,7 +429,7 @@ features/config/
 - A service registers its handlers against the contract; the registry fails start-up if any operation has no
   handler.
 - Only `CommandRunner` starts processes. Only `ProjectFs` touches the working directory, and it refuses paths
-  outside it. Only `SecretStore` reads `.env` values.
+  outside it. Only `SecretStore` reads `.env` values; `SecretService` maps each secret name to its provider.
 
 ## What the Studio writes into a project
 
@@ -449,12 +459,12 @@ Studio parse or guess it. Proposed additions to `ak-py`, each specified through 
 
 | Addition | Gives | Replaces in the Studio | Needed by |
 |---|---|---|---|
-| `ak inspect --json` | Agents, framework, tools, handoffs, hooks and registered surfaces of the project | The Studio-owned introspection helper | P3 |
+| `ak inspect --json` | Agents, framework, tools, handoffs, hooks and registered surfaces of the project, starting from the agent registry (`AgentDescriptor`) | The Studio-owned introspection helper | P3 |
 | `ak config schema --json` | `AKConfig` JSON schema of the installed version | Calling `model_json_schema()` from a Studio script | P3 |
 | **Secret fields marked in `AKConfig`** | A machine-readable mark on every field that holds a secret | A hand-kept list of secret field names | P3 |
 | `ak config resolve --json` | The resolved configuration with secret values replaced by key names | Merging YAML and `AK_*` variables in the Studio | P3; depends on the row above |
 | `ak features --json` | The capabilities this version has | Part of the Studio-side catalog, for new versions | After P3 |
-| `ak rules check` | Rule check results | (already planned) | P7 |
+| `ak rules check --json` | Rule check results. The one implementation of the checks, in Python; the app, CI and a later hosted Studio all run it | A Studio-side copy of the checks: on versions without the command, the Studio runs the same Python module, shipped as a helper, never a TypeScript copy | P7 |
 
 - **Secrets today.** `AKConfig` holds tokens as plain `str` fields (for example `slack.bot_token` in
   `ak-py/src/agentkernel/core/config.py`); nothing marks them as secret. Until the kernel marks them, the

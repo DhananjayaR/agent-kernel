@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| Status | Started 24 November 2026. Tasks 1–7 done on Linux; 8–10 wait for the design gate. [Execution plan](P1a-plan.md); design gate at step 3 (options), waiting for the owner |
-| Business aspect | The Studio exists: it builds locally, opens a window, and looks like Agent Kernel |
-| Issue milestone | Before milestone 1 |
+| Status | Started 24 November 2026. Tasks 1–10 done on Linux; shell layout and component set await sign-off. The branding changes of 25 November 2026 (see the sign-off notes) are decided; the code change lands separately. [Execution plan](P1a-plan.md) |
+| Business aspect | The Studio exists: it builds locally, opens a window, and looks like Open Agent Kernel (OAK) |
+| PRD milestone | Before milestone 1 |
 | Depends on | [P0](P0-technology-selection.md). The stack and pinned versions are in its [decision record](P0-technology-selection.md#decision-record), which is in owner review: the choices of Vite and shadcn/ui were the owner's from the start, and D1a, D5 and D12 were approved after the spikes; everything else is pending. Windows and macOS were never run; CI on three systems must pass before this phase relies on those results. |
 | Unlocks | [P1b](P1b-data-layer-and-patterns.md); P12 reuses the build pipeline |
 | Screens | The desktop shell (top bar, tabs, bottom panel, status bar) and the component library in Storybook |
@@ -64,6 +64,21 @@ the Task 10 report): the app tabs' empty states have no first action in P1a, a w
 ("purpose and first action"), because no project can be opened yet; P2 adds "Open folder". The copy names the
 phase that fills each tab, as 1.5 asks.
 
+Notes for the "Style reference" and "Base component set" sign-offs: a **branding change**, ruled on 25 November
+2026 at the owner's request (README decision log). Where [branding/README.md](../../../branding/README.md) is
+explicit, it wins over Spectrum 2:
+
+- Buttons, inputs and tags are rectangular at the 8 px control radius (`--ak-radius-control`). This replaces the
+  Spectrum 2 pill shape for those components. Spectrum 2 still sets size, density and states.
+- Icons are Tabler outline icons, replacing lucide.
+- Primary call-to-action labels use Archivo; UI text stays Inter; headings stay Archivo.
+- The logo mark is the app icon and sits in the top bar.
+- Kept, as approved: palette A (it is the brand), 32 px controls, dark when the system gives no answer, solid
+  floating layers. The team's brief 00 assumes 40 px controls, Archivo for all UI text and a light fallback;
+  those are [open decision 10](README.md#open-decisions).
+
+The component stories are reviewed for sign-off after these changes land in `ak-studio/`.
+
 ## Work packages
 
 ### 1.1 Workspace
@@ -105,6 +120,8 @@ phase that fills each tab, as 1.5 asks.
 - [x] Single-instance lock. Application menu per platform. (Run on Linux; the macOS app menu is written, not run.)
 - [x] The app makes no network calls of its own. (Checked on Chromium's network stack; Node networking in the
       main process is not covered by the check.)
+- [ ] Extend the "no network calls" check to Node networking in the main process. It is a standing principle
+      ([README](README.md#standing-principles)): with usage data off, the app makes no network calls of its own.
 
 ### 1.3 The bridge
 
@@ -186,10 +203,12 @@ in the status bar where P2 shows the version.
 
 ## Open decisions
 
-- The product name and the app identifier. "Agent Kernel Studio" and `ak-studio/` are working names; the
-  repository has since been rebranded Open Agent Kernel, so the name needs a decision before P12 at the
-  latest.
-- The Studio's licence (the issue recommends open source).
+- The product name and the app identifier. The working name is "OAK Studio" ("Open Agent Kernel Studio" on
+  first mention) since 25 November 2026; `ak-studio/` and `.akstudio/` stay. The final name is decided by P12
+  at the latest ([open decision 3](README.md#open-decisions)).
+- The Studio's licence, before any build leaves the team. The PRD recommends free to use locally, ideally
+  open source; this repository's Apache 2.0 licence would apply on merge unless the owner decides otherwise
+  ([open decision 9](README.md#open-decisions)).
 - Whether the approved components are fed back into the Agent Kernel Design System used by the docs site.
 
 ## Risks
