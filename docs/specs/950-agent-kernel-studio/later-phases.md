@@ -57,6 +57,9 @@ secret names.
 - Secrets: read and write `.env` in the main process only; the renderer sees key names and whether each
   resolves.
 - Settings: toolchain, secrets, general preferences, usage data (off by default).
+- Preferences that survive version changes: P1a's `AppService` keeps only the keys it knows (`theme`, `layout`)
+  and its strict layout schema resets an unknown shape, so an older build's write drops a newer build's
+  preferences. Decide forward-compatible preferences (keep unknown keys, or version the file) before adding any.
 
 **Design questions.** How many wizard steps. What the wizard shows while the environment is created (it can
 take minutes). How the version choice explains what a newer version adds. How a form shows an invalid value

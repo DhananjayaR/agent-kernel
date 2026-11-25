@@ -99,6 +99,10 @@ settled once, here.
 - [ ] `useCapability` and `CapabilityGate`, backed by an empty catalog until P2.
 - [ ] The app command registry and `runCommand`; palette, menu and shortcuts built from manifests; a clash
       test.
+- [ ] Take over the shell's Mod+J (declared in `packages/ui/src/components/bottom-panel.tsx` in P1a): register it,
+      decide whether it acts behind an open modal (it does in P1a) and Ctrl versus Cmd per platform.
+- [ ] A DOM test setup for the renderer (happy-dom and Testing Library), and tests for the shell's untested error
+      paths: the layout-save toast and the bridge-error banner (`apps/renderer/src/shell/Shell.tsx`).
 - [ ] `SchemaForm` skeleton with React Hook Form and JSON-schema field checks (filled out in P3).
 
 ### 1b.4 Shared patterns (`packages/ui` and `shared/`)

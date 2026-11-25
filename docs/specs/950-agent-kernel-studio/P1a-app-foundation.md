@@ -59,6 +59,11 @@ canvas. Options for palette, fonts, density and theme, with measured contrast:
 | Shell layout | | | | |
 | Base component set | | | | |
 
+Notes for the "Shell layout" sign-off (Task 10 prototype; the stories, the recommendations and the full list are in
+the Task 10 report): the app tabs' empty states have no first action in P1a, a waiver of the empty-state pattern
+("purpose and first action"), because no project can be opened yet; P2 adds "Open folder". The copy names the
+phase that fills each tab, as 1.5 asks.
+
 ## Work packages
 
 ### 1.1 Workspace

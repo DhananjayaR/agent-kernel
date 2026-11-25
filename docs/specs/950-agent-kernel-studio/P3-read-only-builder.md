@@ -172,4 +172,5 @@ Per "Get data from the kernel, not around it" in [architecture.md](architecture.
 | Importing the project has side effects or needs secrets | Timeout, no server start, static fallback, a clear message naming the missing variable |
 | Eight frameworks expose handoffs and tools differently | Read through the kernel's own `Agent` abstraction where it carries the data; per-framework code only in the helper |
 | Large graphs are unreadable | Settled at the design gate: grouping, auto-layout, mini-map |
+| Switching tabs loses the canvas or editor state: the P1a shell remounts a tab's content on every switch (one keyed `TabPanel`, `desktop-shell.tsx`) | Keep canvas and editor state outside the panel (stores, `.akstudio/`), or move the shell to one force-mounted `TabPanel` per tab; settle at the "Builder layout" gate |
 | The schema is too raw for a good form (unions, nested optionals) | The form generator supports a small per-field override table for labels and widgets; the schema stays the source of fields |
