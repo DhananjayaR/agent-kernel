@@ -34,7 +34,11 @@ a custom protocol serving `apps/desktop/out/renderer/` with the content security
 Context isolation and the sandbox are on, Node integration is off, navigation, new windows and permissions are
 refused, and every request whose scheme is not `app:` or `devtools:` (or, unpackaged, the dev server) is
 cancelled. The preload exposes one global, `window.studio` (`request`, `subscribe`). Window size, position and
-maximised state are kept in `window-state.json` in the app's data folder.
+maximised state are kept in `window-state.json` in the app's data folder; the app preferences (the theme and the
+shell layout: the bottom panel's open state and height) in `preferences.json`, written by `AppService` through
+`app.setTheme` and `app.setLayout` (strict schemas in `packages/contract`). The window opens with the stored theme's
+surface colour as its background (`nativeTheme` already follows the preference; `system` follows the OS), so a dark
+theme has no white flash, and keeps it in step when the theme changes.
 
 Development code is compiled out of the production build. `electron.vite.config.ts` sets `__STUDIO_DEV__` at
 build time: true for `pnpm dev` and `pnpm build:e2e`, false for `pnpm build` and `pnpm package`. Main's
@@ -147,6 +151,32 @@ shows an up-down icon at rest. The Menu `Shortcuts` story disables axe's `label-
 counts a visible shortcut ("Ctrl+E") as label text, while React Aria exposes it as the item's description
 (asserted).
 
+**Desktop shell** (Task 10, the "Shell layout" row of the design gate, built as its step 4 prototype; the owner
+signs it off from the `Shell/*` stories). Presentational components in `packages/ui`: `DesktopShell` (top bar, the
+selected tab's content as the `main` landmark, the bottom panel, the status bar), `TopBar` and `AppTabList`
+(Canvas, Code, Config, Test & trace, Deploy, as React Aria tabs filling the 48 px bar), `ProjectSwitcher`,
+`RunControl` (stopped, starting, running, failed), `DeployStatus` (not deployed, deployed, applying, failed),
+`BuildWithAIButton` (Button's `ai` variant: an outline in the AI colour with a sparkle, filled with the AI colour on
+hover; existing roles only), `SettingsButton`, `BottomPanel` (Problems, Run log, Commands), `StatusBar` and
+`SettingsModal`. Fixtures and the width checks are in `src/lib/shell-fixtures.tsx`; shell stories render full bleed
+(`parameters.fullBleed`) at a set viewport (`parameters.viewport` and `globals.viewport`, which the Vitest run
+applies), so a story at 1100 px measures 1100 px. The top bar is one row: at 1100 px and wider every label shows in
+full and only the project name gives way (ellipsis, at least 96 px); below 1100 px (the window allows 800) it is
+compact: tabs 16 px apart, Build with AI shows its sparkle (name in a tooltip), the run control drops the port and
+the deploy status its time. Nothing scrolls sideways (stories `At1100`, `At1440`, `At800Compact`; e2e at 1100 px);
+below about 1100 px the status bar may cut its last items (its narrow rule is P2's). The bottom panel collapses to
+its tab strip, so its toggle stays put; selecting a panel tab opens it; Mod+J (Ctrl+J, Cmd+J on macOS; declared in
+`bottom-panel.tsx`, no clash test exists yet) toggles it from anywhere; hiding it moves focus out of the views
+first. Its height is in pixels, restored when the shell mounts and reported after a drag, the handle's keys or a
+toggle. React Aria's Tabs render their children once in a detached document to build the collection, where
+react-resizable-panels refuses to mount, so `DesktopShell` mounts the panel group only once it is in a window; the
+bottom panel clears the outer tab state for its own Tabs (as React Aria's TabPanel does). In the app
+(`apps/renderer/src/shell/`), the tabs are hash routes (`#/canvas` ... `#/deploy`) whose empty states name the phase
+that fills them; no project can be opened before P2, so the switcher says "No project open" and the run control
+and deploy status are not drawn; Build with AI opens a popover saying it arrives in P6; settings open a modal with
+the theme; the status bar shows the Studio's version (the project's Agent Kernel version is a separate slot P2
+fills). A failed layout save is a background toast.
+
 **check-palette: known limits.** It reads source as text, so it cannot see class names built at run time
 (template strings such as `` `bg-${tone}-500` ``, or concatenation such as `"bg-" + tone`), and it does not flag
 Tailwind's CSS-variable shorthand (`bg-(--x)`, `w-(--trigger-width)`). Colour literals (hex, `rgb()`, `hsl()`,
@@ -159,12 +189,17 @@ class compiles to nothing even where the check cannot see it. Its scope is `apps
 test hooks), then runs two Playwright
 projects through `tools/e2e.mjs`, which wraps the run in `xvfb-run -a` on Linux when there is no `DISPLAY`
 (extra arguments go to `playwright test`, e.g. `pnpm test:e2e --project browser`). `browser` serves the
-renderer with its Vite dev server on `127.0.0.1:5199` and checks it on the mock transport: version, platform,
-theme switch. `electron` launches the built, unpackaged app (`apps/desktop/out/`) with `AK_STUDIO_TEST_HOOKS=1`
-and a fresh `--user-data-dir` per test, and checks the version and platform from the real main process, that the
-theme switch reaches `nativeTheme`, that the request gate cancelled nothing (Chromium's network stack only: Node
-networking in main is not covered), that the gate does count a refused request, and that the page uses the
-bundled Inter, loaded from `app://studio/assets/` with no `securitypolicyviolation` event.
+renderer with its Vite dev server on `127.0.0.1:5199` and checks it on the mock transport: the shell renders with
+the mock's version, each tab opens its empty state (and its address), the theme switches from the settings modal,
+Ctrl+J and the toggle hide and show the bottom panel, and at 1100 px the top bar is one row with no horizontal
+scroll. `electron` launches the built, unpackaged app (`apps/desktop/out/`) with `AK_STUDIO_TEST_HOOKS=1` and a
+fresh `--user-data-dir` per test (or one shared by a restart), and checks the version from the real main process,
+each tab's empty state, that the theme switch from the settings modal reaches `nativeTheme` and the window's
+background, that the window opens with the stored theme's background (dark, light, system), that the bottom
+panel's open state and height persist across a restart, the 1100 px layout, that the request gate cancelled
+nothing (Chromium's network stack only: Node networking in main is not covered), that the gate does count a
+refused request, and that the page uses the bundled Inter, Archivo and JetBrains Mono, declared on
+`app://studio/assets/` with no `securitypolicyviolation` event.
 
 **Packaging** (`apps/desktop/electron-builder.yml`, electron-builder 26.18.0). `pnpm package` builds, then
 packages for the current system into `apps/desktop/release/`: an AppImage and `linux-unpacked/` on Linux, an NSIS
@@ -202,16 +237,16 @@ packaged rows are from `pnpm test:packaged`, which CI also runs before it upload
 | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | ----------------------- | ----------------------- |
 | `pnpm install --frozen-lockfile`                                                 | Pass: lockfile up to date, supply-chain policy OK                                                                                                                                                                                                                                                                                               | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
 | `pnpm dev`                                                                       | Pass: window loads from the electron-vite dev server (`localhost:5173`), prints `[studio] window shown` and `[studio] bridge ready`; no CSP violation in the console (`ELECTRON_ENABLE_LOGGING=1`)                                                                                                                                              | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
-| `pnpm lint` (Biome with warnings as errors, check-palette, depcruise, self-test) | Pass: no Biome warning; check-palette 75 files (after Task 9)                                                                                                                                                                                                                                                                                   | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm lint` (Biome with warnings as errors, check-palette, depcruise, self-test) | Pass: no Biome warning; check-palette 117 files (after Task 10)                                                                                                                                                                                                                                                                                 | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
 | `pnpm typecheck`                                                                 | Pass                                                                                                                                                                                                                                                                                                                                            | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
-| `pnpm depcruise`                                                                 | Pass: 132 modules, 383 dependencies, no violations (after Task 9)                                                                                                                                                                                                                                                                               | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm depcruise`                                                                 | Pass: 175 modules, 649 dependencies, no violations (after Task 10)                                                                                                                                                                                                                                                                              | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
 | `pnpm depcruise:selftest`                                                        | Pass: 20 modules, 14 expected violations found, 2 allowed cases clean                                                                                                                                                                                                                                                                           | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
-| `pnpm test`                                                                      | Pass: 487 unit tests (contract 32, desktop 138, ui 276, renderer 41), check-palette 39 (after Task 9)                                                                                                                                                                                                                                           | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm test`                                                                      | Pass: 580 unit tests (contract 35, desktop 144, ui 351, renderer 50), check-palette 39 (after Task 10)                                                                                                                                                                                                                                          | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
 | `pnpm build` (production)                                                        | Pass: `out/main/index.js` holds no `AK_STUDIO_TEST_HOOKS` or `ELECTRON_RENDERER_URL`                                                                                                                                                                                                                                                            | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
 | `pnpm build-storybook`                                                           | Pass                                                                                                                                                                                                                                                                                                                                            | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
-| `pnpm test:storybook`                                                            | Pass: 178 (89 stories, dark and light), no axe violation (after Task 9)                                                                                                                                                                                                                                                                         | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
-| `pnpm test:e2e`                                                                  | Pass: 7 (browser 2, Electron 5) in about 3 s, no display (xvfb-run -a)                                                                                                                                                                                                                                                                          | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
-| `pnpm package`                                                                   | Pass: AppImage 126,422,100 bytes (120.6 MiB; differs by tens of bytes from build to build); `linux-unpacked/` 276 MiB; about 11 s                                                                                                                                                                                                               | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm test:storybook`                                                            | Pass: 366 (183 stories, dark and light), no axe violation, three runs in a row (after Task 10)                                                                                                                                                                                                                                                  | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm test:e2e`                                                                  | Pass: 14 (browser 5, Electron 9) in about 9 s, no display (xvfb-run -a); five runs in a row (after Task 10)                                                                                                                                                                                                                                     | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm package`                                                                   | Pass: AppImage 126,602,523 bytes (120.7 MiB, after Task 10; differs by tens of bytes from build to build); `linux-unpacked/` 276 MiB; about 11 s                                                                                                                                                                                                | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
 | `pnpm test:packaged` (AppImage and `linux-unpacked/`)                            | Pass, under `xvfb-run -a` and on a display: both start (`window shown`, `bridge ready`) and close with exit code 0, no process left; `--remote-debugging-port` and `--remote-debugging-pipe` exit 1 with the refusal line, the port never accepts a connection; `app.asar` holds no test-hook code; `THIRD-PARTY-NOTICES.txt` ships; about 21 s | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
 | Fuses (`ELECTRON_RUN_AS_NODE=1 ... -e`, `NODE_OPTIONS`, `--inspect`)             | Pass: none takes effect; the app starts as itself                                                                                                                                                                                                                                                                                               | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
 

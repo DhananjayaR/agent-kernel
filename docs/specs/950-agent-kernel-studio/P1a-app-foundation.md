@@ -139,10 +139,13 @@ canvas. Options for palette, fonts, density and theme, with measured contrast:
 ### 1.5 Desktop shell (`apps/renderer`)
 
 - [ ] `DesktopShell` with `TopBar`, `AppTabs` (Canvas, Code, Config, Test & Trace, Deploy), `BottomPanel`
-      (Problems, Run log, Commands), `StatusBar`. (Waits for the design gate, Task 10.)
-- [ ] Each tab shows an empty state naming the phase that fills it. (Task 10.)
-- [ ] Routing with in-memory or hash history. Theme switch. Panel sizes remembered. (Hash-history routing and
-      the theme switch are done on the placeholder page; panel sizes come with the shell, Task 10.)
+      (Problems, Run log, Commands), `StatusBar`. (Built on Linux as the design gate's step 4 prototype, Task 10:
+      stories under `Shell/` and wired in the app; waits for the "Shell layout" sign-off.)
+- [ ] Each tab shows an empty state naming the phase that fills it. (Task 10, with the shell: Canvas, Code and
+      Config P3; Test & Trace P8 and P9; Deploy P10.)
+- [ ] Routing with in-memory or hash history. Theme switch. Panel sizes remembered. (Task 10: each tab is a hash
+      route; the theme switches from the settings modal; the bottom panel's open state and height are an app
+      preference stored through `app.setLayout`. Waits for the "Shell layout" sign-off.)
 - [x] Runs in a browser against the mock transport.
 
 ### 1.6 Continuous integration
@@ -167,8 +170,9 @@ in the status bar where P2 shows the version.
 - [x] The renderer opens in a browser with the mock transport.
 - [x] The lint rule catches an `electron` import in the renderer.
 - [x] Contract test passes; a missing handler fails it.
-- [ ] End-to-end smoke test: the app starts, each tab opens, the theme switches. (Starts and theme switch:
-      done on Linux, and the packaged app starts. Tabs: Task 10.)
+- [ ] End-to-end smoke test: the app starts, each tab opens, the theme switches. (Done on Linux, Task 10: the
+      shell renders, each tab opens its empty state, the theme switches from the settings modal, the bottom panel
+      persists across a restart; the packaged app starts. Checked off with the "Shell layout" sign-off.)
 - [ ] Every story passes the accessibility check and the [UX checklist](design-process.md). (The three token
       stories pass the accessibility check on Linux; the UX checklist applies to the components of Task 9.)
 - [ ] CI is green on three operating systems and uploads three installers. (Deferred: needs push access
