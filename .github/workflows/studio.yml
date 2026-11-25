@@ -9,12 +9,16 @@ on:
     paths:
       - 'ak-studio/**'
       - '.github/workflows/studio.yml'
+      # The app's copy of the OAK mark must stay equal to the brand file (packages/ui/src/assets/oak-mark.test.ts).
+      - 'branding/logo-mark/**'
   push:
     branches:
       - develop
     paths:
       - 'ak-studio/**'
       - '.github/workflows/studio.yml'
+      # The app's copy of the OAK mark must stay equal to the brand file (packages/ui/src/assets/oak-mark.test.ts).
+      - 'branding/logo-mark/**'
   workflow_dispatch:
 
 concurrency:

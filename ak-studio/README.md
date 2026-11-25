@@ -9,11 +9,12 @@ The display name is "OAK Studio" (window title, menus, About, the `productName`)
 Kernel Studio" on first mention and in the About panel and the package description; identifiers keep their form
 (`ak-studio/`, `@ak-studio/*`, the `ak-studio` executable, the app id). The palette is already the token palette
 (`packages/ui/src/theme.css`). Interface icons are Tabler outline icons (`@tabler/icons-react`, pinned; Biome's
-`noRestrictedImports` refuses `lucide-react`), 16 px (`size-4`) or 20 px, stroke 2, and always `aria-hidden`
+`noRestrictedImports` refuses `lucide-react`), stroke 2, at the sizes the lucide icons had (16 px, `size-4`, almost
+everywhere; 12 px for the checkbox mark, 14 px in Tag and PathChip, 24 px in EmptyState's disc), and always `aria-hidden`
 (Tabler, unlike the lucide it replaced, does not hide them itself): the control around an icon carries the name.
 The top bar starts with the mark, `packages/ui/src/assets/oak-mark-orange.svg`, a byte-for-byte copy of
-`branding/logo-mark/oak-mark-orange.svg` (a unit test compares them; Biome skips the file, so it is never
-reformatted), imported as an asset and emitted as a file, so the app serves it from `app://studio/assets/` under
+`branding/logo-mark/oak-mark-orange.svg` (a unit test compares them, line endings normalised; the Studio
+workflow also runs on changes under `branding/logo-mark/`; Biome skips the file, so it is never reformatted), imported as an asset and emitted as a file, so the app serves it from `app://studio/assets/` under
 the production CSP. The app icon, `apps/desktop/build/icon.png` (1024 x 1024: the orange mark on Prussian Blue
 `#02284F`, the background `branding/README.md` gives for that colourway), is rendered from the same SVG by
 `pnpm make-app-icon` (`tools/make-app-icon.mjs`, Playwright's Chromium); run it again when the mark changes and
