@@ -1,7 +1,7 @@
 // Button: added with the shadcn CLI (aria-nova, React Aria `Button`), restyled to Spectrum 2 medium in OAK's shape:
 // rectangular, the 8 px control radius (branding/README.md, "Shape"), never a pill.
 // One primary action per view: `primary` for it; everything else is `secondary`, `outline` or `ghost`. The primary
-// label is Archivo SemiBold (branding: "Archivo for headlines and CTA buttons"); every other label is Inter.
+// label is Archivo SemiBold (the Drive "Agent Kernel - Style Guidelines Quick Reference", May 2026: "Archivo for headlines and CTA buttons"); every other label is Inter.
 // `danger` names the thing it destroys ("Destroy deployment") and always shows an icon, so it is never told
 // from `primary` by colour alone (the two hues are close). `ai` is the AI button style, for an action that hands
 // work to the coding agent ("Build with AI") and nothing else: an outline in the AI colour with a sparkle icon

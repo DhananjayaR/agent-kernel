@@ -1,6 +1,6 @@
 {
 	"name": "@ak-studio/desktop",
-	"productName": "OAK Studio",
+	"productName": "Open Agent Kernel Studio",
 	"description": "Open Agent Kernel Studio (OAK Studio) desktop app",
 	"desktopName": "oak-studio.desktop",
 	"version": "0.0.0",

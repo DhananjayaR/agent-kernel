@@ -1,11 +1,12 @@
 # electron-builder 26.18.0: packages the electron-vite build in out/. `pnpm package` (from ak-studio/) builds
 # first, then runs this for the current operating system. Unsigned everywhere in P1a.
 #
-# productName is the display name, "OAK Studio" (Open Agent Kernel Studio, the description in package.json); it
-# also names the app's data folder. The appId (reverse DNS of the project domain kernel.yaala.ai) is unchanged.
+# productName is the full name, "Open Agent Kernel Studio" (brand name rule: the full name in titles; the compact UI
+# says "OAK Studio"); it names the installer, the Linux desktop entry and the app's data folder.
+# The appId (reverse DNS of the project domain kernel.yaala.ai) is unchanged.
 # P12 confirms both (docs/specs/950-agent-kernel-studio/README.md, open question 3).
 appId: ai.yaala.kernel.studio
-productName: OAK Studio
+productName: Open Agent Kernel Studio
 directories:
   output: release
   # build/icon.png (1024 x 1024, made by `pnpm make-app-icon` from branding/logo-mark/oak-mark-orange.svg): the

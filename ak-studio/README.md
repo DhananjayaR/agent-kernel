@@ -5,8 +5,9 @@ workspace; Node 24.22.1, pnpm 12.4.1.
 
 **Brand.** The source of truth is [`branding/README.md`](../branding/README.md) at the repository root (name
 rules, logos, colours, the website design system) and its SVGs, used as they are (never redrawn or recoloured).
-The display name is "OAK Studio" (window title, menus, About, the `productName`), with the full name "Open Agent
-Kernel Studio" on first mention and in the About panel and the package description; identifiers keep their form
+The full name "Open Agent Kernel Studio" is the `productName`, the window title, the renderer `<title>`, the About
+panel and the installer name (the brand's rule: the full name in titles); the compact interface says "OAK Studio"
+(the top bar's logo name, messages); identifiers keep their form
 (`ak-studio/`, `@ak-studio/*`, the `ak-studio` executable, the app id). The palette is already the token palette
 (`packages/ui/src/theme.css`). Interface icons are Tabler outline icons (`@tabler/icons-react`, pinned; Biome's
 `noRestrictedImports` refuses `lucide-react`), stroke 2, in two sizes: 16 px (inline, controls, chips; the default
@@ -19,7 +20,7 @@ workflow also runs on changes under `branding/logo-mark/`; Biome skips the file,
 the production CSP. The app icon, `apps/desktop/build/icon.png` (1024 x 1024: the orange mark on Prussian Blue
 `#02284F`, the background `branding/README.md` gives for that colourway), is rendered from the same SVG by
 `pnpm make-app-icon` (`tools/make-app-icon.mjs`, Playwright's Chromium); run it again when the mark changes and
-commit the PNG. electron-builder makes the Linux icon sizes, the macOS `.icns` and the Windows `.ico` from it (its
+commit the PNG and `icon.source.sha256` (the mark's hash; a unit test fails when the PNG is out of date). electron-builder makes the Linux icon sizes, the macOS `.icns` and the Windows `.ico` from it (its
 converter works on Linux too), and main sets it as the window icon on Linux (from `resources/icon.png` when
 packaged). The icon is a full-bleed square; the macOS rounded-square template is made with signing, in P12.
 
@@ -71,10 +72,10 @@ at run time. Development and e2e builds, run unpackaged with `AK_STUDIO_TEST_HOO
 `globalThis.__akStudioTestHooks` in the main process (`cancelledRequestCount()`, `cancelledRequestUrls()`, the
 newest 100) for the Electron smoke test. The count covers Chromium's network stack only, not Node networking in
 the main process. They accept `ELECTRON_RENDERER_URL` only on `localhost`, `127.0.0.1` or `[::1]` (otherwise
-they refuse to start). Every unpackaged build runs as "OAK Studio (dev)" with its own data folder and
-single-instance lock. The data folder is named after the product name (`<appData>/OAK Studio`, and
-`<appData>/OAK Studio (dev)` unpackaged), so it moved with the rename from "Agent Kernel Studio": window state
-and preferences kept under the old name are not read (nothing was released under it).
+they refuse to start). Every unpackaged build runs as "Open Agent Kernel Studio (dev)" with its own data folder and
+single-instance lock. The data folder is named after the product name (`<appData>/Open Agent Kernel Studio`, and
+`<appData>/Open Agent Kernel Studio (dev)` unpackaged), so it moved with the renames ("Agent Kernel Studio", then
+"OAK Studio"): window state and preferences kept under an old name are not read (nothing was released under them).
 Packaged builds and production builds (`pnpm build`, packaged or not) refuse to start with `--remote-debugging-port`
 or `--remote-debugging-pipe` (checked first, before
 the single-instance lock; one line on stderr, exit code 1): the DevTools protocol takes local connections without
@@ -242,7 +243,7 @@ refused request, and that the page uses the bundled Inter, Archivo and JetBrains
 packages for the current system into `apps/desktop/release/`: an AppImage and `linux-unpacked/` on Linux, an NSIS
 installer on Windows, a dmg on macOS (Windows and macOS are configured, not yet built). Nothing is signed. The
 asar holds `out/` and `package.json` only (the contract and zod are bundled into main, so no `node_modules`).
-The product name is "OAK Studio" and `appId` (`ai.yaala.kernel.studio`) is unchanged; P12 confirms both. The
+The product name is "Open Agent Kernel Studio" and `appId` (`ai.yaala.kernel.studio`) is unchanged; P12 confirms both. The
 icon comes from `build/` (`buildResources`), and `build/icon.png` also ships as `resources/icon.png` for the Linux
 window icon (`pnpm test:packaged` checks it is there). On Linux, `desktopName` (`oak-studio.desktop`, in
 `apps/desktop/package.json`) with `linux.syncDesktopName` names the launcher entry and its `StartupWMClass`
@@ -267,7 +268,7 @@ an X server (`xvfb-run -a pnpm test:packaged`). The AppImage needs FUSE 2 (`libf
 Ubuntu, Windows and macOS: install, Playwright's Chromium, lint (with depcruise and its self-test), typecheck,
 unit tests, Storybook build and accessibility run, e2e, package, the packaged smoke check (`xvfb-run -a` on
 Linux), and the installer uploaded as a workflow artifact only after the smoke check passes.
-The Python `Test` and `Code Quality` workflows ignore changes under `ak-studio/**`. No status check is required
+`test.yaml` (`Test`) and `code-quality.yml` (`Code Quality`) skip changes only under `ak-studio/**`. No status check is required
 on `develop` today; if `Test` or `Code Quality` ever becomes a required check, a Studio-only PR would wait forever
 for a run that never starts, and needs a different approach (for example a job that always runs and skips its
 steps). `ak-studio/.gitattributes` keeps LF line endings on Windows checkouts, which Biome expects.

@@ -144,14 +144,14 @@ test("built app starts and shows the shell with the version from the real main p
 		// The real version (the mock would say 0.0.0-mock), so the renderer is on the IPC bridge.
 		await expect(appVersion(page)).toHaveText(main);
 		expect(page.url()).toBe("app://studio/#/canvas");
-		// The display name: the window title, and the app name (unpackaged builds add "(dev)").
-		await expect(page).toHaveTitle("OAK Studio");
+		// The full name: the window title, and the app name (unpackaged builds add "(dev)").
+		await expect(page).toHaveTitle("Open Agent Kernel Studio");
 		expect(
 			await app.evaluate(({ app, BrowserWindow }) => [
 				app.getName(),
 				BrowserWindow.getAllWindows()[0]?.getTitle(),
 			]),
-		).toEqual(["OAK Studio (dev)", "OAK Studio"]);
+		).toEqual(["Open Agent Kernel Studio (dev)", "Open Agent Kernel Studio"]);
 		await expect(page.getByRole("banner")).toBeVisible();
 		await expect(page.getByText("No project open")).toBeVisible();
 		await expect(page.getByRole("group", { name: "Local run" })).toHaveText(

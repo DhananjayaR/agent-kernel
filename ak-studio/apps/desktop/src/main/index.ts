@@ -87,11 +87,12 @@ const windowIcon = app.isPackaged
 	? join(process.resourcesPath, "icon.png")
 	: join(import.meta.dirname, "../../build/icon.png");
 
-// The display name is "OAK Studio" (productName); About names the full product.
+// The product name is the full name, "Open Agent Kernel Studio" (productName): the window title, the installer,
+// the data folder and the About panel use it (brand name rule, branding/README.md). Linux's About dialog shows
+// applicationName, applicationVersion and the icon (`credits` is macOS and Windows only, so it is not used).
 app.setAboutPanelOptions({
-	applicationName: "OAK Studio",
+	applicationName: "Open Agent Kernel Studio",
 	applicationVersion: app.getVersion(),
-	credits: "Open Agent Kernel Studio",
 	iconPath: windowIcon,
 });
 
@@ -137,7 +138,7 @@ function createWindow(): BrowserWindow {
 		minWidth: MIN_SIZE.width,
 		minHeight: MIN_SIZE.height,
 		show: false,
-		title: "OAK Studio",
+		title: "Open Agent Kernel Studio",
 		...(process.platform === "linux" ? { icon: windowIcon } : {}),
 		// The stored theme is already applied (startBridge sets nativeTheme.themeSource first): no white flash.
 		backgroundColor: windowBackground(nativeTheme.shouldUseDarkColors),

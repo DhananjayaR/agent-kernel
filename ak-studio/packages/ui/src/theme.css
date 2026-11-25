@@ -271,7 +271,7 @@
 
 	/*
 	 * Families (bundled in fonts.css). `font-ui`: Inter, all UI and body text. `font-heading`: Archivo,
-	 * headings and the primary call to action (branding/README.md: "Archivo for headlines and CTA buttons").
+	 * headings and the primary call to action (the Drive "Agent Kernel - Style Guidelines Quick Reference", May 2026: "Archivo for headlines and CTA buttons"; not in branding/README.md).
 	 * `font-mono`: JetBrains Mono, for code, paths, identifiers, durations, token counts and money; with
 	 * figures, use `mono-figures` (below) for tabular digits. The other button labels stay in Inter
 	 * (`font-ui` with weight `font-control`), so every other control in a row (buttons, action buttons,
