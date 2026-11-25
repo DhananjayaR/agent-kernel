@@ -27,6 +27,7 @@
  *                                               from `text`; only `text`-coloured content sits on them.
  *   disabled-fill, disabled-border,             Disabled controls only (exempt from contrast minimums).
  *   disabled-text
+ *   scrim                                       Behind a modal only; derived from the theme's own roles.
  *
  * Roles: accent-primary (primary action, selection), accent-ai (the coding agent, nothing else),
  * status-success, status-warning, status-danger.
@@ -85,6 +86,9 @@
 	--role-border-default: #173964; /* --ak-border */
 	--role-border-control: #597eae; /* from --ak-border #173964 */
 	--role-focus-ring: #ff5e32; /* --ak-primary */
+
+	/* Behind a modal: the dark surface at 70%, so the page recedes into the ground it sits on. */
+	--role-scrim: color-mix(in oklab, var(--role-surface) 70%, transparent);
 }
 
 [data-theme="light"] {
@@ -116,6 +120,9 @@
 	--role-border-default: #d3deec; /* --ak-border */
 	--role-border-control: #7d8794; /* from --ak-border #d3deec */
 	--role-focus-ring: #ef4e20; /* from --ak-primary #ff5e32 */
+
+	/* Behind a modal: the navy text colour at 40% (a white wash would not separate the modal from the page). */
+	--role-scrim: color-mix(in oklab, var(--role-text) 40%, transparent);
 }
 
 /*
@@ -189,6 +196,11 @@
 		transparent
 	);
 	--color-disabled-text: color-mix(in oklab, var(--role-text) 40%, transparent);
+	/*
+	 * Overlays (Task 9, second half). The scrim dims the page behind a modal; it is derived from the theme's
+	 * own roles (no new colour value) and is decorative: the modal itself carries the border and the shadow.
+	 */
+	--color-scrim: var(--role-scrim);
 }
 
 /*

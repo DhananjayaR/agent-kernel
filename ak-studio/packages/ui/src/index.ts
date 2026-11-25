@@ -31,6 +31,14 @@ export {
 	type ComboboxProps,
 } from "./components/combobox";
 export {
+	ConfirmModal,
+	type ConfirmModalProps,
+} from "./components/confirm-modal";
+export {
+	ContextMenu,
+	type ContextMenuProps,
+} from "./components/context-menu";
+export {
 	DataTable,
 	DataTableBody,
 	DataTableCell,
@@ -49,7 +57,17 @@ export {
 	type InlineBannerProps,
 } from "./components/inline-banner";
 export { Input, type InputProps } from "./components/input";
+export {
+	Menu,
+	MenuItem,
+	type MenuItemProps,
+	type MenuProps,
+	MenuSection,
+	MenuSeparator,
+} from "./components/menu";
+export { Modal, type ModalOpening, type ModalProps } from "./components/modal";
 export { PathChip, type PathChipProps } from "./components/path-chip";
+export { Popover, type PopoverProps } from "./components/popover";
 export {
 	type PanelLayout,
 	ResizableHandle,
@@ -91,6 +109,16 @@ export {
 } from "./components/tabs";
 export { Tag, type TagProps } from "./components/tag";
 export { Textarea, type TextareaProps } from "./components/textarea";
+export {
+	type BackgroundResult,
+	createToastQueue,
+	notifyBackgroundResult,
+	TOAST_TIMEOUT_MS,
+	type ToastQueue,
+	ToastRegion,
+	type ToastRegionProps,
+	type ToastTone,
+} from "./components/toast";
 export { Tooltip, type TooltipProps } from "./components/tooltip";
 export {
 	Tree,
@@ -100,5 +128,11 @@ export {
 	type TreeProps,
 } from "./components/tree";
 export { cn } from "./lib/utils";
-export type { CodeBlockStrings, PathChipStrings } from "./strings";
+export type {
+	CodeBlockStrings,
+	ConfirmModalStrings,
+	ModalStrings,
+	PathChipStrings,
+	ToastStrings,
+} from "./strings";
 export { uiStrings } from "./strings";
