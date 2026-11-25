@@ -94,7 +94,9 @@ component imports `cn` directly, or while `lib/utils.ts` misses a size, radius, 
 **Base components** (Task 9, `packages/ui/src/components/`, exported from `@ak-studio/ui`), restyled to Spectrum 2
 medium on React Aria: Button and IconButton, Input, Textarea, Select, Combobox, Checkbox, Switch, SegmentedControl
 (controls); Tag, Badge, StatusChip, PathChip, Card, CodeBlock, Tooltip, Skeleton, Spinner, EmptyState,
-InlineBanner (display). Fields take `label`, `description` and `errorMessage` and render them, and must be named
+InlineBanner (display); Modal, ConfirmModal, Popover, Menu, ContextMenu, Toast (overlays); Tabs, ResizablePanels,
+DataTable, Tree (structure). Drawer is left to P6 (its first user, the Build with AI drawer). Fields take `label`,
+`description` and `errorMessage` and render them, and must be named
 by type (`label`, `aria-label` or `aria-labelledby`). Each control's state colours come from one function in
 `src/lib/state.ts` with a written precedence (disabled wins over everything; invalid wins the border over focus,
 hover and selection; read-only shows no hover or press), and `state.test.ts` enumerates every combination.
@@ -102,12 +104,32 @@ Read-only (P3's config forms): Input, Textarea, Combobox, Checkbox and Switch ta
 React Aria cannot make read-only, renders as a read-only Input showing the selected option. The English defaults
 of the components (status labels, "Copy path", ...) are in `src/strings.ts`, each overridable by a prop. Shared
 class recipes are in `src/lib/styles.ts`; `theme.css` adds the state colours they use (`accent-primary-hover`,
-`status-danger-hover`, the neutral `fill` steps derived from `text`, and the `disabled-*` colours) and the
-`focus-ring` / `focus-outline` and `press` utilities. Muted text never sits on a neutral fill (it drops below
-4.5:1). Every component has stories (default, hover, focus, disabled, invalid where they apply; keyboard tests
-for Select, Combobox, Checkbox, Switch, SegmentedControl and PathChip) whose play functions check the state was
+`status-danger-hover`, the neutral `fill` steps derived from `text`, the `disabled-*` colours and the modal
+`scrim`) and the `focus-ring` / `focus-ring-inset` / `focus-outline`, `press` and `tree-indent` utilities. Muted
+text never sits on a neutral fill (it drops below 4.5:1), so table and tree rows show `text`-coloured content
+only. Every component has stories (default, hover, focus, disabled, invalid where they apply; keyboard tests
+for Select, Combobox, Checkbox, Switch, SegmentedControl, PathChip, Modal, ConfirmModal, Popover, Menu,
+ContextMenu, Toast, Tabs, ResizablePanels, DataTable and Tree) whose play functions check the state was
 reached and the Spectrum 2 measurement (32 px controls, radii, padding, the 2 px focus ring 2 px away). Storybook
 sets `data-theme` on `<html>` as the app does, so popovers and tooltips (portalled to `<body>`) follow the theme.
+
+**Overlays and structure.** Floating layers (Modal, Popover, Menu, ContextMenu, Toast) are solid: the overlay
+surface, a decorative hairline and the measured `shadow-elevated`, asserted by `expectSolidLayer` in both themes.
+Focus moves into a Modal or Popover when it opens and back to its trigger when it closes; Escape closes them. A
+ConfirmModal is an alert dialog whose action says what happens; the destructive variant names what it affects
+and enables its danger action only when the thing's name is typed exactly, and focus never starts on that
+action (Escape and Cancel close it without acting; a scrim click does nothing). Toast is React Aria's toast
+(`UNSTABLE_ToastRegion`, pinned with react-aria-components 1.22.1), not sonner: sonner injects a global stylesheet
+with its own 400 ms transitions, widths and colours even when unstyled. A toast is only for a background result
+(`notifyBackgroundResult`); a toast with an action stays until dismissed; F6 reaches the region. ContextMenu
+wraps a region (a Tree or DataTable) and opens for the row under the pointer or the focused row (Shift+F10, the
+ContextMenu key). ResizablePanels (react-resizable-panels 4.24.1, P0 D1) never stores anything: `defaultLayout`
+restores a layout and `onLayoutChange` reports the one to remember. DataTable and Tree use highlight selection
+(selection follows focus, Space toggles, Enter runs the row action) and draw a selected row's 2 px start edge in
+`text-accent-primary` so selection is not colour alone; their keyboard models are written at the top of
+`data-table.tsx` and `tree.tsx` and asserted by their Keyboard stories. DataTable is not virtualised. The Menu
+stories disable axe's `label-content-name-mismatch` rule: it counts a visible shortcut ("Ctrl+E") as label text,
+while React Aria exposes it as the item's description (asserted).
 
 **check-palette: known limits.** It reads source as text, so it cannot see class names built at run time
 (template strings such as `` `bg-${tone}-500` ``, or concatenation such as `"bg-" + tone`), and it does not flag
