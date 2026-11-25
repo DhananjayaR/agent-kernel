@@ -251,7 +251,7 @@ match the provisional choice.
 - [ ] S4 Canvas and code. Ran on Linux, software-rendered; cold-open target missed; real-GPU check not done
 - [ ] S5 Coding agent. The pasted-key half ran on Linux and is superseded; the mechanics of the user's-own-Claude-Code half ran; a turn on a working subscription has not
 - [ ] Decision record complete and approved. Drafted; the owner chose Vite and shadcn/ui (and the Spectrum 2 style) on 23 Nov 2026 before P0 ran; D1a, D5 and D12 approved after the spikes; the rest pending owner review
-- [ ] Spike code deleted or archived outside `ak-studio/`. Left on branch `spike/950-studio-p0` until P1a starts
+- [x] Spike code deleted, 25 Nov 2026, at the owner's request. It was never pushed; the findings and measurements are in `research/`
 
 ## Exit criteria
 
@@ -283,8 +283,8 @@ match the provisional choice.
 ### Not run: the coding agent on the user's own Claude Code (S5, second half)
 
 - A real turn on a working subscription: streaming, approve, deny, interrupt, usage, and what cost figure a
-  subscription reports. The spike machine's sign-in had expired. To run it: sign in a Claude Code on the
-  machine, then run `ak-studio-spikes/app/scripts/s5b-live-probe.mjs` on the spike branch.
+  subscription reports. The spike machine's sign-in had expired. Moved to P6, which writes its own check; the spike's
+  probe script was deleted with the spike code.
 - A user-installed `claude` (the spike used the desktop app's copy), and any version other than the SDK's own.
 - Whether the model uses the Agent Kernel commands once loaded. A resume that carries a real conversation.
 - A real trace of file opens (`strace`), and a real desktop-launcher start.

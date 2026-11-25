@@ -2,6 +2,9 @@
 
 **Date:** 23 and 24 Nov 2026  **Ran on:** Linux (WSL2) only  **Time spent:** under 1 day  **Decision it feeds:** D14
 
+> **The spike code was deleted on 25 November 2026** at the owner's request; it was never pushed. This note and the
+> measurement files beside it are the record. File paths below name the spike code as it was.
+
 > **Superseded in part, 24 November 2026.** This spike tested a design in which the user pastes an API key
 > into the Studio. The owner has since settled that the Studio uses the user's own Claude Code, already
 > installed and signed in with a subscription, and holds no credential
@@ -264,8 +267,8 @@ no turn ran on a subscription.
   - project commands from `ak skill install` loading, also with hooks off.
 - **Not run, because the sign-in had expired:** streaming text, approve, deny, interrupt, usage and cost on a
   subscription.
-- **Re-run:** the owner signs in a Claude Code CLI on the machine, then runs `scripts/s5b-live-probe.mjs` as its
-  header describes.
+- **Re-run:** moved to P6, which writes its own check against a signed-in Claude Code. The spike's probe script
+  was deleted with the spike code.
 
 **Important facts about this machine:**
 - **`claude` is not installed:** there is no `claude` on `PATH` or in any install location. The only Claude Code

@@ -2,6 +2,9 @@
 
 **Date:** 2026-11-23  **Ran on:** Linux (WSL2) only  **Time spent:** under 1 day
 
+> **The spike code was deleted on 25 November 2026** at the owner's request; it was never pushed. This note and the
+> measurement files beside it are the record. File paths below name the spike code as it was.
+
 ## Result
 
 Pass with changes — shadcn/ui on the React Aria base, restyled with Spectrum 2-measured tokens in Tailwind 4
@@ -31,8 +34,8 @@ held more than 15 rows.
 
 Dark/light readability of floating layers: measured title-text contrast on the composited dialog fill
 (ignoring scrim and blur, so a best case): solid dark 11.22, glass dark 12.57, solid light 14.8. **Glass light
-with the brief's `.glass` fill: 2.67 (fails)** — the capture of it is kept on branch `spike/950-studio-p0`. After
-adding a light glass fill (below): 14.8 (capture kept on branch `spike/950-studio-p0`).
+with the brief's `.glass` fill: 2.67 (fails)** — the capture of it was on the spike branch, deleted with the spike code. After
+adding a light glass fill (below): 14.8. The numbers here are the record.
 
 ## Step 2a: Spectrum 2 measurements (medium size, desktop scale)
 

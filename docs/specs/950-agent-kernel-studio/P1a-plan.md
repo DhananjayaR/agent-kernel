@@ -36,8 +36,8 @@ dependency-cruiser, electron-builder, pnpm 12, Node 24.
 - **Electron security baseline:** `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false`, a content
   security policy, a custom protocol, navigation and new windows blocked, the sender checked on every message.
 - **The app makes no network calls of its own.** Fonts are bundled.
-- **Spike code is reference, not source.** Read `ak-studio-spikes/` on branch `spike/950-studio-p0` for what
-  worked; write `ak-studio/` fresh. No file copied, and no `SPIKE_*` switch carried over.
+- **No spike code.** The P0 spike code was deleted on 25 November 2026. Its findings are in `research/spike-s*.md`;
+  `ak-studio/` is written fresh, and no `SPIKE_*` switch exists.
 - **Design-gate boundary.** Token *values*, base components and the shell layout wait for the P1a design gate
   sign-off. Before it, `packages/ui` holds the mechanism only, with stand-in tokens from
   `docs/src/css/custom.css`, each marked `/* provisional: P1a design gate */`.

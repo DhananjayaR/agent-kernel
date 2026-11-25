@@ -2,6 +2,9 @@
 
 **Date:** 2026-11-23  **Ran on:** Linux (WSL2) only  **Time spent:** under 1 day (S2 part 1 and part 2)
 
+> **The spike code was deleted on 25 November 2026** at the owner's request; it was never pushed. This note and the
+> measurement files beside it are the record. File paths below name the spike code as it was.
+
 ## Result
 
 Pass with changes on Linux; Windows and macOS not run, so the "one command on all three systems, CI green on

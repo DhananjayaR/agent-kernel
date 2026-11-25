@@ -139,7 +139,7 @@ requests as cards; sees what changed on the canvas and in a diff; accepts or rev
 - A status view: not installed, not signed in, or ready, with the version and which credential Claude Code
   is using. When not signed in, it tells the user to sign in from a terminal.
 - The opened folder's agent hooks and permission rules are listed and confirmed before they are loaded.
-- Run the live turn of spike S5 if P0 did not: streaming, approve, deny, interrupt and usage on a working
+- Run the live turn S5 could not (the spike code is deleted, so P6 writes its own check): streaming, approve, deny, interrupt and usage on a working
   subscription. A lowest supported Claude Code version, checked in the status view.
 - A user with only the Claude desktop app has no `claude` command: the status view sends them to the Claude
   Code installer. The adapter never uses the SDK's `sessionStore`, which appears to read the credential file (not exercised).

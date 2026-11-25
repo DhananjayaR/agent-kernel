@@ -1,5 +1,8 @@
 # P0 Technology Selection: Execution Plan
 
+> **Executed, and the spike code is deleted** (25 November 2026). This plan is kept as the record of how P0 ran;
+> the branch and paths it names no longer exist. Results: [P0-technology-selection.md](P0-technology-selection.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or
 > superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for
 > tracking.
@@ -1110,12 +1113,8 @@ approver and date in the table.
 git add docs/specs/950-agent-kernel-studio && git commit -m "docs: record P0 technology decisions for #950"
 ```
 
-Leave `spike/950-studio-p0` in place until P1a starts, as a reference. **Deleting the remote branch needs the
-project owner's go-ahead**; when given:
-
-```bash
-git push origin --delete spike/950-studio-p0 && git branch -D spike/950-studio-p0
-```
+**Done 25 November 2026:** the owner asked for the spike code to be removed. The branch was never pushed, so only
+the local branch `spike/950-studio-p0` and the working copy `ak-studio-spikes/` were deleted.
 
 ---
 
@@ -1205,7 +1204,7 @@ Added 24 November 2026. Runs on branch `spike/950-studio-p0`, in `ak-studio-spik
 **Ran 24 November 2026** with the owner's go-ahead. Steps 1 to 4 and 6 to 8 ran (Step 6 with a weaker check;
 no `strace`). In Step 5 the dummy-key run passed; **the turn on the subscription did not run**, because the
 machine's sign-in had expired. The machine had no `claude` command, so the desktop app's copy was used
-through a spike-only override. To finish: sign in a Claude Code, then run `scripts/s5b-live-probe.mjs`.
+through a spike-only override. The live turn moved to P6 when the spike code was deleted.
 
 **Stop first:** Steps 3 to 6 use the Claude Code sign-in on the machine they run on. Do not run them without
 the owner's go-ahead for that machine. Never read, print or copy a credential file or keychain entry.

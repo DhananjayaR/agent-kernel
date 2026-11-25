@@ -2,6 +2,9 @@
 
 **Date:** 2026-11-23  **Ran on:** Linux (WSL2) only, headless Chromium and Electron 45 under xvfb, software-rendered  **Time spent:** under 1 day
 
+> **The spike code was deleted on 25 November 2026** at the owner's request; it was never pushed. This note and the
+> measurement files beside it are the record. File paths below name the spike code as it was.
+
 ## Result
 
 Pass with changes, and weaker than a first reading of the numbers suggests. React Flow 13.0.2 with a dagre layout in a worker stayed usable at 300
