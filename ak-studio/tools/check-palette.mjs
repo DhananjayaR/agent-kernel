@@ -57,13 +57,14 @@ export function findViolations(text, families) {
 		],
 		[
 			"arbitrary value",
-			// utility-[value]; a bracket followed by ':' is an arbitrary variant (data-[state=open]:), not a value.
-			/(?<![\w-])-?[a-z][a-z0-9-]*-\[[^\]\s]+\](?!:)/g,
+			// utility-[value]. A bracket followed by ':' (or by '/name:' for a named group or peer) is an
+			// arbitrary variant such as data-[state=open]: or group-data-[open]/menu:, not a value.
+			/(?<![\w-])-?[a-z][a-z0-9-]*-\[[^\]\s]+\](?!:|\/[\w-]+:)/g,
 		],
 		[
 			"arbitrary value",
 			// [property:value] arbitrary property.
-			/(?<![\w-])\[[a-z-]+:[^\]\s]+\](?!:)/g,
+			/(?<![\w-])\[[a-z-]+:[^\]\s]+\](?!:|\/[\w-]+:)/g,
 		],
 	];
 	const found = [];

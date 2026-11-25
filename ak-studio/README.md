@@ -11,7 +11,7 @@ pnpm test        # every member's unit tests (Vitest), then check-palette's own 
 pnpm check-palette        # no Tailwind default-palette class or arbitrary value in apps/renderer or packages/ui
 pnpm storybook            # Storybook dev server for packages/ui on 127.0.0.1:6006
 pnpm build-storybook      # static Storybook into packages/ui/storybook-static/
-pnpm test:storybook       # every story in headless Chromium with the axe accessibility check (fails on a violation)
+pnpm test:storybook       # every story, dark and light, in headless Chromium with axe (fails on a violation)
 pnpm depcruise   # boundary rules (dependency-cruiser, swc parser)
 pnpm depcruise:selftest  # proves the rules can fail and the parser finds modules
 pnpm build       # check-palette, then electron-vite: main, preload and renderer into apps/desktop/out/

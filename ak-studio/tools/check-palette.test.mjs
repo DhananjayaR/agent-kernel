@@ -72,9 +72,18 @@ describe("check-palette", () => {
 		]);
 	});
 
+	it("flags an arbitrary value with an opacity modifier", () => {
+		expect(
+			findViolations('"bg-[#fff]/50"', defaultPaletteFamilies()).map(
+				(v) => v.kind,
+			),
+		).toEqual(["arbitrary value"]);
+	});
+
 	it.each([
 		"data-[pressed]:bg-surface",
 		"[&_svg]:size-4",
+		"group-data-[open]/menu:bg-surface",
 		"whitespace-nowrap",
 		"text-accent-primary",
 		"--color-*: initial",

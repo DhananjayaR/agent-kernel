@@ -25,32 +25,32 @@
  */
 :root,
 [data-theme="dark"] {
-	--role-surface: #011428; /* provisional: P1a design gate (custom.css --ak-surface) */
-	--role-surface-raised: #02284f; /* provisional: P1a design gate (custom.css --ak-surface-raised) */
-	--role-surface-overlay: #0d315a; /* provisional: P1a design gate (custom.css --ak-surface-overlay) */
-	--role-text: #eaf3f8; /* provisional: P1a design gate (custom.css --ak-text) */
-	--role-text-muted: #798bad; /* provisional: P1a design gate (custom.css --ak-text-muted) */
-	--role-border-default: #173964; /* provisional: P1a design gate (custom.css --ak-border) */
-	--role-accent-primary: #ff5e32; /* provisional: P1a design gate (custom.css --ak-primary) */
+	--role-surface: #011428; /* provisional: P1a design gate */ /* custom.css --ak-surface */
+	--role-surface-raised: #02284f; /* provisional: P1a design gate */ /* custom.css --ak-surface-raised */
+	--role-surface-overlay: #0d315a; /* provisional: P1a design gate */ /* custom.css --ak-surface-overlay */
+	--role-text: #eaf3f8; /* provisional: P1a design gate */ /* custom.css --ak-text */
+	--role-text-muted: #798bad; /* provisional: P1a design gate */ /* custom.css --ak-text-muted */
+	--role-border-default: #173964; /* provisional: P1a design gate */ /* custom.css --ak-border */
+	--role-accent-primary: #ff5e32; /* provisional: P1a design gate */ /* custom.css --ak-primary */
 	/* custom.css defines no coding-agent colour; --ak-blue is a stand-in only, not a pick. */
-	--role-accent-ai: #b1cdff; /* provisional: P1a design gate (custom.css --ak-blue) */
-	--role-status-success: #26a64d; /* provisional: P1a design gate (custom.css --ak-green) */
-	--role-status-warning: #f7a544; /* provisional: P1a design gate (custom.css --ak-warning) */
-	--role-status-danger: #db4444; /* provisional: P1a design gate (custom.css --ak-red) */
+	--role-accent-ai: #b1cdff; /* provisional: P1a design gate */ /* custom.css --ak-blue */
+	--role-status-success: #26a64d; /* provisional: P1a design gate */ /* custom.css --ak-green */
+	--role-status-warning: #f7a544; /* provisional: P1a design gate */ /* custom.css --ak-warning */
+	--role-status-danger: #db4444; /* provisional: P1a design gate */ /* custom.css --ak-red */
 }
 
 [data-theme="light"] {
-	--role-surface: #ffffff; /* provisional: P1a design gate (custom.css --ak-surface) */
-	--role-surface-raised: #f1f5fa; /* provisional: P1a design gate (custom.css --ak-surface-raised) */
-	--role-surface-overlay: #e7eef7; /* provisional: P1a design gate (custom.css --ak-surface-overlay) */
-	--role-text: #02284f; /* provisional: P1a design gate (custom.css --ak-text) */
-	--role-text-muted: #5d7199; /* provisional: P1a design gate (custom.css --ak-text-muted) */
-	--role-border-default: #d3deec; /* provisional: P1a design gate (custom.css --ak-border) */
-	--role-accent-primary: #ff5e32; /* provisional: P1a design gate (custom.css --ak-primary) */
-	--role-accent-ai: #3f598a; /* provisional: P1a design gate (custom.css --ak-blue) */
-	--role-status-success: #26a64d; /* provisional: P1a design gate (custom.css --ak-green) */
-	--role-status-warning: #f7a544; /* provisional: P1a design gate (custom.css --ak-warning) */
-	--role-status-danger: #db4444; /* provisional: P1a design gate (custom.css --ak-red) */
+	--role-surface: #ffffff; /* provisional: P1a design gate */ /* custom.css --ak-surface */
+	--role-surface-raised: #f1f5fa; /* provisional: P1a design gate */ /* custom.css --ak-surface-raised */
+	--role-surface-overlay: #e7eef7; /* provisional: P1a design gate */ /* custom.css --ak-surface-overlay */
+	--role-text: #02284f; /* provisional: P1a design gate */ /* custom.css --ak-text */
+	--role-text-muted: #5d7199; /* provisional: P1a design gate */ /* custom.css --ak-text-muted */
+	--role-border-default: #d3deec; /* provisional: P1a design gate */ /* custom.css --ak-border */
+	--role-accent-primary: #ff5e32; /* provisional: P1a design gate */ /* custom.css --ak-primary */
+	--role-accent-ai: #3f598a; /* provisional: P1a design gate */ /* custom.css --ak-blue */
+	--role-status-success: #26a64d; /* provisional: P1a design gate */ /* custom.css --ak-green */
+	--role-status-warning: #f7a544; /* provisional: P1a design gate */ /* custom.css --ak-warning */
+	--role-status-danger: #db4444; /* provisional: P1a design gate */ /* custom.css --ak-red */
 }
 
 /* No Tailwind default palette: only the role colours exist as colour utilities. */
@@ -75,9 +75,10 @@
 
 /*
  * Spectrum 2, medium size, desktop scale (spike S1 measurements; L = live, S = s2 source, T = spectrum-tokens).
- * provisional: P1a design gate (density). `static` keeps every variable in the output so the token story can
- * read it even before a utility uses it.
+ * Density is a gate subject, so the marker below covers every value in this block. `static` keeps every
+ * variable in the output so the token story can read it even before a utility uses it.
  */
+/* provisional: P1a design gate */
 @theme static {
 	/* Control heights (T component-height-75..300) */
 	--spacing-control-s: 24px;

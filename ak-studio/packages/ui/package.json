@@ -17,7 +17,7 @@
 		"test": "vitest run --project unit",
 		"storybook": "storybook dev --port 6006 --host 127.0.0.1 --no-open",
 		"build-storybook": "storybook build",
-		"test:storybook": "vitest run --project storybook"
+		"test:storybook": "vitest run --project storybook-dark --project storybook-light"
 	},
 	"dependencies": {
 		"@fontsource-variable/archivo": "5.3.0",
