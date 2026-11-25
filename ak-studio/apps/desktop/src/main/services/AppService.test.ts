@@ -7,7 +7,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ERROR_CODES } from "@ak-studio/contract";
+import { DEFAULT_SHELL_LAYOUT, ERROR_CODES } from "@ak-studio/contract";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServiceRegistry } from "../bridge/registry";
 import {
@@ -32,7 +32,7 @@ function serve(service: AppService) {
 }
 
 describe("AppService", () => {
-	it("answers app.info with version, platform and the default theme", async () => {
+	it("answers app.info with version, platform, the default theme and the default layout", async () => {
 		const registry = serve(
 			new AppService({
 				version: "1.2.3",
@@ -42,7 +42,12 @@ describe("AppService", () => {
 		);
 		await expect(registry.request("app.info", {})).resolves.toEqual({
 			ok: true,
-			value: { version: "1.2.3", platform: "linux", theme: "system" },
+			value: {
+				version: "1.2.3",
+				platform: "linux",
+				theme: "system",
+				layout: DEFAULT_SHELL_LAYOUT,
+			},
 		});
 		// Strict inputs: an unknown key is refused, not dropped.
 		await expect(
@@ -67,7 +72,10 @@ describe("AppService", () => {
 			registry.request("app.setTheme", { theme: "dark" }),
 		).resolves.toEqual({ ok: true, value: { theme: "dark" } });
 		expect(onThemeChange).toHaveBeenCalledExactlyOnceWith("dark");
-		expect(JSON.parse(readFileSync(file, "utf8"))).toEqual({ theme: "dark" });
+		expect(JSON.parse(readFileSync(file, "utf8"))).toEqual({
+			theme: "dark",
+			layout: DEFAULT_SHELL_LAYOUT,
+		});
 
 		const again = serve(
 			new AppService({
@@ -117,12 +125,117 @@ describe("AppService", () => {
 		expect(service.theme).toBe("system");
 	});
 
-	it("falls back to the default theme for a missing, malformed or unknown file", () => {
-		expect(readPreferences(file).theme).toBe("system");
+	it("stores the layout beside the theme, and each setter keeps the other", async () => {
+		const registry = serve(
+			new AppService({
+				version: "1",
+				platform: "linux",
+				preferencesFile: file,
+			}),
+		);
+		const layout = { bottomPanel: { open: false, height: 312 } };
+		await registry.request("app.setTheme", { theme: "light" });
+		await expect(
+			registry.request("app.setLayout", { layout }),
+		).resolves.toEqual({ ok: true, value: { layout } });
+		expect(JSON.parse(readFileSync(file, "utf8"))).toEqual({
+			theme: "light",
+			layout,
+		});
+		await registry.request("app.setTheme", { theme: "dark" });
+		expect(JSON.parse(readFileSync(file, "utf8"))).toEqual({
+			theme: "dark",
+			layout,
+		});
+
+		const again = serve(
+			new AppService({
+				version: "1",
+				platform: "linux",
+				preferencesFile: file,
+			}),
+		);
+		await expect(again.request("app.info", {})).resolves.toMatchObject({
+			value: { theme: "dark", layout },
+		});
+	});
+
+	it("rejects an invalid layout without touching the file", async () => {
+		const registry = serve(
+			new AppService({
+				version: "1",
+				platform: "linux",
+				preferencesFile: file,
+			}),
+		);
+		for (const layout of [
+			{ bottomPanel: { open: true, height: 10 } },
+			{ bottomPanel: { open: true, height: 240, extra: 1 } },
+			{ bottomPanel: { open: "no", height: 240 } },
+		]) {
+			await expect(
+				registry.request("app.setLayout", { layout }),
+			).resolves.toMatchObject({
+				ok: false,
+				error: { code: ERROR_CODES.invalidInput },
+			});
+		}
+		expect(() => readFileSync(file)).toThrow();
+	});
+
+	it("answers preferencesNotSaved, and keeps the old layout, when the file cannot be written", async () => {
+		writeFileSync(join(dir, "blocker"), "");
+		const service = new AppService({
+			version: "1",
+			platform: "linux",
+			preferencesFile: join(dir, "blocker", PREFERENCES_FILE),
+		});
+		const result = await serve(service).request("app.setLayout", {
+			layout: { bottomPanel: { open: false, height: 300 } },
+		});
+		expect(result).toMatchObject({
+			ok: false,
+			error: {
+				code: ERROR_CODES.preferencesNotSaved,
+				message: "The panel layout could not be saved.",
+			},
+		});
+		expect(service.layout).toEqual(DEFAULT_SHELL_LAYOUT);
+	});
+
+	it("reads each preference on its own: a bad layout keeps the theme, a bad theme keeps the layout", () => {
 		mkdirSync(join(dir, "data"), { recursive: true });
-		for (const text of ["not json", "null", '{"theme":"blue"}', "[]"]) {
+		const layout = { bottomPanel: { open: false, height: 400 } };
+		writeFileSync(
+			file,
+			JSON.stringify({ theme: "light", layout: { bottomPanel: { open: 1 } } }),
+		);
+		expect(readPreferences(file)).toEqual({
+			theme: "light",
+			layout: DEFAULT_SHELL_LAYOUT,
+		});
+		writeFileSync(file, JSON.stringify({ theme: "blue", layout }));
+		expect(readPreferences(file)).toEqual({ theme: "system", layout });
+		// A file from before the layout existed (theme only) keeps its theme.
+		writeFileSync(file, '{"theme":"dark"}');
+		expect(readPreferences(file)).toEqual({
+			theme: "dark",
+			layout: DEFAULT_SHELL_LAYOUT,
+		});
+	});
+
+	it("falls back to the default theme for a missing, malformed or unknown file", () => {
+		expect(readPreferences(file)).toEqual({
+			theme: "system",
+			layout: DEFAULT_SHELL_LAYOUT,
+		});
+		mkdirSync(join(dir, "data"), { recursive: true });
+		for (const text of ["not json", "null", '{"theme":"blue"}', "[]", "7"]) {
 			writeFileSync(file, text);
-			expect(readPreferences(file).theme).toBe("system");
+			expect(readPreferences(file)).toEqual({
+				theme: "system",
+				layout: DEFAULT_SHELL_LAYOUT,
+			});
 		}
 		writeFileSync(file, '{"theme":"light","other":1}');
 		expect(readPreferences(file).theme).toBe("light");

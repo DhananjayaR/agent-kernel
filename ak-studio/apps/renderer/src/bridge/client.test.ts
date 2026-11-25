@@ -1,4 +1,4 @@
-import type { StudioBridge } from "@ak-studio/contract";
+import { DEFAULT_SHELL_LAYOUT, type StudioBridge } from "@ak-studio/contract";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	BRIDGE_MISSING_ERROR,
@@ -11,7 +11,12 @@ import {
 } from "./client";
 import { createMockTransport } from "./mockTransport";
 
-const info = { version: "1.0.0", platform: "linux", theme: "dark" } as const;
+const info = {
+	version: "1.0.0",
+	platform: "linux",
+	theme: "dark",
+	layout: DEFAULT_SHELL_LAYOUT,
+} as const;
 
 function fakeStudio(): StudioBridge {
 	return {

@@ -18,7 +18,13 @@ const probe = vi.hoisted(() => {
 });
 
 import { z } from "zod";
-import { appInfo, appSetTheme, bridgeResultSchema } from "./index";
+import {
+	appInfo,
+	appSetLayout,
+	appSetTheme,
+	bridgeResultSchema,
+	DEFAULT_SHELL_LAYOUT,
+} from "./index";
 
 describe("zod configuration", () => {
 	it("is jitless once the contract is imported", () => {
@@ -27,9 +33,15 @@ describe("zod configuration", () => {
 
 	it("never calls new Function: not on import, construction or parse", () => {
 		expect(
-			appInfo.output.parse({ version: "1", platform: "linux", theme: "dark" }),
+			appInfo.output.parse({
+				version: "1",
+				platform: "linux",
+				theme: "dark",
+				layout: DEFAULT_SHELL_LAYOUT,
+			}),
 		).toBeTruthy();
 		appSetTheme.input.parse({ theme: "light" });
+		appSetLayout.input.parse({ layout: DEFAULT_SHELL_LAYOUT });
 		bridgeResultSchema.parse({ ok: true, value: 1 });
 		z.object({ a: z.string(), b: z.object({ c: z.number() }) }).parse({
 			a: "x",

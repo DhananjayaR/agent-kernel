@@ -4,6 +4,7 @@
 import {
 	type Contract,
 	contract,
+	DEFAULT_SHELL_LAYOUT,
 	type HandlerInputOf,
 	type HandlerResultOf,
 	type InputOf,
@@ -12,6 +13,7 @@ import {
 	type Operations,
 	type OutputOf,
 	runOperation,
+	type ShellLayout,
 	type StreamEventOf,
 	type StreamHandlerEventOf,
 	type StreamHandlerInputOf,
@@ -42,13 +44,27 @@ export type MockStreamHandlers = {
 /** The version the mock reports for `app.info`. */
 export const MOCK_VERSION = "0.0.0-mock";
 
-/** Fixture answers: `app.info` reports the browser platform; `app.setTheme` keeps the theme in memory. */
+/**
+ * Fixture answers: `app.info` reports the browser platform; `app.setTheme` and `app.setLayout` keep their values in
+ * memory (a reload starts again from the defaults, as on a first run).
+ */
 export function defaultMockHandlers(
 	initialTheme: ThemePreference = "system",
+	initialLayout: ShellLayout = DEFAULT_SHELL_LAYOUT,
 ): MockHandlers {
 	let theme = initialTheme;
+	let layout = initialLayout;
 	return {
-		"app.info": () => ({ version: MOCK_VERSION, platform: "browser", theme }),
+		"app.info": () => ({
+			version: MOCK_VERSION,
+			platform: "browser",
+			theme,
+			layout,
+		}),
+		"app.setLayout": (input) => {
+			layout = input.layout;
+			return { layout };
+		},
 		"app.setTheme": (input) => {
 			theme = input.theme;
 			return { theme };

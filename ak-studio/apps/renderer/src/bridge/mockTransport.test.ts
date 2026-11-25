@@ -1,5 +1,6 @@
 import {
 	contract,
+	DEFAULT_SHELL_LAYOUT,
 	defineStream,
 	ERROR_CODES,
 	StudioFailure,
@@ -24,7 +25,27 @@ describe("mockTransport", () => {
 			version: MOCK_VERSION,
 			platform: "browser",
 			theme: "system",
+			layout: DEFAULT_SHELL_LAYOUT,
 		});
+	});
+
+	it("keeps the layout set with app.setLayout, beside the theme", async () => {
+		const transport = createMockTransport();
+		const layout = { bottomPanel: { open: false, height: 300 } };
+		await transport.request("app.setTheme", { theme: "light" });
+		await expect(
+			transport.request("app.setLayout", { layout }),
+		).resolves.toEqual({ layout });
+		await expect(transport.request("app.info", {})).resolves.toMatchObject({
+			theme: "light",
+			layout,
+		});
+		const error = await errorOf(
+			transport.request("app.setLayout", {
+				layout: { bottomPanel: { open: true, height: 1 } },
+			}),
+		);
+		expect(error.code).toBe(ERROR_CODES.invalidInput);
 	});
 
 	it("keeps the theme set with app.setTheme", async () => {
@@ -59,6 +80,7 @@ describe("mockTransport", () => {
 						version: "9",
 						platform: "browser",
 						theme: "light",
+						layout: DEFAULT_SHELL_LAYOUT,
 						extra: true,
 					}) as never,
 			},
@@ -67,6 +89,7 @@ describe("mockTransport", () => {
 			version: "9",
 			platform: "browser",
 			theme: "light",
+			layout: DEFAULT_SHELL_LAYOUT,
 		});
 		const broken = createMockTransport({
 			handlers: { "app.info": () => ({ version: 9 }) as never },

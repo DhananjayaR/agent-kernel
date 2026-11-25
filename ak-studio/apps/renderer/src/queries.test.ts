@@ -1,3 +1,4 @@
+import { DEFAULT_SHELL_LAYOUT } from "@ak-studio/contract";
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -9,9 +10,11 @@ import {
 import { createMockTransport } from "./bridge/mockTransport";
 import {
 	appInfoQueryKey,
+	cacheStoredLayout,
 	cacheStoredTheme,
 	createQueryClient,
 	fetchAppInfo,
+	storeLayout,
 	storeTheme,
 	themeFromInfo,
 } from "./queries";
@@ -42,7 +45,12 @@ describe("app.info", () => {
 describe("themeFromInfo", () => {
 	it("uses the stored preference once known", () => {
 		expect(
-			themeFromInfo({ version: "1", platform: "linux", theme: "dark" }),
+			themeFromInfo({
+				version: "1",
+				platform: "linux",
+				theme: "dark",
+				layout: DEFAULT_SHELL_LAYOUT,
+			}),
 		).toBe("dark");
 	});
 });
@@ -63,6 +71,27 @@ describe("app.setTheme", () => {
 	it("leaves an empty cache empty", () => {
 		const client = new QueryClient();
 		cacheStoredTheme(client, { theme: "light" });
+		expect(client.getQueryData(appInfoQueryKey)).toBeUndefined();
+	});
+});
+
+describe("app.setLayout", () => {
+	it("stores through the transport and updates only the layout in the app.info cache", async () => {
+		setTransport(createMockTransport());
+		const client = new QueryClient();
+		client.setQueryData(appInfoQueryKey, await fetchAppInfo());
+		const layout = { bottomPanel: { open: false, height: 360 } };
+		cacheStoredLayout(client, await storeLayout(layout));
+		expect(client.getQueryData(appInfoQueryKey)).toMatchObject({
+			theme: "system",
+			layout,
+		});
+		expect((await fetchAppInfo()).layout).toEqual(layout);
+	});
+
+	it("leaves an empty cache empty", () => {
+		const client = new QueryClient();
+		cacheStoredLayout(client, { layout: DEFAULT_SHELL_LAYOUT });
 		expect(client.getQueryData(appInfoQueryKey)).toBeUndefined();
 	});
 });

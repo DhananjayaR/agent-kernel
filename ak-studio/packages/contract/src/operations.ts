@@ -85,7 +85,40 @@ export type Platform = z.infer<typeof platformSchema>;
 // Inputs are strict objects: an unknown key is `bridge.invalidInput`, not silently dropped (P0 D12, strict
 // validation). Outputs are plain objects, so undeclared fields are stripped before they cross the bridge.
 
-/** App version, platform ("browser" under the mock transport) and the stored theme preference. */
+/** The bottom panel's height in CSS pixels: the bounds a stored value must keep, and the first-run default. */
+export const BOTTOM_PANEL_HEIGHT = {
+	min: 120,
+	max: 4000,
+	default: 240,
+} as const;
+
+const bottomPanelLayoutShape = {
+	/** Open (its content shows) or closed (only its tab strip shows). */
+	open: z.boolean(),
+	/** Its height while open; kept while it is closed, so opening it restores the height. */
+	height: z.int().min(BOTTOM_PANEL_HEIGHT.min).max(BOTTOM_PANEL_HEIGHT.max),
+};
+
+/** The shell's remembered layout (an app preference, stored by main beside the theme). Strict, as an input. */
+export const shellLayoutSchema = z.strictObject({
+	bottomPanel: z.strictObject(bottomPanelLayoutShape),
+});
+export type ShellLayout = z.infer<typeof shellLayoutSchema>;
+
+/** The same layout as an output: a plain object, so undeclared fields are stripped. */
+const shellLayoutOutputSchema = z.object({
+	bottomPanel: z.object(bottomPanelLayoutShape),
+});
+
+/** The layout before the person has changed anything: the bottom panel open at its default height. */
+export const DEFAULT_SHELL_LAYOUT: ShellLayout = Object.freeze({
+	bottomPanel: Object.freeze({
+		open: true,
+		height: BOTTOM_PANEL_HEIGHT.default,
+	}),
+});
+
+/** App version, platform ("browser" under the mock transport), the stored theme preference and shell layout. */
 export const appInfo = defineOperation({
 	name: "app.info",
 	input: z.strictObject({}),
@@ -93,6 +126,7 @@ export const appInfo = defineOperation({
 		version: z.string(),
 		platform: platformSchema,
 		theme: themePreferenceSchema,
+		layout: shellLayoutOutputSchema,
 	}),
 });
 
@@ -103,9 +137,17 @@ export const appSetTheme = defineOperation({
 	output: z.object({ theme: themePreferenceSchema }),
 });
 
+/** Stores the shell layout (the bottom panel's open state and height) and answers with the stored value. */
+export const appSetLayout = defineOperation({
+	name: "app.setLayout",
+	input: z.strictObject({ layout: shellLayoutSchema }),
+	output: z.object({ layout: shellLayoutOutputSchema }),
+});
+
 /** Every request operation, keyed by name (a test checks each key equals its operation's name). */
 export const operations = {
 	"app.info": appInfo,
+	"app.setLayout": appSetLayout,
 	"app.setTheme": appSetTheme,
 } as const satisfies OperationMap;
 

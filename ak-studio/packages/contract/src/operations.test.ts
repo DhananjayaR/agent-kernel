@@ -3,13 +3,17 @@ import { z } from "zod";
 import { ERROR_CODES, StudioFailure, studioError } from "./errors";
 import {
 	appInfo,
+	appSetLayout,
 	appSetTheme,
+	BOTTOM_PANEL_HEIGHT,
 	contract,
+	DEFAULT_SHELL_LAYOUT,
 	defineOperation,
 	lookup,
 	operations,
 	platformSchema,
 	runOperation,
+	shellLayoutSchema,
 	streams,
 	themePreferenceSchema,
 	toStudioError,
@@ -20,7 +24,13 @@ import {
 	unknownOperationError,
 } from "./transport";
 
-const info = { version: "1.2.3", platform: "linux", theme: "dark" } as const;
+const layout = { bottomPanel: { open: false, height: 320 } };
+const info = {
+	version: "1.2.3",
+	platform: "linux",
+	theme: "dark",
+	layout,
+} as const;
 
 describe("the operations map", () => {
 	it("keys every operation by its own name", () => {
@@ -30,6 +40,7 @@ describe("the operations map", () => {
 		}
 		expect(Object.keys(operations).sort()).toEqual([
 			"app.info",
+			"app.setLayout",
 			"app.setTheme",
 		]);
 		expect(Object.keys(streams)).toEqual([]);
@@ -56,6 +67,52 @@ describe("the operations map", () => {
 		});
 		expect(appSetTheme.input.safeParse({ theme: "Light" }).success).toBe(false);
 		expect(appSetTheme.input.safeParse({}).success).toBe(false);
+	});
+
+	it("declares app.setLayout with a strict layout and bounded height", () => {
+		expect(appSetLayout.input.parse({ layout })).toEqual({ layout });
+		expect(appSetLayout.output.parse({ layout })).toEqual({ layout });
+		const bad = [
+			{},
+			{ layout: {} },
+			{ layout: { bottomPanel: { open: true } } },
+			{ layout: { bottomPanel: { open: "yes", height: 200 } } },
+			{ layout: { bottomPanel: { open: true, height: 200.5 } } },
+			{
+				layout: {
+					bottomPanel: { open: true, height: BOTTOM_PANEL_HEIGHT.min - 1 },
+				},
+			},
+			{
+				layout: {
+					bottomPanel: { open: true, height: BOTTOM_PANEL_HEIGHT.max + 1 },
+				},
+			},
+			// Strict inputs: unknown keys at every level are refused.
+			{ layout, extra: 1 },
+			{ layout: { ...layout, sidebar: {} } },
+			{ layout: { bottomPanel: { ...layout.bottomPanel, width: 1 } } },
+		];
+		for (const input of bad)
+			expect(appSetLayout.input.safeParse(input).success).toBe(false);
+	});
+
+	it("strips undeclared layout fields from outputs instead of refusing them", () => {
+		const parsed = appInfo.output.parse({
+			...info,
+			layout: { bottomPanel: { ...layout.bottomPanel, extra: 1 }, more: 2 },
+		});
+		expect(parsed.layout).toEqual(layout);
+	});
+
+	it("has a default layout inside the bounds", () => {
+		expect(shellLayoutSchema.parse(DEFAULT_SHELL_LAYOUT)).toEqual(
+			DEFAULT_SHELL_LAYOUT,
+		);
+		expect(DEFAULT_SHELL_LAYOUT.bottomPanel.height).toBe(
+			BOTTOM_PANEL_HEIGHT.default,
+		);
+		expect(Object.isFrozen(DEFAULT_SHELL_LAYOUT.bottomPanel)).toBe(true);
 	});
 
 	it("uses one schema each for platform and theme", () => {

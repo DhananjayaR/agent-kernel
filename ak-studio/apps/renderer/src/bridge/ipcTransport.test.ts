@@ -1,4 +1,5 @@
 import {
+	DEFAULT_SHELL_LAYOUT,
 	ERROR_CODES,
 	type StudioBridge,
 	type StudioError,
@@ -38,7 +39,12 @@ async function failureOf(promise: Promise<unknown>): Promise<StudioError> {
 	return (err as StudioFailure).error;
 }
 
-const info = { version: "1.0.0", platform: "linux", theme: "system" } as const;
+const info = {
+	version: "1.0.0",
+	platform: "linux",
+	theme: "system",
+	layout: DEFAULT_SHELL_LAYOUT,
+} as const;
 
 describe("ipcTransport.request", () => {
 	it("sends the operation and input over window.studio and resolves with the value", async () => {
