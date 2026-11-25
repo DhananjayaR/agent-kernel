@@ -41,7 +41,7 @@ wait for the gate.
 
 - [ ] **Job is clear.** A new user can say what the screen is for and what to do first.
 - [ ] **All states exist:** empty, loading, error, and the "cannot read this project" state where it applies.
-- [ ] **Version states exist:** a feature the project's Agent Kernel version lacks is shown as unavailable with
+- [ ] **Version states exist:** a feature the project's Open Agent Kernel version lacks is shown as unavailable with
       the version that adds it, never as a broken control (see [P2](P2-project-and-kernel-version.md)).
 - [ ] **Holds at 1100 px wide** and is comfortable at 1440 px. No horizontal scrolling of the page.
 - [ ] **Keyboard works.** Every action is reachable; focus order follows reading order; focus is visible.
@@ -87,6 +87,6 @@ Recorded so nobody rediscovers them:
 - **Second-pass artboards are not drawn** (listed in the team's README).
 - **The redrawn canvas is not reviewed.** The team's README says the re-skin of 25 November was not rendered
   and checked.
-- **No version states.** No brief mentions the project's Agent Kernel version; the designs assume one.
+- **No version states.** No brief mentions the project's OAK version; the designs assume one.
 - **Five deploy targets.** The PRD names five; Azure Functions is retired
   (`docs/specs/957-retire-azure-functions/design.md`). The catalog decides what a project's version offers.

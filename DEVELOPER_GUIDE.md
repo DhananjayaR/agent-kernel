@@ -69,9 +69,9 @@ To see all available Makefile commands:
 make help
 ```
 
-## Agent Kernel Studio
+## OAK Studio
 
-The Electron desktop app lives in `ak-studio/` (pnpm workspace, Node 24.22.1, pnpm 12.4.1). See
+Open Agent Kernel Studio (OAK Studio), the Electron desktop app, lives in `ak-studio/` (pnpm workspace, Node 24.22.1, pnpm 12.4.1). See
 [ak-studio/README.md](ak-studio/README.md). From the root, `make studio-dev`, `studio-build`, `studio-test`,
 `studio-lint`, `studio-storybook` and `studio-package` run the matching `pnpm --dir ak-studio` command.
 

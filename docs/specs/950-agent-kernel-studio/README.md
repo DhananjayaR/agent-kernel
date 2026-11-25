@@ -8,7 +8,7 @@ as work lands.
 **The product.** OAK Studio is a desktop app (Electron) that builds, tests and
 deploys an Open Agent Kernel (OAK) project from one folder on the user's computer. A visual canvas and a
 coding agent sit on top of the real project files. It builds locally, runs on Windows, macOS and Linux, and
-showcases the OAK feature set for whichever Agent Kernel version the project uses. Everything it produces is
+showcases the OAK feature set for whichever OAK version the project uses. Everything it produces is
 ordinary framework code, pytest and Terraform in the user's own repository, so a project outlives the app.
 
 **Name.** "OAK Studio" is a working name, from the PRD and the brand's
@@ -28,9 +28,9 @@ PRD's milestones.
 | Phase | Business aspect | PRD milestone | Status | Design signed off | Doc |
 |---|---|---|---|---|---|
 | P0 | Technology selection | Before 1 | In review (spikes ran on Linux; record drafted; Windows and macOS deferred by the owner; spike S5 added; no turn has run on a subscription yet) | n/a | [P0](P0-technology-selection.md) |
-| P1a | App foundation: workspace, shell, bridge, design system | Before 1 | Started 24 Nov 2026: Tasks 1–10 done on Linux; shell layout and component set await sign-off. The 25 Nov branding changes are decided; the code change lands separately in `ak-studio/` | Palette, fonts, density, theme only | [P1a](P1a-app-foundation.md), [plan](P1a-plan.md) |
+| P1a | App foundation: workspace, shell, bridge, design system | Before 1 | Started 24 Nov 2026: Tasks 1–10 done on Linux; shell layout and component set await sign-off. The 25 Nov branding changes are decided and built (`c3085c7c`) | Palette, fonts, density, theme only | [P1a](P1a-app-foundation.md), [plan](P1a-plan.md) |
 | P1b | Data and feature layer, shared patterns, Studio skills | Before 1 | Not started | No | [P1b](P1b-data-layer-and-patterns.md) |
-| P2 | Open a project and know its Agent Kernel version | 1 | Not started | No | [P2](P2-project-and-kernel-version.md) |
+| P2 | Open a project and know its OAK version | 1 | Not started | No | [P2](P2-project-and-kernel-version.md) |
 | P3 | See the project: read-only Canvas, Code, Config | 1 | Not started | No | [P3](P3-read-only-builder.md) |
 | P6 | Build with AI | 2 | Not started | No | [outline](later-phases.md#p6--build-with-ai) |
 | P7 | Business rules and `ak rules check` | 2 | Not started | No | [outline](later-phases.md#p7--business-rules) |
@@ -42,9 +42,9 @@ PRD's milestones.
 | P11 | The remaining targets | 6 | Not started | n/a | [outline](later-phases.md#p11--the-remaining-targets) |
 | P12 | Packaging and release | None (installers are a PRD deliverable) | Not started | No | [outline](later-phases.md#p12--packaging-and-release) |
 
-**Next action:** the owner signs off the P1a shell layout and base component set, after the 25 Nov branding
-changes land in `ak-studio/` (rectangular controls at the 8 px radius, Archivo on primary call-to-action
-labels, the logo mark; Tabler outline icons landed on 25 Nov in `4d7fcfec`). Owner review of the [P0 decision record](P0-technology-selection.md#decision-record)
+**Next action:** the owner signs off the P1a shell layout and base component set. The 25 Nov branding changes
+have landed in `ak-studio/` (rectangular controls at the 8 px radius, Archivo on primary call-to-action
+labels, the logo mark, Tabler outline icons; last commit `c3085c7c`). Owner review of the [P0 decision record](P0-technology-selection.md#decision-record)
 is still open. The owner answers the [open decisions](#open-decisions) marked for 25 Nov. Anthropic's
 confirmation of the coding-agent design is needed before P6. Windows and macOS are deferred until the
 re-entry point under [Order and dependencies](#order-and-dependencies).
@@ -91,6 +91,7 @@ flowchart LR
   P7 -.-> P4
   P4 --> P8[P8 Run, chat, trace] --> P9[P9 Tests + CI] --> P10[P10 Deploy one target] --> P11[P11 More targets]
   P7 --> P9
+  P7 --> P8
   P5 -.-> P8
   P1a --> P12[P12 Packaging]
 ```
@@ -122,9 +123,9 @@ Both are proposals until approved at the start of [P1b](P1b-data-layer-and-patte
 after a review on 23 November 2026 (sessions, safe writes, domain-event invalidation, working copies, secret
 handling, fewer skills written later, skills scoped to `ak-studio/`).
 
-## Cross-cutting: Agent Kernel versions
+## Cross-cutting: OAK versions
 
-Features are driven by the Agent Kernel version of the open project, because versions add features and make
+Features are driven by the OAK version of the open project, because versions add features and make
 breaking changes.
 
 | Piece | What it does | Built in |
@@ -132,7 +133,7 @@ breaking changes.
 | Version detection | Reads the project's version from its environment, `uv.lock` or `pyproject.toml` | P2 |
 | Capability catalog | One list of features with the version that adds each and the version that removes it. The whole app asks it "is F available here?" | P2 |
 | Installed-version schema | Config forms are generated from the schema of the installed `agentkernel`, so fields, defaults and descriptions are always right for that version | P3 |
-| Version-unavailable pattern | One UI pattern for "needs Agent Kernel ≥ X" | P2 design gate |
+| Version-unavailable pattern | One UI pattern for "needs OAK ≥ X" | P2 design gate |
 | Supported floor | The oldest version opened with full support; older projects open read-only | P2 |
 | Version choice at creation | The new project wizard picks the version; templates follow it | P4 |
 | Drift test | Fails when in-tree `ak-py` gains a feature the catalog does not list | P2 |
@@ -149,7 +150,7 @@ Detail: [P2](P2-project-and-kernel-version.md).
 | 23 Nov 2026 | Phase order follows the issue (create and edit before coding agent). (Superseded 25 Nov 2026 by the PRD order; see below) | [later-phases.md](later-phases.md) |
 | 23 Nov 2026 | Bundler: Vite, through electron-vite. Rspack is dropped. | [P0](P0-technology-selection.md) D3 |
 | 23 Nov 2026 | Component library: shadcn/ui, styled with Tailwind CSS. React Spectrum is not used as a library. | [P0](P0-technology-selection.md) D1, D2 |
-| 23 Nov 2026 | Style reference: the components' basic style resembles React Spectrum (Spectrum 2) in size, density, shape and states, with Agent Kernel's colours and fonts. (Shape amended 25 Nov 2026 for buttons, inputs and tags; see below) | [P0](P0-technology-selection.md) D1, [P1a](P1a-app-foundation.md) design gate |
+| 23 Nov 2026 | Style reference: the components' basic style resembles React Spectrum (Spectrum 2) in size, density, shape and states, with OAK's colours and fonts. (Shape amended 25 Nov 2026 for buttons, inputs and tags; see below) | [P0](P0-technology-selection.md) D1, [P1a](P1a-app-foundation.md) design gate |
 | 23 Nov 2026 | Bridge: the in-house zod contract with the `Transport` interface, not oRPC. Same renderer code over IPC and WebSocket; sender checked on every IPC message, which oRPC's Electron path does not do. Approved by Dhananjaya Rajasinghe | [P0](P0-technology-selection.md) D5, [S3](research/spike-s3-bridge.md) |
 | 23 Nov 2026 | Form validation is strict: Ajv `coerceTypes` off, so `"30"` for an integer `ttl` is rejected. Validators stay precompiled (CSP blocks runtime compile). Approved by Dhananjaya Rajasinghe | [P0](P0-technology-selection.md) D12, [S1](research/spike-s1-components.md) |
 | 23 Nov 2026 | Floating layers are solid, as in Spectrum 2, not glass. Decided in P0. Approved by Dhananjaya Rajasinghe | [P0](P0-technology-selection.md) D1a, [conventions-and-skills.md](conventions-and-skills.md) |
@@ -160,7 +161,7 @@ Detail: [P2](P2-project-and-kernel-version.md).
 | 23 Nov 2026 | New requirement: the Studio takes a key from the user and drives Claude with it to build agents. Spike S5 and decision D14 added to P0; the Claude Agent SDK runs in the main process and holds the key there. Replaces "the app never stores credentials". (Superseded 24 Nov 2026; see the next row) | [architecture](architecture.md#the-coding-agent-and-the-users-claude-code), [P6](later-phases.md#p6--build-with-ai) |
 | 24 Nov 2026 | The coding agent uses the user's own Claude Code, already installed and signed in with a subscription. Decided by Dhananjaya Rajasinghe. Replaces the pasted-key design of 23 Nov. That the Studio itself never takes or stores the subscription token is our reading of Anthropic's rules, awaiting the owner's confirmation; under it, "the app never stores credentials" stands again. Mechanics ran on 24 Nov; no turn has run on a subscription; needs Anthropic's confirmation before P6 | [architecture](architecture.md#the-coding-agent-and-the-users-claude-code), [P0](P0-technology-selection.md) D14 |
 | 24 Nov 2026 | P1a started at the owner's request. The P0 record is still in review (the choices of Vite and shadcn/ui were the owner's from the start; D1a, D5 and D12 were approved after the spikes; everything else is pending); P1a builds on the drafted rows and is Linux only, with the three-system CI written but not executed | [P1a-plan.md](P1a-plan.md) |
-| 25 Nov 2026 | P1a design gate, palette, tokens, density and theme: Option A palette: Agent Kernel's current brand. Orange `#FF5E32` primary (dark text on fills), ice `#B1CDFF` / dusk `#3F598A` for the coding agent, navy ground; every role gets per-surface text variants tuned to 4.5:1. Fonts: Inter for UI, Archivo for headings, JetBrains Mono for code (Archivo also on primary call-to-action labels from 25 Nov 2026; see below). Density: one, Spectrum 2 medium (32 px controls, 40 px rows, 14 px text, 48 px top bar). Default theme: follow the system setting, dark when unknown. Approved by Dhananjaya Rajasinghe. Shell layout and the base component set are signed off after their stories (gate steps 4 to 6) | [P1a](P1a-app-foundation.md#design-gate), [options](research/p1a-design-gate-options.md) |
+| 25 Nov 2026 | P1a design gate, palette, tokens, density and theme: Option A palette: OAK's current brand. Orange `#FF5E32` primary (dark text on fills), ice `#B1CDFF` / dusk `#3F598A` for the coding agent, navy ground; every role gets per-surface text variants tuned to 4.5:1. Fonts: Inter for UI, Archivo for headings, JetBrains Mono for code (Archivo also on primary call-to-action labels from 25 Nov 2026; see below). Density: one, Spectrum 2 medium (32 px controls, 40 px rows, 14 px text, 48 px top bar). Default theme: follow the system setting, dark when unknown. Approved by Dhananjaya Rajasinghe. Shell layout and the base component set are signed off after their stories (gate steps 4 to 6) | [P1a](P1a-app-foundation.md#design-gate), [options](research/p1a-design-gate-options.md) |
 | 25 Nov 2026 | The P0 spike code (local branch `spike/950-studio-p0` and the `ak-studio-spikes/` working copy) is deleted at the owner's request; it was never pushed. The findings stay in `research/`. S5's live turn moves to P6 | [P0](P0-technology-selection.md#exit-criteria) |
 | 25 Nov 2026 | Source of scope: the team's [PRD](../950-agent-kernel-studio-phase-1/PHASE-1-PRD.md) (revised 25 Nov 2026) supersedes issue #950 where they differ. The plan links to the team's folder as input. The team is asked to update the issue so the two agree. Ruled at the owner's request to align with the team branch | [Inputs](#inputs-and-what-was-checked), [design-process.md](design-process.md) |
 | 25 Nov 2026 | Phase order follows the PRD's milestones: P2, P3; then P6, P7; then P4, P5; then P8, P9; P10; P11. Phase IDs are kept. P6 installs the OAK skills itself; P7 runs the test file itself before P9; P10 takes P7 and P9 as prerequisites. Replaces the 23 Nov order | [Order](#order-and-dependencies), [later-phases.md](later-phases.md#order) |
@@ -170,7 +171,7 @@ Detail: [P2](P2-project-and-kernel-version.md).
 | 25 Nov 2026 | The coding-agent feature stays "Claude Agent" in our copy (Anthropic's naming rule for products built on its SDK); D14 stands. The team is asked to change its briefs' "Claude Code" labels | [conventions](conventions-and-skills.md#copy-rules), [P0](P0-technology-selection.md) D14 |
 | 25 Nov 2026 | Our design gate stays. A signed-off story supersedes its artboard; artboard and component names stay code names where they fit; the team gets the differences after each gate. The PRD's redrawn canvas is a team deliverable (who owns it: open decision 11) | [design-process.md](design-process.md#ground-rules) |
 | 25 Nov 2026 | Terraform state: remote by default, created through a confirm-by-name job (`deploy.backend.create`); local state only by choice, with a warning that state holds secrets | [P10](later-phases.md#p10--deploy-to-one-target), [architecture](architecture.md#jobs) |
-| 25 Nov 2026 | Business-rule checks have one implementation, in Python (`ak rules check`), which the Studio calls. A helper shipped with the Studio runs the same module only on Agent Kernel versions without the command | [P7](later-phases.md#p7--business-rules), [architecture](architecture.md#get-data-from-the-kernel-not-around-it) |
+| 25 Nov 2026 | Business-rule checks have one implementation, in Python (`ak rules check`), which the Studio calls. A helper shipped with the Studio runs the same module only on OAK versions without the command | [P7](later-phases.md#p7--business-rules), [architecture](architecture.md#get-data-from-the-kernel-not-around-it) |
 | 25 Nov 2026 | Secrets are modelled as a key name plus the OAK secret provider; `.env` is the `env` provider's local store | [architecture](architecture.md#where-each-kind-of-data-lives) |
 | 25 Nov 2026 | `.akstudio/` is committed with the project, except `.akstudio/runs/`, which git ignores (the team's rule). Closes P3's open question | [P3](P3-read-only-builder.md) |
 | 25 Nov 2026 | Windows and macOS stay deferred, with a re-entry point: the three-system CI runs green before the first build leaves the team, and before P6 at the latest | [Order](#order-and-dependencies) |
@@ -185,7 +186,7 @@ Detail: [P2](P2-project-and-kernel-version.md).
 | 1c | Canvas keyboard model: Tab reaches the first node only after all edges; `edgesFocusable={false}` fixes it but loses edge keyboard access | P3 design gate | [S4](research/spike-s4-canvas-code.md) |
 | 1d | CodeMirror cold open missed 200 ms (360 to 382 ms); try preload on idle. Also needs a person: side-by-side look against Spectrum 2, screen-reader pass, canvas smoothness on a real GPU (nodes are solid by default; compare glass only if reconsidered) | P1a design gate | [P0 exit criteria](P0-technology-selection.md#exit-criteria) |
 | 2 | Studio primary colour. **Closed 25 Nov 2026:** orange `#FF5E32`, chosen at the P1a gate; the team's briefs moved to the OAK identity the same day | Closed | [Decision log](#decision-log) |
-| 3 | Product name and app identifier | P12 | Working name "OAK Studio" since 25 Nov 2026 (the PRD's working name). Identifiers `ak-studio/` and `.akstudio/` unchanged. The built app still says "Agent Kernel Studio" until the change lands in `ak-studio/` |
+| 3 | Product name and app identifier | P12 | Working name "OAK Studio" since 25 Nov 2026 (the PRD's working name). Identifiers `ak-studio/` and `.akstudio/` unchanged. The built app uses the full name in titles and "OAK Studio" in the compact interface |
 | 4 | Supported floor version | P2 | |
 | 5 | Introspection by import or by static parsing | P3 | |
 | 6 | Kernel-side commands (`ak inspect`, `ak config schema`, `ak config resolve`, `ak features`) in `ak-py` | Design in P3 | Proposed in [architecture.md](architecture.md); each goes through the repo's spec process |

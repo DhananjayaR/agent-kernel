@@ -41,6 +41,7 @@ flowchart LR
   P7 -.-> P4
   P4 --> P8 --> P9 --> P10 --> P11
   P7 --> P9
+  P7 --> P8
   P5 -.-> P8
   P1a --> P12
 ```
@@ -157,7 +158,7 @@ or the tests. CI runs the same check with `ak rules check`.
 - Rule categories from brief 06: routing, approval, compliance, data, tone, safety, access.
 - `ak rules check`, a **new** `ak` subcommand in `ak-py` (today the CLI has only `ak skill`,
   `ak-py/src/agentkernel/cli/ak.py`). It is core package work, so it follows the repository's own
-  `design.md`, `spec.md`, `plan.md` process and ships in an Agent Kernel release. What it does, from brief 06:
+  `design.md`, `spec.md`, `plan.md` process and ships in an OAK release. What it does, from brief 06:
   - Deterministic, with no model: every linked file, line range, config key, node and test case still
     exists, and the project's introspection still finds what each link names.
   - Exits non-zero when a rule is out of sync or a link is broken. Untested rules are listed as warnings;
@@ -165,7 +166,7 @@ or the tests. CI runs the same check with `ak rules check`.
   - A `--json` output for the Studio, with a `schemaVersion`.
 - **One check implementation, in Python.** The Studio runs `ak rules check --json` from the project's
   environment, through the command runner, whenever a linked file changes, and shows the results in the Rules
-  view and the Problems panel. On Agent Kernel versions without the command, the Studio runs the same Python
+  view and the Problems panel. On OAK versions without the command, the Studio runs the same Python
   module, shipped with the Studio as a helper (as P3's introspection helper is). It is never re-written in
   TypeScript. The catalog records the version that adds the command.
 - **States, in order of severity:** out of sync, untested, drafted, enforced. A card shows its most severe
@@ -209,13 +210,13 @@ or is only a warning, as an untested rule is.
 | Screens | New project wizard; Welcome's "Describe a project" and "Create a project here"; Config tab in edit mode; Code tab light edits; Settings (toolchain, secrets, cloud, general) |
 | Design input | Briefs 02, 03, 04 (Config, Code), 09 |
 
-**Outcome.** From an empty folder, a person picks an Agent Kernel version, a framework, a model provider and a
+**Outcome.** From an empty folder, a person picks an OAK version, a framework, a model provider and a
 template, and gets a project that opens on the canvas. They edit any `config.yaml` section as a form, make
 light edits in the Code tab, and add secret names.
 
 **Work, in outline**
 
-- New project wizard: folder, **Agent Kernel version** (latest by default, older ones selectable), framework,
+- New project wizard: folder, **OAK version** (latest by default, older ones selectable), framework,
   model provider, template, "Initialise a git repository" (checked by default); then `uv` environment
   creation, `ak skill install --assistant claude` and `git init`, all through the command runner.
 - "Describe it with AI" on every wizard step, and "Describe a project" on Welcome: both open the Build with AI
@@ -301,7 +302,7 @@ and the others read-only.
 |---|---|
 | Business aspect | Trying the project locally and seeing what it did |
 | PRD milestone | 4 (Run and test), first half |
-| Depends on | P4 |
+| Depends on | P4; P7 for the rule chips (the rule ids come from its links) |
 | Screens | Run control in the top bar; Test & Trace tab: chat, trace; Run log |
 | Design input | Brief 07 |
 
@@ -416,11 +417,12 @@ deployment.
 - Confirmation that names the cloud account. Secrets passed at run time, never written to
   `terraform.tfvars`.
 - Redeploy: "Changed since the last deploy" lists the changed files, then the same plan and confirm.
-- One deploy target per project, in `deploy/`. Changing the target replaces the files in `deploy/`; the
-  current deployment is destroyed first.
+- One deploy target per project, in `deploy/`. Changing the target warns the user that the current
+  deployment must be destroyed first; the destroy is the explicit confirmation that names the account (standing
+  principle 3), never automatic, and only then are the files in `deploy/` replaced.
 - Deploy history in `.akstudio/`.
 
-**Version awareness.** The target list and the Terraform module version come from the project's Agent Kernel
+**Version awareness.** The target list and the Terraform module version come from the project's OAK
 version. The first target is chosen at the start of this phase; AWS containerized is the brief's fixture.
 
 **Design questions.** The confirmation step is the most safety-critical screen in the app; it gets its own
@@ -438,7 +440,7 @@ account. Whether a small smoke test of the deployed endpoint belongs here.
 | Depends on | P10 |
 | Screens | No new screens; per-target prerequisites, variables and state backend |
 
-**Outcome.** Every Terraform target the project's Agent Kernel version supports can be deployed and destroyed.
+**Outcome.** Every Terraform target the project's OAK version supports can be deployed and destroyed.
 
 **Note.** The PRD names five targets: AWS serverless, AWS containerized, Azure containerized, Google Cloud
 serverless and Google Cloud containerized. Azure Functions is retired (issue #957,
@@ -466,7 +468,9 @@ when the Lambda is packaged as an image.
 - Auto-update, or a manual "update available" notice. Decide in this phase. Either must fit the standing
   principle that, with usage data off, the app makes no network calls of its own
   ([README](README.md#standing-principles)).
-- The release process and how Studio versions relate to Agent Kernel versions.
+- The release process and how Studio versions relate to OAK versions.
+- Source and build instructions (a PRD deliverable): how to build and run the app from source, kept in
+  `ak-studio/README.md` and checked on the three systems.
 - The final product name and app identifier ([open decision 3](README.md#open-decisions)).
 - The PRD's acceptance run on all three platforms: with the toolchain installed, start from an empty folder,
   build the support-triage example with three agents, test it locally, deploy it to one cloud target, call

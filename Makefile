@@ -40,12 +40,12 @@ help:
 	@echo "  lock-bounds-check   - Lists uv.lock versions outside the bounds ak-py declares (not part of lint-check-all)"
 	@echo "  deploy-inject       - Injects local module sources/backend.tf into deployment examples"
 	@echo "  deploy-revert       - Reverts deployment examples back to registry module sources"
-	@echo "  studio-dev          - Runs Agent Kernel Studio in development mode (ak-studio)"
-	@echo "  studio-build        - Builds Agent Kernel Studio (ak-studio)"
-	@echo "  studio-test         - Runs Agent Kernel Studio tests (ak-studio)"
-	@echo "  studio-lint         - Lints Agent Kernel Studio: Biome, palette check, boundary rules (ak-studio)"
-	@echo "  studio-storybook    - Runs the Agent Kernel Studio Storybook on 127.0.0.1:6006 (ak-studio)"
-	@echo "  studio-package      - Builds an unsigned Agent Kernel Studio installer for this system (ak-studio)"
+	@echo "  studio-dev          - Runs OAK Studio in development mode (ak-studio)"
+	@echo "  studio-build        - Builds OAK Studio (ak-studio)"
+	@echo "  studio-test         - Runs OAK Studio tests (ak-studio)"
+	@echo "  studio-lint         - Lints OAK Studio: Biome, palette check, boundary rules (ak-studio)"
+	@echo "  studio-storybook    - Runs the OAK Studio Storybook on 127.0.0.1:6006 (ak-studio)"
+	@echo "  studio-package      - Builds an unsigned OAK Studio installer for this system (ak-studio)"
 	@echo "  help                - Show this help message"
 
 dev-setup:

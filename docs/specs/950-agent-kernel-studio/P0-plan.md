@@ -293,7 +293,7 @@ have.** For each missing one, write the component directly on `react-aria-compon
 - [ ] **Step 5: Build the spike screen**
 
 `ComponentsSpike.tsx` must show, on one page, each restyled to resemble Spectrum 2 using the Step 2a tokens
-and the Agent Kernel colours, with a dark/light switch that sets `data-theme` on `<html>`. Floating layers
+and the Open Agent Kernel colours, with a dark/light switch that sets `data-theme` on `<html>`. Floating layers
 (Dialog, Popover, Menu) are built twice, once solid as Spectrum has them and once with `.glass`, so the
 design gate can choose:
 

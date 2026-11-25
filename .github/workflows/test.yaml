@@ -1,7 +1,7 @@
 name: Test
 
 on:
-  # A change only to Agent Kernel Studio (ak-studio/) runs no Python test: studio.yml covers it.
+  # A change only to Open Agent Kernel Studio (ak-studio/) runs no Python test: studio.yml covers it.
   pull_request:
     paths-ignore:
       - 'ak-studio/**'

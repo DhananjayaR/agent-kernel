@@ -4,7 +4,7 @@ on:
   pull_request:
     branches:
       - develop
-    # A change only to Agent Kernel Studio (ak-studio/) runs no Python lint: studio.yml covers it.
+    # A change only to Open Agent Kernel Studio (ak-studio/) runs no Python lint: studio.yml covers it.
     paths-ignore:
       - 'ak-studio/**'
 

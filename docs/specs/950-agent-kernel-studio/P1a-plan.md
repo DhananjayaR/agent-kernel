@@ -27,7 +27,7 @@ dependency-cruiser, electron-builder, pnpm 12, Node 24.
   `electron-vite@6.0.0`, `vite@8.3.8`, `react@19.3.0`, `react-dom@19.3.0`, `@types/react@19.3.0`,
   `typescript@7.0.2`, `@biomejs/biome@2.6.8`, `zod@4.6.7`, `tailwindcss@4.3.5`, `@tailwindcss/vite@4.3.5`,
   `tw-animate-css@1.4.0`, `shadcn@4.23.0`, `react-aria-components@1.22.1`, `class-variance-authority@0.7.1`,
-  `lucide-react@1.77.0`, `vitest@5.1.1`, `@playwright/test@1.65.1`, `storybook@10.6.8`,
+  `lucide-react@1.77.0` (replaced on 25 Nov 2026 by `@tabler/icons-react@3.51.0`; see the P1a record), `vitest@5.1.1`, `@playwright/test@1.65.1`, `storybook@10.6.8`,
   `@storybook/react-vite@10.6.8`, `electron-builder@26.18.0`, `dependency-cruiser@18.9.0`, `@swc/core@1.16.22`.
   Node 24.22.1, pnpm 12.4.1. D8 (Zustand, TanStack Query, TanStack Router) is not pinned in the record: Task 1
   pins the latest release that is at least two weeks old and records the versions in the P0 record's D8 row.
@@ -41,7 +41,8 @@ dependency-cruiser, electron-builder, pnpm 12, Node 24.
 - **Design-gate boundary.** Token *values*, base components and the shell layout wait for the P1a design gate
   sign-off. Before it, `packages/ui` holds the mechanism only, with stand-in tokens from
   `docs/src/css/custom.css`, each marked `/* provisional: P1a design gate */`.
-- **Style reference: Spectrum 2** in size, shape, state and spacing; Agent Kernel's colours and fonts. Floating
+- **Style reference: Spectrum 2** in size, shape, state and spacing (shape amended 25 Nov 2026: buttons, inputs and
+  tags are rectangular at the 8 px control radius, per the brand; see the P1a record); Open Agent Kernel's colours and fonts. Floating
   layers are solid. No Adobe icons, fonts, logo or brand colours.
 - **Commits** end with the attribution line the session gives. No secrets, local absolute paths or personal
   data in any file.
@@ -113,7 +114,7 @@ ak-studio/
 - [x] **Step 4:** Root `Makefile` gains `studio-dev`, `studio-build`, `studio-test`, `studio-lint`, which run the
   matching `pnpm --dir ak-studio` command, and a `help` line each. (The whole-branch review added
   `studio-storybook` and `studio-package`, so every command the spec names has a target.)
-  `DEVELOPER_GUIDE.md` gains a short "Agent Kernel Studio" section pointing to `ak-studio/README.md`.
+  `DEVELOPER_GUIDE.md` gains a short "Agent Kernel Studio" section (named "OAK Studio" since 25 Nov 2026) pointing to `ak-studio/README.md`.
 - [x] **Step 5:** Verify: `pnpm install --frozen-lockfile` from a clean clone, then `pnpm lint`, `pnpm typecheck`
   pass with the empty members. Commit.
 

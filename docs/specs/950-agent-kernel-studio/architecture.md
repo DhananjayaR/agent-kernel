@@ -7,7 +7,7 @@
 Every screen in the Studio reads project files, runs commands, follows streams and waits on long jobs. If each
 feature solves those problems its own way, the code drifts, and code written by a coding agent drifts
 fastest. This document fixes **one way** to do each of them, so that features look the same whoever writes
-them, and so that the Studio never needs a hack to get data out of Agent Kernel.
+them, and so that the Studio never needs a hack to get data out of Open Agent Kernel.
 
 The rules are enforced by lint and tests where they can be (see "Enforcement"), and taught to coding agents
 through the Studio skills ([conventions-and-skills.md](conventions-and-skills.md)).
@@ -39,7 +39,7 @@ flowchart TB
 ```
 
 At run time the renderer calls services only through the bridge, and infrastructure is the only thing that
-touches the project's files, processes and Agent Kernel environment.
+touches the project's files, processes and OAK environment.
 
 | Layer | May import | Must not import |
 |---|---|---|
@@ -71,7 +71,7 @@ keeps a second copy that can silently disagree with it.
 | Kind of data | Examples | Owner (source of truth) | How the renderer holds it |
 |---|---|---|---|
 | Project state | `config.yaml`, the project graph, the file tree, rules, deploy history | Files on disk, read and derived by main-process services | **Query cache** (TanStack Query), invalidated by domain events |
-| Machine state | Toolchain, Agent Kernel version, recent projects | Main-process services | Query cache |
+| Machine state | Toolchain, OAK version, recent projects | Main-process services | Query cache |
 | Streams | Command output, run log, coding-agent events, trace spans | Main-process services | **Stream store**: one bounded buffer per stream |
 | Jobs and sessions | A test run, `terraform plan`; the local server, a coding-agent session | `JobService` and `SessionService` | **Job and session stores**, mirrored from events |
 | UI state | Selected node, open panel, active tab, canvas zoom | The renderer | **Feature store** (Zustand), one per feature |
@@ -326,7 +326,7 @@ must not be a quieter way to run its code.
 - A project's agent settings (hooks, permission rules) are **not** loaded by default. The first time a
   project is opened with the agent, the Studio lists the hooks and pre-allowed tools it found and asks; only
   then does it load them. The user's own settings are theirs and load without a question.
-- Agent Kernel's own instructions are wanted: `ak skill install --assistant claude` writes them to
+- OAK's own instructions are wanted: `ak skill install --assistant claude` writes them to
   `.claude/commands`, and they load as commands with project settings on. (Verified in S5.)
 - **No clean switch exists yet.** Turning all hooks off keeps the project's commands but also stops the
   user's own plugin hooks; leaving project settings out drops the commands too. (Verified in S5.) P6 must
@@ -378,7 +378,7 @@ type StudioError = {
   [conventions-and-skills.md](conventions-and-skills.md).
 - Thrown exceptions never cross the bridge; the service boundary converts them.
 
-## Agent Kernel versions in the code
+## OAK versions in the code
 
 - `useCapability(id)` returns `available`, `needs-upgrade` or `removed` from the P2 catalog.
 - `<CapabilityGate id="...">` wraps any control or section that needs a capability and renders the
@@ -416,7 +416,7 @@ features/config/
 - Field-level checks (required, type, enum, range) run in the renderer from the same JSON schema, for
   immediate feedback.
 - **The kernel is the authority.** Before a save, the main process validates the whole section with the
-  installed Agent Kernel. A value the renderer accepted and the kernel rejects is shown as a `config.invalid`
+  installed OAK. A value the renderer accepted and the kernel rejects is shown as a `config.invalid`
   error on its field.
 
 ## Main-process services
@@ -433,7 +433,7 @@ features/config/
 
 ## What the Studio writes into a project
 
-Code the Studio generates must look exactly like code a person would write with Agent Kernel, so a project
+Code the Studio generates must look exactly like code a person would write with OAK, so a project
 never shows it was made by the Studio.
 
 1. **One source for templates.** The bundled skills (`ak-init`, `ak-cloud-deploy`) are prose instructions with
@@ -453,7 +453,7 @@ never shows it was made by the Studio.
 
 ## Get data from the kernel, not around it
 
-When the Studio needs information Agent Kernel already has, the kernel should **expose it**, not have the
+When the Studio needs information OAK already has, the kernel should **expose it**, not have the
 Studio parse or guess it. Proposed additions to `ak-py`, each specified through the repository's normal
 `design.md`, `spec.md`, `plan.md` process:
 

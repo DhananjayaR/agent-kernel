@@ -1,9 +1,9 @@
-# P2 · Open a project and know its Agent Kernel version
+# P2 · Open a project and know its Open Agent Kernel version
 
 | | |
 |---|---|
 | Status | Not started |
-| Business aspect | Getting into a project: open a folder, see what is installed, know which Agent Kernel features apply |
+| Business aspect | Getting into a project: open a folder, see what is installed, know which OAK features apply |
 | PRD milestone | 1 (Open and read), first half |
 | Depends on | [P1b](P1b-data-layer-and-patterns.md) |
 | Unlocks | Every later phase. All of them ask this phase "what does this project's version support?" |
@@ -12,7 +12,7 @@
 ## Outcome
 
 A person launches the Studio, sees whether their toolchain is ready, opens a folder, and the app says: this is
-an Agent Kernel project on version X, with these frameworks installed. Every command the app ran to learn that
+an OAK project on version X, with these frameworks installed. Every command the app ran to learn that
 is listed in the Commands panel. Opening a project on an older version works, and features that version lacks
 are marked unavailable instead of failing.
 
@@ -27,7 +27,7 @@ are marked unavailable instead of failing.
 - Toolchain detection.
 - The command runner and the Commands panel.
 - File watching and the "changed on disk" notice.
-- Agent Kernel version detection and the capability catalog.
+- OAK version detection and the capability catalog.
 
 **Out**
 
@@ -40,10 +40,10 @@ Follow [design-process.md](design-process.md). Existing input: briefs 00, 01 and
 
 | Screen | Requirements (from the PRD and brief 02) | Questions to settle |
 |---|---|---|
-| Welcome | Open a folder. See recent projects. See a toolchain check. Start a new project, or describe one to the coding agent (entry points only in this phase). | What a first-time user with nothing installed sees first. Whether a missing optional tool (Terraform, Docker) looks different from a missing required one (Python, `uv`). Where the Agent Kernel version of each recent project is shown. |
-| Status bar | Working directory, git branch, Python environment state, file sync state. | Where the project's Agent Kernel version lives, and what it looks like when the version is below the supported floor. |
+| Welcome | Open a folder. See recent projects. See a toolchain check. Start a new project, or describe one to the coding agent (entry points only in this phase). | What a first-time user with nothing installed sees first. Whether a missing optional tool (Terraform, Docker) looks different from a missing required one (Python, `uv`). Where the OAK version of each recent project is shown. |
+| Status bar | Working directory, git branch, Python environment state, file sync state. | Where the project's OAK version lives, and what it looks like when the version is below the supported floor. |
 | Commands panel | Every command with its output and exit status. | How a long output is shown. How a running command is cancelled. How commands run by the app differ from those run by the coding agent (later). |
-| Version states | Not in the PRD; needed by the versioning requirement. | One shared pattern for "this needs Agent Kernel ≥ X": on a tab, on a form section, on a palette tile. An upgrade hint that shows the command and never runs it silently. |
+| Version states | Not in the PRD; needed by the versioning requirement. | One shared pattern for "this needs OAK ≥ X": on a tab, on a form section, on a palette tile. An upgrade hint that shows the command and never runs it silently. |
 
 **Sign-off**
 
@@ -88,7 +88,7 @@ skill: features `welcome`, `commands`, `status`; services `ToolchainService`,
 - [ ] Detect an OAK project: `pyproject.toml` depends on `agentkernel`, or `config.yaml` and `app.py` exist,
       or (the team's signal, brief 02) `config.yaml` and a Python file that registers an OAK module. Record
       which signal matched.
-- [ ] States: Agent Kernel project, Python project without Agent Kernel, empty folder, unreadable folder.
+- [ ] States: OAK project, Python project without OAK, empty folder, unreadable folder.
 - [ ] Open creates the project scope from the [architecture](architecture.md); close disposes it. One
       project per window.
 - [ ] Watch the folder for changes. Ignore `.venv/`, `.git/`, `node_modules/`, `.terraform/`,
@@ -98,7 +98,7 @@ skill: features `welcome`, `commands`, `status`; services `ToolchainService`,
 
 ### 2.4 Kernel version service
 
-- [ ] Resolve the project's Agent Kernel version, in this order, and record which source answered:
+- [ ] Resolve the project's OAK version, in this order, and record which source answered:
   1. The installed package in the project's environment (`importlib.metadata.version("agentkernel")`, the same
      call the package uses in `ak-py/src/agentkernel/__init__.py`).
   2. The `agentkernel` entry in `uv.lock`.
@@ -109,7 +109,7 @@ skill: features `welcome`, `commands`, `status`; services `ToolchainService`,
 
 ### 2.5 Capability catalog
 
-The catalog answers one question for the whole app: **does this project's Agent Kernel version support
+The catalog answers one question for the whole app: **does this project's OAK version support
 feature F?**
 
 - [ ] A data package in `ak-studio/` holding one entry per capability:
@@ -129,7 +129,7 @@ feature F?**
 - [ ] One API: `catalog.status(id, version)` returns `available`, `needs-upgrade` (with `since`) or `removed`
       (with `until` and `replacedBy`).
 - [ ] One renderer hook and one component for the version-unavailable pattern from the design gate.
-- [ ] **Supported floor.** Studio declares the oldest Agent Kernel version it opens with full support.
+- [ ] **Supported floor.** Studio declares the oldest OAK version it opens with full support.
       Proposed: the latest minor at the time P2 ships. Below the floor the project opens read-only with a
       banner. The floor is recorded in the README decision log.
 - [ ] **Seed entries**, enough to prove the mechanism in this phase:
@@ -150,7 +150,7 @@ feature F?**
 ### 2.6 Welcome screen, status bar, Commands panel
 
 - [ ] Build the screens approved at the design gate, on the P1a shell and components and the P1b patterns.
-- [ ] Recent projects show name, path, Agent Kernel version and last opened.
+- [ ] Recent projects show name, path, OAK version and last opened.
 - [ ] The status bar shows the resolved version and its source.
 
 ## How later phases use the version
@@ -159,7 +159,7 @@ feature F?**
 |---|---|
 | P3 | Config form generated from the installed version's schema; canvas node kinds gated by the catalog |
 | P6, P7 | Which bundled skills exist; whether `ak rules check` exists in the installed version |
-| P4 | New project wizard picks the Agent Kernel version; templates are chosen by version range |
+| P4 | New project wizard picks the OAK version; templates are chosen by version range |
 | P5 | Palette tiles gated by the catalog |
 | P8, P9 | Which stream event types and tracing options exist |
 | P10, P11 | Which deploy targets exist; which module version matches the package version |
@@ -177,7 +177,7 @@ These are the first real features, so the skills are checked against them.
 - [ ] Unit tests: `CommandRunner` (arguments, cancel, exit status), version resolution from each of the three
       sources, `catalog.status` for available, needs-upgrade and removed.
 - [ ] Fixture projects: one current, one on an older minor, one with no environment yet, one that is not an
-      Agent Kernel project. Each opens to the right state.
+      OAK project. Each opens to the right state.
 - [ ] The drift test passes against in-tree `ak-py` and fails when an entry is removed.
 - [ ] End-to-end (Playwright): launch, open a fixture folder, see the version in the status bar and the
       detection commands in the Commands panel.

@@ -11,10 +11,10 @@
 
 ## Outcome
 
-A person opens any existing Agent Kernel project, including the examples in `examples/`, and sees its agents,
+A person opens any existing Open Agent Kernel project, including the examples in `examples/`, and sees its agents,
 tools and handoffs as a graph, reads every file, and reads every `config.yaml` section as a form. Nothing is
 editable yet. When a file changes on disk the views update. When the project cannot be read, the app says
-which file is the problem. This is the first phase that showcases Agent Kernel visually.
+which file is the problem. This is the first phase that showcases OAK visually.
 
 ## Scope
 
@@ -74,7 +74,7 @@ Per "Get data from the kernel, not around it" in [architecture.md](architecture.
 - [ ] A small Python script shipped with the Studio. It is run with the project's own interpreter through
       `CommandRunner`, so it is visible in the Commands panel, and it prints one JSON document.
 - [ ] It reports:
-  - Agent Kernel version, Python version, installed frameworks.
+  - OAK version, Python version, installed frameworks.
   - The config schema of the **installed** version, from `AKConfig.model_json_schema()`. Checked on in-tree
     `ak-py`: it returns 28 top-level sections with types, defaults and descriptions, with no `config.yaml`
     present.
@@ -134,7 +134,7 @@ Per "Get data from the kernel, not around it" in [architecture.md](architecture.
 - [ ] Forms generated from the installed version's schema: one section per top-level `AKConfig` block.
 - [ ] Each field shows its description, its type, its default and whether it is set in `config.yaml`.
 - [ ] Read-only in this phase. The form generator is built so that P4 only has to switch editing on.
-- [ ] Validation uses Agent Kernel's own config loading, through the helper. Errors go to the Problems panel.
+- [ ] Validation uses OAK's own config loading, through the helper. Errors go to the Problems panel.
 
 ### 3.6 Problems panel
 
@@ -153,7 +153,7 @@ Per "Get data from the kernel, not around it" in [architecture.md](architecture.
       no secret value appears in the helper's output for a fixture with every secret set.
 - [ ] Unit tests for the helper against in-tree `ak-py`: one fixture project per framework, asserting agents,
       tools and handoffs.
-- [ ] The helper runs against at least two released Agent Kernel versions in CI.
+- [ ] The helper runs against at least two released OAK versions in CI.
 - [ ] Form generator tests: every top-level `AKConfig` section renders from the schema without a hand-written
       form.
 - [ ] End-to-end: open three projects from `examples/` (single agent, multi-agent with handoffs, one with a

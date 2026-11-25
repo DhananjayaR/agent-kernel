@@ -40,7 +40,7 @@ Component names are working names until the P1a design gate.
   radius, not Spectrum 2's pill; cards and panels use the 16 px card radius. The logo mark
   (`branding/logo-mark/`) is the app icon and sits in the top bar, used as supplied: never redrawn,
   recoloured or stretched.
-- **Type.** Inter for UI text. Archivo for headings and for primary call-to-action labels. JetBrains Mono for
+- **Type.** Inter for UI text. Archivo for headings and for primary call-to-action labels (the Archivo-for-CTA rule is from the Drive "Agent Kernel - Style Guidelines Quick Reference", May 2026, not `branding/README.md`). JetBrains Mono for
   code. All three are bundled.
 
 - **Design-system colours only.** Tailwind's default palette is removed, so only role tokens exist
@@ -60,8 +60,8 @@ Component names are working names until the P1a design gate.
 ### Copy rules
 
 - Sentence case everywhere in the app.
-- **The product's name.** "Open Agent Kernel" where the full name is read (window and installer titles),
-  "OAK" everywhere else; the working app name is "OAK Studio". The company is not named in the app.
+- **The product's name.** "Open Agent Kernel" where the full name is read (window and installer titles: the app's
+  title is "Open Agent Kernel Studio"), "OAK" everywhere else; the compact interface says "OAK Studio". The company is not named in the app.
   Identifiers keep their form: the `agentkernel` package, the `ak` CLI, `AKConfig`, `AK_*` variables,
   `.akstudio/`, the `ak-*` skills. (The team's brief 00 and the brand's
   [name rule](../../../branding/README.md#name).)

@@ -43,8 +43,8 @@ canvas. Options for palette, fonts, density and theme, with measured contrast:
 
 | Subject | Requirements | Questions to settle |
 |---|---|---|
-| Palette and tokens | The Studio looks like Agent Kernel. | **Brand drift:** the briefs make electric blue the primary colour; the repository's current tokens (`docs/src/css/custom.css`) make orange `#FF5E32` primary. Which is the Studio's primary, which colour marks the coding agent, and do both pass 4.5:1 contrast on the app's surfaces. |
-| Style reference | **Decided:** the components' basic style resembles React Spectrum (Spectrum 2), with Agent Kernel's colours and fonts. | How closely to follow it where the briefs differ: the briefs assume glass floating layers and a 40 px row; floating layers are **solid, decided in P0**, and Spectrum 2 has its own size scale. Start from the token table measured in the P0 S1 spike. |
+| Palette and tokens | The Studio looks like OAK. | **Brand drift:** the briefs make electric blue the primary colour; the repository's current tokens (`docs/src/css/custom.css`) make orange `#FF5E32` primary. Which is the Studio's primary, which colour marks the coding agent, and do both pass 4.5:1 contrast on the app's surfaces. |
+| Style reference | **Decided:** the components' basic style resembles React Spectrum (Spectrum 2), with OAK's colours and fonts. | How closely to follow it where the briefs differ: the briefs assume glass floating layers and a 40 px row; floating layers are **solid, decided in P0**, and Spectrum 2 has its own size scale. Start from the token table measured in the P0 S1 spike. |
 | Density | A tool used for hours. | The type scale, row height and spacing steps, starting from Spectrum 2's scale. Comfortable and compact, or one density. |
 | Theme | Dark and light. | Which is the default. |
 | Shell layout | Top bar with project switcher, tabs, run control, deploy status, Build with AI; bottom panel; status bar. No left navigation. | Whether five tabs plus controls fit the top bar at 1100 px. Native or custom window controls per operating system. Where settings open. |
@@ -55,7 +55,7 @@ canvas. Options for palette, fonts, density and theme, with measured contrast:
 | Subject | Options explored | Decision | Approved by | Date |
 |---|---|---|---|---|
 | Style reference: how closely to follow Spectrum 2 (floating layers are solid, decided in P0) | | | | |
-| Palette, tokens, density, theme | 3 palettes, 2 font pairings, 3 densities, 3 default themes ([options](research/p1a-design-gate-options.md)) | Option A palette: Agent Kernel's current brand. Orange `#FF5E32` primary (dark text on fills), ice `#B1CDFF` / dusk `#3F598A` for the coding agent, navy ground; every role gets per-surface text variants tuned to 4.5:1. Fonts: Inter for UI, Archivo for headings, JetBrains Mono for code. Density: one, Spectrum 2 medium (32 px controls, 40 px rows, 14 px text, 48 px top bar). Default theme: follow the system setting, dark when unknown | Dhananjaya Rajasinghe | 25 Nov 2026 |
+| Palette, tokens, density, theme | 3 palettes, 2 font pairings, 3 densities, 3 default themes ([options](research/p1a-design-gate-options.md)) | Option A palette: OAK's current brand. Orange `#FF5E32` primary (dark text on fills), ice `#B1CDFF` / dusk `#3F598A` for the coding agent, navy ground; every role gets per-surface text variants tuned to 4.5:1. Fonts: Inter for UI, Archivo for headings, JetBrains Mono for code. Density: one, Spectrum 2 medium (32 px controls, 40 px rows, 14 px text, 48 px top bar). Default theme: follow the system setting, dark when unknown | Dhananjaya Rajasinghe | 25 Nov 2026 |
 | Shell layout | | | | |
 | Base component set | | | | |
 
@@ -77,7 +77,12 @@ explicit, it wins over Spectrum 2:
   floating layers. The team's brief 00 assumes 40 px controls, Archivo for all UI text and a light fallback;
   those are [open decision 10](README.md#open-decisions).
 
-The component stories are reviewed for sign-off after these changes land in `ak-studio/`.
+The changes have landed in `ak-studio/` (`c3085c7c`); the component stories are reviewed for sign-off.
+
+Radius exceptions for the owner to accept knowingly (the brand names two radii, 8 px for controls and 16 px for
+cards; the ruling named only buttons, inputs and tags): popovers and menus keep 10 px (`--radius-popover`); 4 px
+remains on the checkbox box, the tooltip, the tab focus ring, tree rows and segments. Each is a one-token change
+if the owner wants 8 or 16 px.
 
 ## Work packages
 
@@ -94,7 +99,7 @@ The component stories are reviewed for sign-off after these changes land in `ak-
     packages/
       contract/       Bridge types and schemas, shared by main and renderer
       ui/             Design system: tokens and components, with stories
-      kernel-catalog/ Agent Kernel capability catalog (filled in P2)
+      kernel-catalog/ OAK capability catalog (filled in P2)
     fixtures/         (P1b) The support-triage fixture project and template reference projects
     tools/            (P1b) Generators: new:feature, new:operation, new:component
     .agents/skills/   (P1b) The ak-studio-* skills; .claude/skills links here
@@ -182,7 +187,7 @@ The component stories are reviewed for sign-off after these changes land in `ak-
 
 ## Version awareness
 
-Nothing in P1a reads an Agent Kernel version. It creates the empty `kernel-catalog` package and the shell slot
+Nothing in P1a reads an OAK version. It creates the empty `kernel-catalog` package and the shell slot
 in the status bar where P2 shows the version.
 
 ## Verification
