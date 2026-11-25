@@ -1,0 +1,119 @@
+name: Studio
+
+# Agent Kernel Studio (ak-studio/, issue #950): lint, type-check, boundary checks, unit tests, Storybook
+# accessibility run, end-to-end tests and an unsigned installer, on Linux, Windows and macOS.
+# P1a: written and parsed, not yet run (Windows, macOS and CI were deferred; see ak-studio/README.md).
+on:
+  pull_request:
+    paths:
+      - 'ak-studio/**'
+      - '.github/workflows/studio.yml'
+  push:
+    branches:
+      - develop
+    paths:
+      - 'ak-studio/**'
+      - '.github/workflows/studio.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: studio-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Least-privilege GITHUB_TOKEN: checkout only. Uploading a workflow artifact needs no token scope.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+        working-directory: ak-studio
+    env:
+      # Unsigned builds: never look for a signing identity in the keychain or certificate store.
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up pnpm (version from ak-studio/package.json packageManager)
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: ak-studio/package.json
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: ak-studio/package.json
+          cache: pnpm
+          cache-dependency-path: ak-studio/pnpm-lock.yaml
+
+      # Also downloads the Electron binary (apps/desktop postinstall: install-electron).
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright's Chromium (Storybook accessibility run and browser e2e)
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Lint (Biome, check-palette)
+        run: pnpm lint
+
+      - name: Type-check
+        run: pnpm typecheck
+
+      - name: Boundary rules
+        run: pnpm depcruise
+
+      - name: Boundary rules self-test (the check must be able to fail)
+        run: pnpm depcruise:selftest
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build Storybook
+        run: pnpm build-storybook
+
+      - name: Storybook accessibility run (dark and light)
+        run: pnpm test:storybook
+
+      # P0 found Ubuntu runners may block the unprivileged user namespaces Electron's sandbox uses. Not yet
+      # verified on a runner: remove this step if the e2e tests pass without it.
+      - name: Allow Electron's user-namespace sandbox (Linux)
+        if: runner.os == 'Linux'
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      # Builds the app, then runs Playwright's browser and Electron projects (under xvfb-run -a on Linux).
+      - name: End-to-end tests
+        run: pnpm test:e2e
+
+      - name: Upload Playwright results on failure
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-results-${{ matrix.os }}
+          path: ak-studio/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # Unsigned: AppImage on Linux, NSIS installer on Windows, dmg on macOS.
+      - name: Package
+        run: pnpm package
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v6
+        with:
+          name: ak-studio-installer-${{ matrix.os }}
+          path: |
+            ak-studio/apps/desktop/release/*.AppImage
+            ak-studio/apps/desktop/release/*.exe
+            ak-studio/apps/desktop/release/*.dmg
+          if-no-files-found: error
+          retention-days: 14

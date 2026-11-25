@@ -17,12 +17,14 @@ pnpm depcruise:selftest  # proves the rules can fail and the parser finds module
 pnpm build       # check-palette, then electron-vite: main, preload and renderer into apps/desktop/out/
 pnpm dev         # Electron against the electron-vite dev server
 pnpm --filter @ak-studio/desktop start   # run the last build (on headless Linux: xvfb-run -a ...)
+pnpm test:e2e    # build, then Playwright: the renderer in Chromium (mock) and the built app in Electron
+pnpm package     # build, then electron-builder for this system into apps/desktop/release/ (unsigned)
 ```
 
 Members: `apps/desktop`, `apps/renderer`, `packages/contract`, `packages/ui`, `packages/kernel-catalog`.
 
-Scripts that are placeholders for now (print "added in Task N" and exit 0): `package` (Task 7).
-`test:storybook` needs Playwright's Chromium (`pnpm exec playwright install chromium` once).
+`test:storybook` and `test:e2e` need Playwright's Chromium (`pnpm exec playwright install chromium` once; on a
+fresh Linux machine `pnpm exec playwright install --with-deps chromium`).
 
 **Desktop app.** `apps/desktop` holds the Electron main process and preload, and the electron-vite config,
 which also builds `apps/renderer` (so the renderer holds no Node-run file). The window loads `app://studio/`,
@@ -64,3 +66,49 @@ Tailwind's CSS-variable shorthand (`bg-(--x)`, `w-(--trigger-width)`). Colour li
 counts only in a value position, and comment lines are not checked for literals. Tailwind's default palette,
 shadow, inset/drop/text shadow, radius, text-size and font-family scales are removed in `theme.css`, so such a
 class compiles to nothing even where the check cannot see it. Its scope is `apps/renderer` and `packages/ui`.
+
+**End-to-end tests** (`playwright.config.ts`, `tests/e2e/`). `pnpm test:e2e` builds, then runs two Playwright
+projects through `tools/e2e.mjs`, which wraps the run in `xvfb-run -a` on Linux when there is no `DISPLAY`
+(extra arguments go to `playwright test`, e.g. `pnpm test:e2e --project browser`). `browser` serves the
+renderer with its Vite dev server on `127.0.0.1:5199` and checks it on the mock transport: version, platform,
+theme switch. `electron` launches the built, unpackaged app (`apps/desktop/out/`) with `AK_STUDIO_TEST_HOOKS=1`
+and a fresh `--user-data-dir` per test, and checks the version and platform from the real main process, that the
+theme switch reaches `nativeTheme`, that the request gate cancelled nothing (Chromium's network stack only: Node
+networking in main is not covered), and that the gate does count a refused request.
+
+**Packaging** (`apps/desktop/electron-builder.yml`, electron-builder 26.18.0). `pnpm package` builds, then
+packages for the current system into `apps/desktop/release/`: an AppImage and `linux-unpacked/` on Linux, an NSIS
+installer on Windows, a dmg on macOS (Windows and macOS are configured, not yet built). Nothing is signed. The
+asar holds `out/` and `package.json` only (the contract and zod are bundled into main, so no `node_modules`).
+`appId` (`ai.yaala.akstudio`) and the product name are working names until P12. Electron fuses are flipped at
+package time: `RunAsNode`, `EnableNodeOptionsEnvironmentVariable`, `EnableNodeCliInspectArguments` and
+`GrantFileProtocolExtraPrivileges` off; `EnableCookieEncryption`, `OnlyLoadAppFromAsar` and
+`EnableEmbeddedAsarIntegrityValidation` (macOS and Windows only; no effect on Linux) on. So
+`ELECTRON_RUN_AS_NODE`, `NODE_OPTIONS` and `--inspect` do nothing to a packaged app, and Playwright cannot drive
+one (it needs `--inspect`): the Electron e2e tests run against the unpackaged build. The AppImage needs FUSE 2
+(`libfuse2`); without it, run it with `--appimage-extract-and-run`.
+
+**CI** (`.github/workflows/studio.yml`). On pull requests and pushes to `develop` that touch `ak-studio/**`, on
+Ubuntu, Windows and macOS: install, Playwright's Chromium, lint, typecheck, depcruise and its self-test, unit
+tests, Storybook build and accessibility run, e2e, package, and the installer uploaded as a workflow artifact.
+The Python `Test` and `Code Quality` workflows ignore changes under `ak-studio/**`.
+
+**Linux results (P1a, 25 November 2026).** Measured on Linux (WSL2, x64), Node 24.22.1, pnpm 12.4.1.
+
+| Check                                                                | Linux                                                                                 | Windows                 | macOS                   | CI                      |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------- | ----------------------- | ----------------------- |
+| `pnpm lint` (Biome, check-palette)                                   | Pass                                                                                  | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm typecheck`                                                     | Pass                                                                                  | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm depcruise`                                                     | Pass: 80 modules, 174 dependencies, no violations                                     | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm depcruise:selftest`                                            | Pass: 13 expected violations found                                                    | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm test`                                                          | Pass: 214 unit tests (contract 32, desktop 134, ui 11, renderer 37), check-palette 39 | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm build-storybook`                                               | Pass                                                                                  | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm test:storybook`                                                | Pass: 6 (3 stories, dark and light), no axe violation                                 | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm test:e2e`                                                      | Pass: 6 (browser 2, Electron 4) in about 3 s, no display (xvfb-run -a)                | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| `pnpm package`                                                       | Pass: AppImage 126,422,062 bytes (120.6 MiB); `linux-unpacked/` 276 MiB; about 17 s   | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| Packaged app starts                                                  | Pass: AppImage and `linux-unpacked/` show version, platform and the IPC bridge        | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+| Fuses (`ELECTRON_RUN_AS_NODE=1 ... -e`, `NODE_OPTIONS`, `--inspect`) | Pass: none takes effect; the app starts as itself                                     | Deferred (not executed) | Deferred (not executed) | Deferred (not executed) |
+
+Windows, macOS and the CI workflow were deferred by the owner for P1a (no push access yet): `studio.yml` was
+parsed, not run. The Linux runner's `apparmor_restrict_unprivileged_userns` step and the macOS fuse re-signing
+(`resetAdHocDarwinSignature`) are unverified until it runs.

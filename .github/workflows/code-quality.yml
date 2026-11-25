@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - develop
+    # A change only to Agent Kernel Studio (ak-studio/) runs no Python lint: studio.yml covers it.
+    paths-ignore:
+      - 'ak-studio/**'
 
 # Least-privilege GITHUB_TOKEN (CodeQL actions/missing-workflow-permissions): checkout only.
 permissions:

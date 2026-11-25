@@ -1,10 +1,15 @@
 name: Test
 
 on:
+  # A change only to Agent Kernel Studio (ak-studio/) runs no Python test: studio.yml covers it.
   pull_request:
+    paths-ignore:
+      - 'ak-studio/**'
   push:
     branches:
       - develop
+    paths-ignore:
+      - 'ak-studio/**'
   workflow_dispatch:
     inputs:
       update_example_locks:
