@@ -1,7 +1,25 @@
 import type { Preview } from "@storybook/react-vite";
+import { type ReactNode, useLayoutEffect } from "react";
 import "./preview.css";
 
 type Theme = "dark" | "light";
+
+/**
+ * Sets data-theme on <html> as well, as the app does: popovers, listboxes and tooltips render in a portal on
+ * <body>, outside the story's wrapper, and would otherwise always resolve the default (dark) theme.
+ */
+function DocumentTheme({
+	theme,
+	children,
+}: {
+	theme: Theme;
+	children: ReactNode;
+}) {
+	useLayoutEffect(() => {
+		document.documentElement.dataset.theme = theme;
+	}, [theme]);
+	return children;
+}
 
 const preview: Preview = {
 	parameters: {
@@ -21,12 +39,14 @@ const preview: Preview = {
 		(Story, context) => {
 			const theme: Theme = context.globals.theme === "light" ? "light" : "dark";
 			return (
-				<div
-					data-theme={theme}
-					className="min-h-screen bg-surface p-6 text-text"
-				>
-					<Story />
-				</div>
+				<DocumentTheme theme={theme}>
+					<div
+						data-theme={theme}
+						className="min-h-screen bg-surface p-6 text-text"
+					>
+						<Story />
+					</div>
+				</DocumentTheme>
 			);
 		},
 	],

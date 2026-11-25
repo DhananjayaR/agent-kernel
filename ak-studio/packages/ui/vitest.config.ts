@@ -31,6 +31,8 @@ export default defineConfig({
 					name: "unit",
 					include: ["src/**/*.test.ts"],
 					environment: "node",
+					// Process theme.css so `theme.css?raw` (lib/utils.test.ts) yields the file, not an empty string.
+					css: { include: [/theme\.css/] },
 				},
 			},
 			storybookProject("dark"),

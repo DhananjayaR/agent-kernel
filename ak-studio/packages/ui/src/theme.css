@@ -21,6 +21,12 @@
  *                                               never the only thing marking a control.
  *   border-control, focus-ring                  Non-text: a control's boundary and the focus indicator. At least
  *                                               3:1 on all three surfaces (WCAG 1.4.11).
+ *   accent-primary-hover, status-danger-hover   FILL of a hovered or pressed primary or danger button; its
+ *                                               on-<role> text stays at least 4.5:1.
+ *   fill, fill-hover, fill-pressed              Neutral state fills (secondary button, hovered item), derived
+ *                                               from `text`; only `text`-coloured content sits on them.
+ *   disabled-fill, disabled-border,             Disabled controls only (exempt from contrast minimums).
+ *   disabled-text
  *
  * Roles: accent-primary (primary action, selection), accent-ai (the coding agent, nothing else),
  * status-success, status-warning, status-danger.
@@ -73,6 +79,8 @@
 	--role-on-status-warning: #011428;
 	--role-status-danger: #d43d3e; /* from --ak-red #db4444 (fails with navy and white text as is) */
 	--role-on-status-danger: #ffffff;
+	--role-accent-primary-hover: #ff7651; /* --ak-primary, 15% toward white: 7.0:1 with on-accent-primary */
+	--role-status-danger-hover: #b43435; /* status-danger, 15% toward black: 6.0:1 with on-status-danger */
 
 	--role-border-default: #173964; /* --ak-border */
 	--role-border-control: #597eae; /* from --ak-border #173964 */
@@ -102,6 +110,8 @@
 	--role-on-status-warning: #011428;
 	--role-status-danger: #d43d3e; /* from --ak-red #db4444 */
 	--role-on-status-danger: #ffffff;
+	--role-accent-primary-hover: #ff7651; /* as dark */
+	--role-status-danger-hover: #b43435; /* as dark */
 
 	--role-border-default: #d3deec; /* --ak-border */
 	--role-border-control: #7d8794; /* from --ak-border #d3deec */
@@ -154,6 +164,31 @@
 	--color-border-default: var(--role-border-default);
 	--color-border-control: var(--role-border-control);
 	--color-focus-ring: var(--role-focus-ring);
+
+	/*
+	 * State colours (Task 9, base components). Spectrum 2 moves a control to the "next colour stop" on hover and
+	 * press and gives disabled controls dedicated colours, not opacity. Agent Kernel has no grey ramp, so:
+	 * - the hover fills of the two filled buttons are explicit per-theme values above (the token story checks
+	 *   their on-* text at 4.5:1);
+	 * - the neutral fills are the theme's text colour mixed into transparency. Only `text`-coloured content sits
+	 *   on them: text-muted drops below 4.5:1 on any of them (measured on surface-overlay), so a component never
+	 *   puts muted text on a fill;
+	 * - the disabled colours are exempt from contrast minimums (WCAG 1.4.3 and 1.4.11 exclude disabled
+	 *   controls) and are never used for anything that is not disabled.
+	 */
+	--color-accent-primary-hover: var(--role-accent-primary-hover);
+	--color-status-danger-hover: var(--role-status-danger-hover);
+	/* Secondary button, hovered item. */
+	--color-fill: color-mix(in oklab, var(--role-text) 8%, transparent);
+	--color-fill-hover: color-mix(in oklab, var(--role-text) 12%, transparent);
+	--color-fill-pressed: color-mix(in oklab, var(--role-text) 16%, transparent);
+	--color-disabled-fill: color-mix(in oklab, var(--role-text) 6%, transparent);
+	--color-disabled-border: color-mix(
+		in oklab,
+		var(--role-text) 16%,
+		transparent
+	);
+	--color-disabled-text: color-mix(in oklab, var(--role-text) 40%, transparent);
 }
 
 /*
@@ -225,6 +260,34 @@
 	/* Floating layers are solid (decided in P0); this is the popover shadow, first two layers (L). */
 	--shadow-elevated: 0 4px 12px rgb(0 0 0 / 0.08), 0 2px 6px rgb(0 0 0 / 0.04);
 	--press-depth: -2px; /* S pressScale: translate3d(0, 0, -2px) on press */
+}
+
+/*
+ * Keyboard focus (Spectrum 2: 2 px solid ring, 2 px gap, keyboard only). `focus-ring` shows it on an element
+ * React Aria marks [data-focus-visible] (never plain :focus-visible, which browsers also match on a text field
+ * after a mouse click). `focus-outline` draws it unconditionally, for use behind a variant, for example
+ * `group-data-focus-visible:focus-outline` on a checkbox's box.
+ */
+@utility focus-outline {
+	outline: var(--spacing-focus-ring) solid var(--color-focus-ring);
+	outline-offset: var(--spacing-focus-gap);
+}
+@utility focus-ring {
+	&[data-focus-visible] {
+		outline: var(--spacing-focus-ring) solid var(--color-focus-ring);
+		outline-offset: var(--spacing-focus-gap);
+	}
+}
+
+/*
+ * Spectrum 2's press: the control pushes in 2 px while [data-pressed] (S pressScale; perspective is the
+ * control height, as measured in S1). Transitions are set by the component (`transition`, 150 ms).
+ */
+@utility press {
+	&[data-pressed] {
+		transform: perspective(var(--spacing-control-m))
+			translate3d(0, 0, var(--press-depth));
+	}
 }
 
 /* Numbers in JetBrains Mono with tabular figures, so columns of durations, counts and money line up. */

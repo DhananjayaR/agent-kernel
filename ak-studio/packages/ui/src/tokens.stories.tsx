@@ -37,6 +37,19 @@ const FILLS = [
 	"status-danger",
 ] as const;
 const ON_FILLS = FILLS.map((fill) => `on-${fill}` as const);
+// Hover and pressed fills of the filled buttons, each with the on-* text of its base fill.
+const HOVER_FILLS = ["accent-primary-hover", "status-danger-hover"] as const;
+const HOVER_ON: Record<
+	(typeof HOVER_FILLS)[number],
+	(typeof ON_FILLS)[number]
+> = {
+	"accent-primary-hover": "on-accent-primary",
+	"status-danger-hover": "on-status-danger",
+};
+const FILL_PAIRS: readonly (readonly [Role, Role])[] = [
+	...FILLS.map((fill) => [fill, `on-${fill}` as const] as const),
+	...HOVER_FILLS.map((fill) => [fill, HOVER_ON[fill]] as const),
+];
 const NON_TEXT_ROLES = ["border-control", "focus-ring"] as const;
 const DECORATIVE_ROLES = ["border-default"] as const;
 
@@ -45,6 +58,7 @@ type Role =
 	| (typeof TEXT_ROLES)[number]
 	| (typeof FILLS)[number]
 	| (typeof ON_FILLS)[number]
+	| (typeof HOVER_FILLS)[number]
 	| (typeof NON_TEXT_ROLES)[number]
 	| (typeof DECORATIVE_ROLES)[number];
 const ROLES: readonly Role[] = [
@@ -52,6 +66,7 @@ const ROLES: readonly Role[] = [
 	...TEXT_ROLES,
 	...FILLS,
 	...ON_FILLS,
+	...HOVER_FILLS,
 	...NON_TEXT_ROLES,
 	...DECORATIVE_ROLES,
 ];
@@ -216,11 +231,11 @@ function ThemePanel({ theme }: { theme: Theme }) {
 
 			<div>
 				<h3 className="pb-2 text-ui-lg font-bold">
-					Text on fills (button and badge labels; at least 4.5:1)
+					Text on fills, and on the hovered primary and danger fills (button and
+					badge labels; at least 4.5:1)
 				</h3>
 				<ul className="flex flex-wrap gap-cell">
-					{FILLS.map((fill) => {
-						const on = `on-${fill}` as const;
+					{FILL_PAIRS.map(([fill, on]) => {
 						const ratio = ratioOf(roles, on, fill);
 						return (
 							<li key={fill}>
@@ -355,7 +370,7 @@ export const Colours: Story = {
 		const text = pairs("text");
 		const nonText = pairs("non-text");
 		await expect(text).toHaveLength(
-			2 * (TEXT_ROLES.length * SURFACES.length + FILLS.length),
+			2 * (TEXT_ROLES.length * SURFACES.length + FILL_PAIRS.length),
 		);
 		await expect(nonText).toHaveLength(
 			2 * NON_TEXT_ROLES.length * SURFACES.length,
