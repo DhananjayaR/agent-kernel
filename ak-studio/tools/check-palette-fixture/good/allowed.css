@@ -1,0 +1,8 @@
+/* Must pass tools/check-palette. */
+:root[data-theme="dark"] {
+	--role-text: #eaf3f8;
+}
+.example {
+	@apply bg-surface text-text;
+	box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);
+}

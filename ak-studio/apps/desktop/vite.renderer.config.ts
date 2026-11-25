@@ -2,11 +2,12 @@
 // It lives here, not in apps/renderer, so the renderer holds no Node-run file (dependency rule
 // renderer-ui-no-node-builtins).
 import { resolve } from "node:path";
-import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { assetsInlineLimit, rendererPlugins } from "./renderer.shared";
 
 export default defineConfig({
 	root: resolve(import.meta.dirname, "../renderer"),
-	plugins: [react()],
+	plugins: rendererPlugins(),
+	build: { assetsInlineLimit },
 	server: { host: "127.0.0.1" },
 });

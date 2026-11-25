@@ -6,6 +6,11 @@
 		"tsBuildInfoFile": "./dist/.tsbuildinfo",
 		"types": ["node"]
 	},
-	"include": ["src", "electron.vite.config.ts", "vite.renderer.config.ts"],
+	"include": [
+		"src",
+		"electron.vite.config.ts",
+		"vite.renderer.config.ts",
+		"renderer.shared.ts"
+	],
 	"references": [{ "path": "../../packages/contract" }]
 }

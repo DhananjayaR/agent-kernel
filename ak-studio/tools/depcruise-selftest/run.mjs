@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { cruise } from "../cruise-lib.mjs";
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
-const EXPECTED_MODULES = 18;
+const EXPECTED_MODULES = 19;
 const expected = [
 	["renderer-ui-no-electron", "apps/renderer/src/violation.ts"], // resolves via fixture node_modules
 	["renderer-ui-no-electron", "apps/renderer/src/required.ts"], // require()
@@ -16,6 +16,7 @@ const expected = [
 	["renderer-ui-no-node-builtins", "apps/renderer/src/barefs.ts"], // bare fs
 	["renderer-ui-no-node-builtins", "apps/renderer/.storybook/main.ts"], // outside src
 	["renderer-ui-no-node-builtins", "packages/ui/src/index.ts"],
+	["renderer-ui-no-node-builtins", "packages/ui/.storybook/main.ts"], // Node-run config: no exemption
 	["contract-only-zod", "packages/contract/src/index.ts"],
 	["contract-tests-only-zod-vitest", "packages/contract/src/violation.test.ts"], // node:fs in a test
 	["ui-no-apps-or-contract", "packages/ui/src/index.ts"],

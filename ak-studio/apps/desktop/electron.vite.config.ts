@@ -1,8 +1,8 @@
 // electron-vite builds main (ESM), preload (CommonJS: sandboxed preloads cannot be ES modules) and the renderer
 // from apps/renderer. The config lives here, not in apps/renderer, so the renderer holds no Node-run file.
 import { resolve } from "node:path";
-import react from "@vitejs/plugin-react";
 import { defineConfig } from "electron-vite";
+import { assetsInlineLimit, rendererPlugins } from "./renderer.shared";
 
 const here = import.meta.dirname;
 const rendererRoot = resolve(here, "../renderer");
@@ -28,9 +28,10 @@ export default defineConfig({
 	},
 	renderer: {
 		root: rendererRoot,
-		plugins: [react()],
+		plugins: rendererPlugins(),
 		build: {
 			outDir: resolve(here, "out/renderer"),
+			assetsInlineLimit,
 			rolldownOptions: { input: resolve(rendererRoot, "index.html") },
 		},
 	},

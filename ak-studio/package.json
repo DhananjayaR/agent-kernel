@@ -9,14 +9,18 @@
 	},
 	"scripts": {
 		"dev": "pnpm --filter @ak-studio/desktop dev",
-		"build": "pnpm --filter @ak-studio/desktop build",
-		"test": "pnpm -r --if-present test",
-		"lint": "biome check .",
+		"build": "pnpm check-palette && pnpm --filter @ak-studio/desktop build",
+		"test": "pnpm -r --if-present test && pnpm check-palette:test",
+		"lint": "biome check . && pnpm check-palette",
 		"typecheck": "tsc -b",
-		"storybook": "echo 'storybook: added in Task 6'",
+		"storybook": "pnpm --filter @ak-studio/ui storybook",
+		"build-storybook": "pnpm --filter @ak-studio/ui build-storybook",
+		"test:storybook": "pnpm --filter @ak-studio/ui test:storybook",
 		"package": "echo 'package: added in Task 7'",
 		"depcruise": "node tools/depcruise.mjs",
-		"depcruise:selftest": "node tools/depcruise-selftest/run.mjs"
+		"depcruise:selftest": "node tools/depcruise-selftest/run.mjs",
+		"check-palette": "node tools/check-palette.mjs",
+		"check-palette:test": "vitest run tools/check-palette.test.mjs"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.6.8",

@@ -1,0 +1,4 @@
+/* Storybook's stylesheet: the design-system tokens, plus this folder as a Tailwind class source. */
+@import "../src/theme.css";
+
+@source "./";

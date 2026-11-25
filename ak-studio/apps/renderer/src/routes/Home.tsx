@@ -25,7 +25,8 @@ export function Home() {
 	});
 
 	return (
-		<main>
+		// One role token (bg-surface) proves the design-system CSS loads; styling waits for the shell (Task 10).
+		<main className="bg-surface">
 			<h1>Agent Kernel Studio</h1>
 			<p>Placeholder page (replaced by the shell in Task 10).</p>
 			{info.isPending && <p>Loading...</p>}

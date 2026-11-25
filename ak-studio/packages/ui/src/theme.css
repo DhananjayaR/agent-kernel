@@ -1,0 +1,131 @@
+/*
+ * Agent Kernel Studio design tokens: the Tailwind 4 entry for the renderer and Storybook.
+ *
+ * MECHANISM ONLY. The P1a design gate has not signed off the palette, fonts, density or default theme. Every
+ * colour below is a stand-in taken from the docs site (docs/src/css/custom.css) and marked
+ * "provisional: P1a design gate"; Task 8 replaces the values once the gate picks. Size, radius and spacing
+ * tokens are Spectrum 2 medium as measured in spike S1
+ * (docs/specs/950-agent-kernel-studio/research/spike-s1-components.md); they are provisional too, because
+ * density is a gate subject.
+ *
+ * Consumers import this file and add an @source for their own files; this file adds packages/ui/src.
+ */
+@import "tailwindcss" source(none);
+@import "tw-animate-css";
+@import "./fonts.css";
+
+@source "./";
+
+/* The app sets data-theme="dark" | "light" on <html>; `dark:` follows it, not the OS setting. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/*
+ * Role colours per theme. Dark is the default and is restated under [data-theme="dark"] so a dark block nested
+ * inside a light one (the token story shows both) resolves correctly.
+ */
+:root,
+[data-theme="dark"] {
+	--role-surface: #011428; /* provisional: P1a design gate (custom.css --ak-surface) */
+	--role-surface-raised: #02284f; /* provisional: P1a design gate (custom.css --ak-surface-raised) */
+	--role-surface-overlay: #0d315a; /* provisional: P1a design gate (custom.css --ak-surface-overlay) */
+	--role-text: #eaf3f8; /* provisional: P1a design gate (custom.css --ak-text) */
+	--role-text-muted: #798bad; /* provisional: P1a design gate (custom.css --ak-text-muted) */
+	--role-border-default: #173964; /* provisional: P1a design gate (custom.css --ak-border) */
+	--role-accent-primary: #ff5e32; /* provisional: P1a design gate (custom.css --ak-primary) */
+	/* custom.css defines no coding-agent colour; --ak-blue is a stand-in only, not a pick. */
+	--role-accent-ai: #b1cdff; /* provisional: P1a design gate (custom.css --ak-blue) */
+	--role-status-success: #26a64d; /* provisional: P1a design gate (custom.css --ak-green) */
+	--role-status-warning: #f7a544; /* provisional: P1a design gate (custom.css --ak-warning) */
+	--role-status-danger: #db4444; /* provisional: P1a design gate (custom.css --ak-red) */
+}
+
+[data-theme="light"] {
+	--role-surface: #ffffff; /* provisional: P1a design gate (custom.css --ak-surface) */
+	--role-surface-raised: #f1f5fa; /* provisional: P1a design gate (custom.css --ak-surface-raised) */
+	--role-surface-overlay: #e7eef7; /* provisional: P1a design gate (custom.css --ak-surface-overlay) */
+	--role-text: #02284f; /* provisional: P1a design gate (custom.css --ak-text) */
+	--role-text-muted: #5d7199; /* provisional: P1a design gate (custom.css --ak-text-muted) */
+	--role-border-default: #d3deec; /* provisional: P1a design gate (custom.css --ak-border) */
+	--role-accent-primary: #ff5e32; /* provisional: P1a design gate (custom.css --ak-primary) */
+	--role-accent-ai: #3f598a; /* provisional: P1a design gate (custom.css --ak-blue) */
+	--role-status-success: #26a64d; /* provisional: P1a design gate (custom.css --ak-green) */
+	--role-status-warning: #f7a544; /* provisional: P1a design gate (custom.css --ak-warning) */
+	--role-status-danger: #db4444; /* provisional: P1a design gate (custom.css --ak-red) */
+}
+
+/* No Tailwind default palette: only the role colours exist as colour utilities. */
+@theme {
+	--color-*: initial;
+}
+
+/* `inline` makes each utility read the role variable where it is used, so nested data-theme blocks work. */
+@theme inline {
+	--color-surface: var(--role-surface);
+	--color-surface-raised: var(--role-surface-raised);
+	--color-surface-overlay: var(--role-surface-overlay);
+	--color-text: var(--role-text);
+	--color-text-muted: var(--role-text-muted);
+	--color-border-default: var(--role-border-default);
+	--color-accent-primary: var(--role-accent-primary);
+	--color-accent-ai: var(--role-accent-ai);
+	--color-status-success: var(--role-status-success);
+	--color-status-warning: var(--role-status-warning);
+	--color-status-danger: var(--role-status-danger);
+}
+
+/*
+ * Spectrum 2, medium size, desktop scale (spike S1 measurements; L = live, S = s2 source, T = spectrum-tokens).
+ * provisional: P1a design gate (density). `static` keeps every variable in the output so the token story can
+ * read it even before a utility uses it.
+ */
+@theme static {
+	/* Control heights (T component-height-75..300) */
+	--spacing-control-s: 24px;
+	--spacing-control-m: 32px; /* Button, TextField, Picker, ComboBox, menu item min height */
+	--spacing-control-l: 40px;
+	--spacing-control-xl: 48px;
+
+	/* Relative and component spacing */
+	--spacing-edge: 12px; /* edge-to-text = height x 3/8 (TextField, Picker padding-x) */
+	--spacing-pill-edge: 16px; /* pill = height / 2 (Button padding-x) */
+	--spacing-text-to-visual: 6px; /* fontRelative(6) at 14 px */
+	--spacing-row: 40px; /* TableView and TreeView row, desktop regular */
+	--spacing-row-compact: 32px; /* TableView compact and header row */
+	--spacing-tab: 48px; /* Tabs item height */
+	--spacing-tab-gap: 24px; /* tab-item-to-tab-item */
+	--spacing-cell: 16px; /* TableView cell padding-x */
+	--spacing-popover: 8px; /* Popover and Menu inner padding */
+	--spacing-dialog: 32px; /* Dialog padding-x */
+	--spacing-field-width: 208px; /* default field width */
+	--spacing-dialog-m: 480px; /* Dialog size M */
+	--spacing-popover-s: 336px; /* Popover size S */
+	--spacing-focus-ring: 2px; /* focus-indicator-thickness */
+	--spacing-focus-gap: 2px; /* focus-indicator-gap (outline-offset) */
+	--spacing-border-field: 2px; /* border-width-200 (fields) */
+
+	/* Radii (T corner-radius-*) */
+	--radius-sm: 4px; /* small: tree row, tab focus */
+	--radius-control: 8px; /* medium: TextField, Picker, menu item, ActionButton */
+	--radius-table: 6px; /* TableView outer border (L) */
+	--radius-popover: 10px; /* large: Popover, Menu */
+	--radius-dialog: 16px; /* extra-large: Dialog */
+	--radius-pill: 9999px; /* pill = height / 2 (Button) */
+
+	/* UI type scale (T font-size-50..500) and weights */
+	--text-ui-xs: 11px;
+	--text-ui-sm: 12px;
+	--text-ui: 14px;
+	--text-ui--line-height: 18px;
+	--text-ui-lg: 16px;
+	--text-ui-xl: 18px;
+	--text-ui-2xl: 20px;
+	--text-ui-3xl: 22px;
+	--text-heading: 22px; /* dialog title (L 22/26 700) */
+	--text-heading--line-height: 26px;
+	--font-weight-control: 700; /* Button label */
+	--font-weight-action: 500; /* ActionButton */
+
+	/* Floating layers are solid (decided in P0); this is the popover shadow, first two layers (L). */
+	--shadow-elevated: 0 4px 12px rgb(0 0 0 / 0.08), 0 2px 6px rgb(0 0 0 / 0.04);
+	--press-depth: -2px; /* S pressScale: translate3d(0, 0, -2px) on press */
+}

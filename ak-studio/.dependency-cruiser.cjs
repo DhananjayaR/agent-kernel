@@ -6,7 +6,7 @@
 // Whole member folders (so .storybook, stories and config files are covered), minus installed and built files.
 const RENDERER_OR_UI = {
 	path: "^(apps/renderer|packages/ui)/",
-	pathNot: "(^|/)(node_modules|dist)/",
+	pathNot: "(^|/)(node_modules|dist|storybook-static)/",
 };
 
 // What contract source may import: itself and zod (unresolved or resolved).
@@ -82,7 +82,8 @@ module.exports = {
 		parser: "swc",
 		tsConfig: { fileName: "tsconfig.json" },
 		doNotFollow: { path: "node_modules" },
-		// Build output (tsc declarations in dist/, electron-vite bundles in out/) is not source.
-		exclude: { path: "^(apps|packages)/[^/]+/(dist|out)/" },
+		// Build output (tsc declarations in dist/, electron-vite bundles in out/, the Storybook build in
+		// storybook-static/) is not source.
+		exclude: { path: "^(apps|packages)/[^/]+/(dist|out|storybook-static)/" },
 	},
 };

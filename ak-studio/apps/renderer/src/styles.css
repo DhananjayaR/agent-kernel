@@ -1,0 +1,5 @@
+/* The renderer's stylesheet: the design-system tokens from packages/ui, plus the renderer's own files as a
+   Tailwind class source. */
+@import "@ak-studio/ui/theme.css";
+
+@source "./";
