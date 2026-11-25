@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { CopyIcon, FolderOpenIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import type { ReactNode } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import {
 	expectDisabledLook,
 	expectFocusRing,
@@ -9,7 +9,6 @@ import {
 	expectStyle,
 	expectTokenColour,
 	hover,
-	settle,
 	tabTo,
 } from "../lib/story-checks";
 import { Button, IconButton } from "./button";
@@ -79,19 +78,27 @@ export const Hover: Story = {
 	args: { variant: "primary" },
 	play: async ({ canvasElement }) => {
 		const button = within(canvasElement).getByRole("button");
-		const before = getComputedStyle(button).backgroundColor;
 		await hover(button);
-		await waitFor(() =>
-			expect(getComputedStyle(button).backgroundColor).not.toBe(before),
+		await expectTokenColour(
+			button,
+			"background-color",
+			"bg-accent-primary-hover",
 		);
-		await settle(button);
 	},
 };
 
 /** Danger, hovered. */
 export const HoverDanger: Story = {
 	args: { variant: "danger", children: "Destroy deployment" },
-	play: Hover.play,
+	play: async ({ canvasElement }) => {
+		const button = within(canvasElement).getByRole("button");
+		await hover(button);
+		await expectTokenColour(
+			button,
+			"background-color",
+			"bg-status-danger-hover",
+		);
+	},
 };
 
 /** Secondary, pressed: Spectrum's 2 px push-in. */

@@ -4,6 +4,7 @@ import { expect, userEvent, within } from "storybook/test";
 import {
 	expectFocusRing,
 	expectHeight,
+	expectNonTextContrastOnSurfaces,
 	expectTokenColour,
 	hover,
 	tabTo,
@@ -46,16 +47,24 @@ export const Default: Story = {
 			name: "Theme",
 		});
 		await expectHeight(group, 32);
-		await expect(radio(canvasElement, "System")).toBeChecked();
+		const system = radio(canvasElement, "System");
+		await expect(system).toBeChecked();
+		// The selected segment's edge is the selection cue that holds 3:1 on every surface.
+		await expectTokenColour(system, "background-color", "bg-accent-primary");
+		await expectTokenColour(
+			system,
+			"border-top-color",
+			"border-text-accent-primary",
+		);
+		await expectNonTextContrastOnSurfaces(system, "border-top-color");
 	},
 };
 
 export const Hover: Story = {
 	play: async ({ canvasElement }) => {
 		const light = radio(canvasElement, "Light");
-		const before = getComputedStyle(light).backgroundColor;
 		await hover(light);
-		await expect(getComputedStyle(light).backgroundColor).not.toBe(before);
+		await expectTokenColour(light, "background-color", "bg-fill");
 	},
 };
 

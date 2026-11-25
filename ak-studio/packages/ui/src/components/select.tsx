@@ -2,8 +2,17 @@
 // CLI (aria-nova, React Aria `Select`), restyled and made a whole field (label, trigger, help text, error).
 // Deviation from Spectrum 2: the trigger is outlined like a text field instead of filled, because the muted
 // placeholder text drops below 4.5:1 on any neutral fill of the Studio palette (theme.css, state colours).
+//
+// Read-only (P3's config forms): React Aria's Select has no read-only mode, so `isReadOnly` renders the field as
+// a read-only Input showing the selected option's text: focusable and selectable, never opens, same label,
+// help text and look as every other read-only field.
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import {
+	Children,
+	isValidElement,
+	type ReactElement,
+	type ReactNode,
+} from "react";
 import {
 	Select as AriaSelect,
 	type SelectProps as AriaSelectProps,
@@ -15,6 +24,7 @@ import {
 	Popover,
 	SelectValue,
 } from "react-aria-components";
+import { fieldBoxColours, fieldValueColour } from "../lib/state";
 import {
 	fieldBox,
 	fieldRoot,
@@ -24,17 +34,41 @@ import {
 } from "../lib/styles";
 import { cn } from "../lib/utils";
 import { FieldFrame, type FieldTextProps } from "./field";
+import { Input } from "./input";
 
 export type SelectProps<T extends object> = Omit<
 	AriaSelectProps<T, "single">,
-	"children" | "className" | "selectionMode"
+	"children" | "className" | "selectionMode" | "aria-label" | "aria-labelledby"
 > &
 	FieldTextProps & {
 		/** Options: `SelectItem`s, or a function of each of `items`. */
 		children: ReactNode | ((item: T) => ReactNode);
 		items?: Iterable<T>;
+		/** Show the value as a read-only field (no list). */
+		isReadOnly?: boolean;
 		className?: string;
 	};
+
+/** The text of the option whose id is `key`, from static `SelectItem`s or from `items` and the render function. */
+function optionText<T extends object>(
+	children: SelectProps<T>["children"],
+	items: Iterable<T> | undefined,
+	key: Key | null | undefined,
+): string | undefined {
+	if (key === null || key === undefined) return undefined;
+	const elements: ReactNode[] =
+		typeof children === "function"
+			? [...(items ?? [])].map((item) => children(item))
+			: Children.toArray(children);
+	for (const element of elements) {
+		if (!isValidElement(element)) continue;
+		const { id, children: text } = (
+			element as ReactElement<{ id?: Key; children?: unknown }>
+		).props;
+		if (id === key && typeof text === "string") return text;
+	}
+	return undefined;
+}
 
 export function Select<T extends object>({
 	label,
@@ -42,16 +76,38 @@ export function Select<T extends object>({
 	errorMessage,
 	children,
 	items,
+	isReadOnly,
 	className,
 	...props
 }: SelectProps<T>) {
+	if (isReadOnly) {
+		const value = optionText(
+			children,
+			items,
+			props.selectedKey ?? props.defaultSelectedKey,
+		);
+		return (
+			<Input
+				label={label as string}
+				aria-label={props["aria-label"]}
+				aria-labelledby={props["aria-labelledby"]}
+				description={description}
+				placeholder={props.placeholder}
+				value={value ?? ""}
+				isReadOnly
+				isDisabled={props.isDisabled}
+				className={className}
+			/>
+		);
+	}
+
 	return (
 		<AriaSelect
 			data-slot="select"
 			className={cn(fieldRoot, className)}
 			{...props}
 		>
-			{({ isInvalid }) => (
+			{({ isInvalid, isOpen, isDisabled }) => (
 				<>
 					<FieldFrame
 						label={label}
@@ -59,15 +115,31 @@ export function Select<T extends object>({
 						errorMessage={errorMessage}
 					>
 						<Button
-							// The trigger carries the field's invalid state, so the box styles apply to it directly.
-							data-invalid={isInvalid || undefined}
-							className={cn(
-								fieldBox,
-								"press focus-ring flex cursor-default items-center justify-between gap-text-to-visual text-left",
-								"not-data-invalid:aria-expanded:border-text",
-							)}
+							className={({ isHovered, isFocused }) =>
+								cn(
+									fieldBox,
+									"press focus-ring flex cursor-default items-center justify-between gap-text-to-visual text-left",
+									fieldBoxColours({
+										hovered: isHovered,
+										focused: isFocused,
+										open: isOpen,
+										invalid: isInvalid,
+										disabled: isDisabled,
+									}),
+								)
+							}
 						>
-							<SelectValue className="flex-1 truncate data-placeholder:text-text-muted" />
+							<SelectValue
+								className={({ isPlaceholder }) =>
+									cn(
+										"flex-1 truncate",
+										fieldValueColour({
+											disabled: isDisabled,
+											placeholder: isPlaceholder,
+										}),
+									)
+								}
+							/>
 							<ChevronDownIcon aria-hidden="true" className="size-4 shrink-0" />
 						</Button>
 					</FieldFrame>

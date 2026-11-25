@@ -4,6 +4,7 @@ import {
 	expectFocusRing,
 	expectHeight,
 	expectNoFocusRing,
+	expectPlaceholderColour,
 	expectStyle,
 	expectTokenColour,
 	hover,
@@ -64,9 +65,8 @@ export const Default: Story = {
 export const Hover: Story = {
 	play: async ({ canvasElement }) => {
 		const group = input(canvasElement).parentElement as HTMLElement;
-		const before = getComputedStyle(group).borderTopColor;
 		await hover(group);
-		await expect(getComputedStyle(group).borderTopColor).not.toBe(before);
+		await expectTokenColour(group, "border-top-color", "border-text-muted");
 	},
 };
 
@@ -89,19 +89,50 @@ export const PointerFocus: Story = {
 	},
 };
 
+/** Disabled wins: with a value, while invalid, and empty (the placeholder too takes the disabled colour). */
 export const Disabled: Story = {
 	args: { isDisabled: true, defaultSelectedKey: "gpt-5" },
+	render: (args) => (
+		<div className="flex flex-col gap-4">
+			<Combobox {...args}>
+				{MODELS.map((model) => (
+					<ComboboxItem key={model} id={model}>
+						{model}
+					</ComboboxItem>
+				))}
+			</Combobox>
+			<Combobox
+				label="Fallback model"
+				placeholder="Choose a model"
+				isDisabled
+				isInvalid
+				errorMessage="Choose a fallback model."
+			>
+				{MODELS.map((model) => (
+					<ComboboxItem key={model} id={model}>
+						{model}
+					</ComboboxItem>
+				))}
+			</Combobox>
+		</div>
+	),
 	play: async ({ canvasElement }) => {
-		const field = input(canvasElement);
-		await expect(field).toBeDisabled();
-		const group = field.parentElement as HTMLElement;
-		await expect(group).toHaveAttribute("data-disabled");
-		await expectTokenColour(
-			group,
-			"border-top-color",
-			"border-disabled-border",
+		const fields = within(canvasElement).getAllByRole("combobox");
+		for (const field of fields) {
+			await expect(field).toBeDisabled();
+			const group = field.parentElement as HTMLElement;
+			await expect(group).toHaveAttribute("data-disabled");
+			await expectTokenColour(
+				group,
+				"border-top-color",
+				"border-disabled-border",
+			);
+			await expectTokenColour(field, "color", "text-disabled-text");
+		}
+		await expectPlaceholderColour(
+			fields[1] as HTMLElement,
+			"text-disabled-text",
 		);
-		await expectTokenColour(field, "color", "text-disabled-text");
 	},
 };
 
@@ -122,6 +153,19 @@ export const Invalid: Story = {
 			"border-top-color",
 			"border-text-status-danger",
 		);
+	},
+};
+
+/** Read-only: shows the value, does not open, no hover change. */
+export const ReadOnly: Story = {
+	args: { isReadOnly: true, defaultSelectedKey: "gpt-5" },
+	play: async ({ canvasElement }) => {
+		const field = input(canvasElement);
+		await expect(field).toHaveValue("gpt-5");
+		await expect(field).toHaveAttribute("readonly");
+		const group = field.parentElement as HTMLElement;
+		await hover(group);
+		await expectTokenColour(group, "border-top-color", "border-border-control");
 	},
 };
 

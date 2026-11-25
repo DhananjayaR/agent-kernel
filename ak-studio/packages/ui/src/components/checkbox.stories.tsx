@@ -2,8 +2,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import {
 	expectHeight,
+	expectNonTextContrastOnSurfaces,
 	expectTokenColour,
 	hover,
+	pointerOver,
 	settle,
 	tabTo,
 } from "../lib/story-checks";
@@ -18,10 +20,17 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const boxes = (canvasElement: HTMLElement) => [
+	...canvasElement.querySelectorAll<HTMLElement>("[data-slot=checkbox-box]"),
+];
 const box = (canvasElement: HTMLElement) =>
-	canvasElement.querySelector("[data-slot=checkbox-box]") as HTMLElement;
+	boxes(canvasElement)[0] as HTMLElement;
 
-/** Off, on and mixed: a 16 px box in a 32 px row; on and mixed show a mark as well as the fill. */
+/**
+ * Off, on and mixed: a 16 px box in a 32 px row. On and mixed show a mark, fill with the primary colour and
+ * draw their edge in text-accent-primary, which holds 3:1 on all three surfaces (the fill alone does not in
+ * light theme).
+ */
 export const Default: Story = {
 	render: (args) => (
 		<div className="flex flex-col">
@@ -33,9 +42,27 @@ export const Default: Story = {
 	play: async ({ canvasElement }) => {
 		const rows = canvasElement.querySelectorAll("[data-slot=checkbox]");
 		for (const row of rows) await expectHeight(row, 32);
-		const first = box(canvasElement);
-		await expect(first.getBoundingClientRect().width).toBe(16);
-		await expect(getComputedStyle(first).borderTopWidth).toBe("2px");
+		const [off, on, mixed] = boxes(canvasElement) as [
+			HTMLElement,
+			HTMLElement,
+			HTMLElement,
+		];
+		await expect(off.getBoundingClientRect().width).toBe(16);
+		await expect(getComputedStyle(off).borderTopWidth).toBe("2px");
+		await expectTokenColour(off, "border-top-color", "border-border-control");
+		for (const selected of [on, mixed]) {
+			await expectTokenColour(
+				selected,
+				"background-color",
+				"bg-accent-primary",
+			);
+			await expectTokenColour(
+				selected,
+				"border-top-color",
+				"border-text-accent-primary",
+			);
+			await expectNonTextContrastOnSurfaces(selected, "border-top-color");
+		}
 		const marks = canvasElement.querySelectorAll("[data-slot=checkbox] svg");
 		await expect(marks).toHaveLength(2);
 	},
@@ -46,11 +73,11 @@ export const Hover: Story = {
 		const row = canvasElement.querySelector(
 			"[data-slot=checkbox]",
 		) as HTMLElement;
-		const before = getComputedStyle(box(canvasElement)).borderTopColor;
 		await hover(row);
-		await settle(box(canvasElement));
-		await expect(getComputedStyle(box(canvasElement)).borderTopColor).not.toBe(
-			before,
+		await expectTokenColour(
+			box(canvasElement),
+			"border-top-color",
+			"border-text-muted",
 		);
 	},
 };
@@ -72,6 +99,7 @@ export const Focus: Story = {
 	},
 };
 
+/** Disabled wins over everything: off, on, mixed and invalid all take the disabled colours. */
 export const Disabled: Story = {
 	render: (args) => (
 		<div className="flex flex-col">
@@ -79,29 +107,32 @@ export const Disabled: Story = {
 			<Checkbox defaultSelected isDisabled>
 				Configure Redis
 			</Checkbox>
+			<Checkbox isIndeterminate isDisabled>
+				Configure all stores
+			</Checkbox>
+			<Checkbox isInvalid defaultSelected isDisabled>
+				I have read the deployment plan
+			</Checkbox>
 		</div>
 	),
 	play: async ({ canvasElement }) => {
 		for (const checkbox of within(canvasElement).getAllByRole("checkbox")) {
 			await expect(checkbox).toBeDisabled();
 		}
-		// Selected and disabled: the disabled colours win over the selected fill.
-		const selectedBox = canvasElement.querySelectorAll(
-			"[data-slot=checkbox-box]",
-		)[1] as HTMLElement;
+		const [off, ...onBoxes] = boxes(canvasElement) as HTMLElement[];
 		await expectTokenColour(
-			selectedBox,
-			"background-color",
-			"bg-disabled-fill",
-		);
-		await expectTokenColour(
-			selectedBox,
+			off as HTMLElement,
 			"border-top-color",
 			"border-disabled-border",
 		);
+		for (const on of onBoxes) {
+			await expectTokenColour(on, "background-color", "bg-disabled-fill");
+			await expectTokenColour(on, "border-top-color", "border-disabled-border");
+		}
 	},
 };
 
+/** Invalid keeps the danger border, selected or not, and while hovered. */
 export const Invalid: Story = {
 	args: {
 		children: "I have read the deployment plan",
@@ -124,16 +155,47 @@ export const Invalid: Story = {
 		await expect(checkbox).toHaveAccessibleDescription(
 			"Confirm the plan before deploying.",
 		);
-		// Invalid keeps the danger border, selected or not.
-		for (const box of canvasElement.querySelectorAll(
-			"[data-slot=checkbox-box]",
-		)) {
+		for (const b of boxes(canvasElement)) {
 			await expectTokenColour(
-				box,
+				b,
 				"border-top-color",
 				"border-text-status-danger",
 			);
 		}
+		await hover(
+			canvasElement.querySelector("[data-slot=checkbox]") as HTMLElement,
+		);
+		await expectTokenColour(
+			box(canvasElement),
+			"border-top-color",
+			"border-text-status-danger",
+		);
+	},
+};
+
+/** Read-only (P3's forms): shows its state, does not change on hover or press, and cannot be toggled. */
+export const ReadOnly: Story = {
+	render: () => (
+		<div className="flex flex-col">
+			<Checkbox isReadOnly>Configure a session store</Checkbox>
+			<Checkbox isReadOnly defaultSelected>
+				Configure Redis
+			</Checkbox>
+		</div>
+	),
+	play: async ({ canvasElement }) => {
+		const [offRow, onRow] = [
+			...canvasElement.querySelectorAll<HTMLElement>("[data-slot=checkbox]"),
+		] as [HTMLElement, HTMLElement];
+		const [off, on] = boxes(canvasElement) as [HTMLElement, HTMLElement];
+		await pointerOver(offRow);
+		await expectTokenColour(off, "border-top-color", "border-border-control");
+		await pointerOver(onRow);
+		await expectTokenColour(on, "background-color", "bg-accent-primary");
+		const selected = within(onRow).getByRole("checkbox");
+		await userEvent.click(onRow);
+		await expect(selected).toBeChecked();
+		await expectTokenColour(on, "background-color", "bg-accent-primary");
 	},
 };
 

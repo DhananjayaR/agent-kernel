@@ -10,14 +10,27 @@ import {
 } from "react-aria-components";
 import { fieldDescription, fieldError, fieldLabel } from "../lib/styles";
 
-export type FieldTextProps = {
-	/** Visible label. Without one, pass `aria-label` to the field. */
-	label?: string;
+/**
+ * A field must be named: a visible `label`, or (where the name is shown elsewhere, as in a table cell)
+ * `aria-label` or `aria-labelledby`. Enforced by type.
+ */
+export type FieldLabelling =
+	| { label: string; "aria-label"?: string; "aria-labelledby"?: string }
+	| { label?: undefined; "aria-label": string; "aria-labelledby"?: string }
+	| { label?: undefined; "aria-label"?: string; "aria-labelledby": string };
+
+export type FieldTextProps = FieldLabelling & {
 	/** Help text under the field. */
 	description?: string;
-	/** Shown under the field, with an icon, while the field is invalid. Says what to do next. */
+	/**
+	 * Shown under the field, with an icon, while it is invalid. Says what to do next. Without it, React Aria's
+	 * own validation message (from `isRequired`, `validate`, ...) is shown.
+	 */
 	errorMessage?: string;
 };
+
+/** The props a field component takes from the caller that are not React Aria's. */
+export type FieldOwnProps = "label" | "description" | "errorMessage";
 
 export function FieldLabel({ children }: { children: string }) {
 	return <AriaLabel className={fieldLabel}>{children}</AriaLabel>;
@@ -34,8 +47,15 @@ export function FieldDescription({ children }: { children: string }) {
 export function FieldErrorText({ children }: { children?: string }) {
 	return (
 		<AriaFieldError className={fieldError}>
-			<CircleAlertIcon aria-hidden="true" />
-			<span>{children}</span>
+			{({ validationErrors }) => {
+				const text = children || validationErrors.join(" ");
+				return text ? (
+					<>
+						<CircleAlertIcon aria-hidden="true" />
+						<span>{text}</span>
+					</>
+				) : null;
+			}}
 		</AriaFieldError>
 	);
 }
@@ -46,7 +66,12 @@ export function FieldFrame({
 	description,
 	errorMessage,
 	children,
-}: FieldTextProps & { children: ReactNode }) {
+}: {
+	label?: string;
+	description?: string;
+	errorMessage?: string;
+	children: ReactNode;
+}) {
 	return (
 		<>
 			{label ? <FieldLabel>{label}</FieldLabel> : null}

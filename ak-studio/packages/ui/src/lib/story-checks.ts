@@ -2,6 +2,7 @@
 // (React Aria's data attributes) and checks the Spectrum 2 measurement it is about, so a hover that did nothing
 // cannot pass as a second default story. Used by *.stories.tsx only; not exported from the package.
 import { expect, userEvent, waitFor } from "storybook/test";
+import { contrastRatio, type Rgb } from "../contrast";
 
 /** Waits until `el` and its descendants have no running transition or animation (150 ms state changes). */
 export async function settle(el: Element): Promise<void> {
@@ -22,7 +23,10 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  * In the test run the real (Playwright) cursor rests somewhere over the story, and Chromium sends trusted
  * pointerover/pointerenter events to whatever is under it when the page changes under it, a little later. If
  * one lands after the simulated hover, React Aria ends the hover (the pointer "moved" elsewhere). So the hover
- * is repeated until it holds for a moment.
+ * is repeated until it holds for a moment. Driving the real pointer instead (`userEvent.hover` from
+ * `vitest/browser`) was tried in fix round 1 and failed 17 of 178 tests in one run: the real cursor stays where
+ * the previous story left it, so a story can mount already hovered or lose the hover to the next story's
+ * layout, and Storybook's own UI has no real-pointer API to share the code with.
  */
 export async function hover(el: Element): Promise<void> {
 	for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -32,6 +36,17 @@ export async function hover(el: Element): Promise<void> {
 		if (el.hasAttribute("data-hovered")) break;
 	}
 	await expect(el).toHaveAttribute("data-hovered");
+	await settle(el);
+}
+
+/**
+ * Moves the pointer onto `el` without expecting a hover state: for read-only and disabled controls, which React
+ * Aria does not mark hovered. Use it to check that nothing changes.
+ */
+export async function pointerOver(el: Element): Promise<void> {
+	await sleep(100);
+	await userEvent.hover(el);
+	await sleep(150);
 	await settle(el);
 }
 
@@ -98,4 +113,51 @@ export async function expectTokenColour(
 	const expected = getComputedStyle(probe).getPropertyValue(property);
 	probe.remove();
 	await expect(getComputedStyle(el).getPropertyValue(property)).toBe(expected);
+}
+
+function rgbOf(value: string): Rgb {
+	const m = /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/.exec(value);
+	if (!m) throw new Error(`not a computed sRGB colour: ${value}`);
+	return [Number(m[1]), Number(m[2]), Number(m[3])];
+}
+
+/**
+ * Checks that the colour of `property` on `el` holds at least 3:1 (WCAG 1.4.11, non-text) against each of the
+ * three surfaces of the current theme, measured with probes beside `el`.
+ */
+export async function expectNonTextContrastOnSurfaces(
+	el: Element,
+	property: "background-color" | "border-top-color" | "color",
+): Promise<void> {
+	await settle(el);
+	const colour = rgbOf(getComputedStyle(el).getPropertyValue(property));
+	const ratios: Record<string, number> = {};
+	for (const surface of [
+		"bg-surface",
+		"bg-surface-raised",
+		"bg-surface-overlay",
+	]) {
+		const probe = document.createElement("span");
+		probe.className = surface;
+		(el.parentElement ?? document.body).appendChild(probe);
+		const ground = rgbOf(getComputedStyle(probe).backgroundColor);
+		probe.remove();
+		ratios[surface] = Math.round(contrastRatio(colour, ground) * 100) / 100;
+	}
+	for (const ratio of Object.values(ratios)) {
+		await expect(ratio, JSON.stringify(ratios)).toBeGreaterThanOrEqual(3);
+	}
+}
+
+/** Checks a text field's placeholder colour against the token utility `utility` (a `text-*` class). */
+export async function expectPlaceholderColour(
+	input: Element,
+	utility: string,
+): Promise<void> {
+	const probe = document.createElement("span");
+	probe.className = utility;
+	(input.parentElement ?? document.body).appendChild(probe);
+	const expected = getComputedStyle(probe).color;
+	probe.remove();
+	await expect(getComputedStyle(input, "::placeholder").color).toBe(expected);
 }

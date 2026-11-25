@@ -5,12 +5,15 @@ import {
 	TextField,
 	type TextFieldProps,
 } from "react-aria-components";
-import { fieldRoot } from "../lib/styles";
+import { fieldBoxColours } from "../lib/state";
+import { fieldBox, fieldRoot } from "../lib/styles";
 import { cn } from "../lib/utils";
 import { FieldFrame, type FieldTextProps } from "./field";
-import { inputBox } from "./input";
 
-export type TextareaProps = Omit<TextFieldProps, "children" | "className"> &
+export type TextareaProps = Omit<
+	TextFieldProps,
+	"children" | "className" | "aria-label" | "aria-labelledby"
+> &
 	FieldTextProps & {
 		placeholder?: string;
 		/** Visible lines before it scrolls (default 3). */
@@ -41,7 +44,19 @@ export function Textarea({
 				<AriaTextArea
 					rows={rows}
 					placeholder={placeholder}
-					className={cn(inputBox, "h-auto resize-y py-text-to-visual")}
+					className={({ isHovered, isFocused, isInvalid, isDisabled }) =>
+						cn(
+							fieldBox,
+							"focus-ring h-auto resize-y py-text-to-visual",
+							fieldBoxColours({
+								hovered: isHovered,
+								focused: isFocused,
+								invalid: isInvalid,
+								disabled: isDisabled,
+								readOnly: props.isReadOnly,
+							}),
+						)
+					}
 				/>
 			</FieldFrame>
 		</TextField>

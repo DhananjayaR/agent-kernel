@@ -4,6 +4,7 @@ import {
 	expectFocusRing,
 	expectHeight,
 	expectNoFocusRing,
+	expectPlaceholderColour,
 	expectStyle,
 	expectTokenColour,
 	hover,
@@ -39,21 +40,24 @@ export const Default: Story = {
 		await expectStyle(input, "padding-left", "12px");
 		await expectStyle(input, "font-size", "14px");
 		await expect(input.getBoundingClientRect().width).toBe(208);
+		await expectTokenColour(input, "border-top-color", "border-border-control");
 	},
 };
 
-/** Empty, with a hint. */
+/** Empty, with a hint in muted text. */
 export const WithPlaceholder: Story = {
 	args: { defaultValue: undefined, placeholder: "support-agent" },
+	play: async ({ canvasElement }) => {
+		await expectPlaceholderColour(box(canvasElement), "text-text-muted");
+	},
 };
 
-/** Hover strengthens the border. */
+/** Hover strengthens the border to text-muted. */
 export const Hover: Story = {
 	play: async ({ canvasElement }) => {
 		const input = box(canvasElement);
-		const before = getComputedStyle(input).borderTopColor;
 		await hover(input);
-		await expect(getComputedStyle(input).borderTopColor).not.toBe(before);
+		await expectTokenColour(input, "border-top-color", "border-text-muted");
 	},
 };
 
@@ -63,6 +67,7 @@ export const Focus: Story = {
 		const input = box(canvasElement);
 		await tabTo(input);
 		await expectFocusRing(input);
+		await expectTokenColour(input, "border-top-color", "border-text");
 	},
 };
 
@@ -76,18 +81,40 @@ export const PointerFocus: Story = {
 	},
 };
 
+/**
+ * Disabled wins over everything: with a value, while invalid, and empty with a placeholder, the border, text and
+ * placeholder all take the disabled colours (no danger border, no muted placeholder).
+ */
 export const Disabled: Story = {
 	args: { isDisabled: true },
+	render: (args) => (
+		<div className="flex flex-col gap-4">
+			<Input {...args} />
+			<Input
+				label="Port"
+				defaultValue="80a"
+				isDisabled
+				isInvalid
+				errorMessage="Enter a whole number."
+			/>
+			<Input label="Region" placeholder="eu-west-1" isDisabled />
+		</div>
+	),
 	play: async ({ canvasElement }) => {
-		const input = box(canvasElement);
-		await expect(input).toBeDisabled();
-		await expectStyle(input, "opacity", "1");
-		await expectTokenColour(
-			input,
-			"border-top-color",
-			"border-disabled-border",
-		);
-		await expectTokenColour(input, "color", "text-disabled-text");
+		const [withValue, invalid, empty] = within(canvasElement).getAllByRole(
+			"textbox",
+		) as [HTMLElement, HTMLElement, HTMLElement];
+		for (const input of [withValue, invalid, empty]) {
+			await expect(input).toBeDisabled();
+			await expectStyle(input, "opacity", "1");
+			await expectTokenColour(
+				input,
+				"border-top-color",
+				"border-disabled-border",
+			);
+			await expectTokenColour(input, "color", "text-disabled-text");
+		}
+		await expectPlaceholderColour(empty, "text-disabled-text");
 	},
 };
 
@@ -112,13 +139,45 @@ export const Invalid: Story = {
 			),
 		).toBeVisible();
 		await expect(canvasElement.querySelector("svg")).not.toBeNull();
+		// Invalid wins over hover and focus.
+		await hover(input);
+		await expectTokenColour(
+			input,
+			"border-top-color",
+			"border-text-status-danger",
+		);
+		await tabTo(input);
+		await expectTokenColour(
+			input,
+			"border-top-color",
+			"border-text-status-danger",
+		);
 	},
 };
 
-/** Read-only, as in P3's config forms: focusable and selectable, not editable. */
+/** Without an errorMessage, React Aria's own validation message is shown (here from `validate`). */
+export const InvalidWithoutMessage: Story = {
+	args: {
+		defaultValue: "support agent",
+		validationBehavior: "aria",
+		validate: (value: string) =>
+			value.includes(" ") ? "Use hyphens instead of spaces." : null,
+	},
+	play: async ({ canvasElement }) => {
+		await expect(box(canvasElement)).toHaveAttribute("aria-invalid", "true");
+		await expect(
+			within(canvasElement).getByText("Use hyphens instead of spaces."),
+		).toBeVisible();
+	},
+};
+
+/** Read-only, as in P3's config forms: focusable and selectable, not editable, no hover change. */
 export const ReadOnly: Story = {
 	args: { isReadOnly: true, description: "Set in config.yaml." },
 	play: async ({ canvasElement }) => {
-		await expect(box(canvasElement)).toHaveAttribute("readonly");
+		const input = box(canvasElement);
+		await expect(input).toHaveAttribute("readonly");
+		await hover(input);
+		await expectTokenColour(input, "border-top-color", "border-border-control");
 	},
 };

@@ -58,9 +58,8 @@ export const WithPlaceholder: Story = {
 export const Hover: Story = {
 	play: async ({ canvasElement }) => {
 		const button = trigger(canvasElement);
-		const before = getComputedStyle(button).borderTopColor;
 		await hover(button);
-		await expect(getComputedStyle(button).borderTopColor).not.toBe(before);
+		await expectTokenColour(button, "border-top-color", "border-text-muted");
 	},
 };
 
@@ -72,17 +71,39 @@ export const Focus: Story = {
 	},
 };
 
+/** Disabled wins: with a value, while invalid, and empty (the placeholder too takes the disabled colour). */
 export const Disabled: Story = {
 	args: { isDisabled: true },
+	render: (args) => (
+		<div className="flex flex-col gap-4">
+			<SessionStores {...args} />
+			<SessionStores
+				{...args}
+				label="Fallback store"
+				description={undefined}
+				defaultSelectedKey={undefined}
+				placeholder="Choose a store"
+				isInvalid
+				errorMessage="Choose a fallback store."
+			/>
+		</div>
+	),
 	play: async ({ canvasElement }) => {
-		const button = trigger(canvasElement);
-		await expect(button).toBeDisabled();
-		await expectTokenColour(
-			button,
-			"border-top-color",
-			"border-disabled-border",
-		);
-		await expectTokenColour(button, "color", "text-disabled-text");
+		const canvas = within(canvasElement);
+		for (const name of [/Session store/, /Fallback store/]) {
+			const button = canvas.getByRole("button", { name });
+			await expect(button).toBeDisabled();
+			await expectTokenColour(
+				button,
+				"border-top-color",
+				"border-disabled-border",
+			);
+			await expectTokenColour(button, "color", "text-disabled-text");
+		}
+		const placeholder = canvas
+			.getByRole("button", { name: /Fallback store/ })
+			.querySelector("[data-placeholder]") as HTMLElement;
+		await expectTokenColour(placeholder, "color", "text-disabled-text");
 	},
 };
 
@@ -95,7 +116,6 @@ export const Invalid: Story = {
 	},
 	play: async ({ canvasElement }) => {
 		const button = trigger(canvasElement);
-		await expect(button).toHaveAttribute("data-invalid");
 		await expectTokenColour(
 			button,
 			"border-top-color",
@@ -118,6 +138,24 @@ export const Invalid: Story = {
  * Open: the listbox is a solid floating layer in a portal on <body>, in the story's theme (the overlay
  * surface, compared with a probe inside the story).
  */
+/**
+ * Read-only, as in P3's config forms: React Aria's Select has no read-only mode, so it renders as a read-only
+ * text field showing the selected option's text. Focusable, never opens, no hover change.
+ */
+export const ReadOnly: Story = {
+	args: { isReadOnly: true, description: "Set in config.yaml." },
+	play: async ({ canvasElement }) => {
+		const field = within(canvasElement).getByRole("textbox", {
+			name: "Session store",
+		});
+		await expect(field).toHaveValue("Redis");
+		await expect(field).toHaveAttribute("readonly");
+		await expect(within(canvasElement).queryByRole("button")).toBeNull();
+		await hover(field);
+		await expectTokenColour(field, "border-top-color", "border-border-control");
+	},
+};
+
 export const Open: Story = {
 	render: (args) => (
 		<div className="flex flex-col gap-4">

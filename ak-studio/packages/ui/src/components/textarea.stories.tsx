@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import {
 	expectFocusRing,
+	expectPlaceholderColour,
 	expectStyle,
 	expectTokenColour,
 	hover,
@@ -40,9 +41,8 @@ export const Default: Story = {
 export const Hover: Story = {
 	play: async ({ canvasElement }) => {
 		const textarea = box(canvasElement);
-		const before = getComputedStyle(textarea).borderTopColor;
 		await hover(textarea);
-		await expect(getComputedStyle(textarea).borderTopColor).not.toBe(before);
+		await expectTokenColour(textarea, "border-top-color", "border-text-muted");
 	},
 };
 
@@ -54,15 +54,41 @@ export const Focus: Story = {
 	},
 };
 
+/** Disabled wins: with a value, while invalid, and empty with a placeholder. */
 export const Disabled: Story = {
 	args: { isDisabled: true },
+	render: (args) => (
+		<div className="flex flex-col gap-4">
+			<Textarea {...args} />
+			<Textarea
+				label="Instructions"
+				defaultValue=""
+				isDisabled
+				isInvalid
+				errorMessage="Enter instructions."
+				className="w-dialog-m"
+			/>
+			<Textarea
+				label="Notes"
+				placeholder="What this agent is for"
+				isDisabled
+				className="w-dialog-m"
+			/>
+		</div>
+	),
 	play: async ({ canvasElement }) => {
-		const textarea = box(canvasElement);
-		await expect(textarea).toBeDisabled();
-		await expectTokenColour(
-			textarea,
-			"border-top-color",
-			"border-disabled-border",
+		const boxes = within(canvasElement).getAllByRole("textbox");
+		for (const textarea of boxes) {
+			await expect(textarea).toBeDisabled();
+			await expectTokenColour(
+				textarea,
+				"border-top-color",
+				"border-disabled-border",
+			);
+		}
+		await expectPlaceholderColour(
+			boxes[2] as HTMLElement,
+			"text-disabled-text",
 		);
 	},
 };
@@ -81,6 +107,21 @@ export const Invalid: Story = {
 			textarea,
 			"border-top-color",
 			"border-text-status-danger",
+		);
+	},
+};
+
+/** Read-only, as in P3's config forms: not editable, no hover change. */
+export const ReadOnly: Story = {
+	args: { isReadOnly: true, description: "Set in config.yaml." },
+	play: async ({ canvasElement }) => {
+		const textarea = box(canvasElement);
+		await expect(textarea).toHaveAttribute("readonly");
+		await hover(textarea);
+		await expectTokenColour(
+			textarea,
+			"border-top-color",
+			"border-border-control",
 		);
 	},
 };

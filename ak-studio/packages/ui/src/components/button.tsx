@@ -69,7 +69,12 @@ export type ButtonProps = BaseProps & {
 };
 
 function PendingIcon() {
-	return <Loader2Icon aria-hidden="true" className="animate-spin" />;
+	return (
+		<Loader2Icon
+			aria-hidden="true"
+			className="animate-spin motion-reduce:animate-none"
+		/>
+	);
 }
 
 /**

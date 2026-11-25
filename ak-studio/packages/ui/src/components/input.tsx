@@ -1,22 +1,21 @@
 // Input: a single-line text field. Added with the shadcn CLI (aria-nova, React Aria `Input`), restyled to
-// Spectrum 2's TextField and made a whole field on React Aria `TextField`: label, box, help text and error, so
-// a field cannot ship without a label. Read-only (P3's config forms) keeps the box and drops the hover change.
+// Spectrum 2's TextField and made a whole field on React Aria `TextField`: label, box, help text and error. A
+// field is named by type (`label`, `aria-label` or `aria-labelledby`). Read-only (P3's config forms) keeps the
+// box, shows focus, and does not change on hover. State colours: `fieldBoxColours` (lib/state.ts).
 import {
 	Input as AriaInput,
 	TextField,
 	type TextFieldProps,
 } from "react-aria-components";
+import { fieldBoxColours } from "../lib/state";
 import { fieldBox, fieldRoot } from "../lib/styles";
 import { cn } from "../lib/utils";
 import { FieldFrame, type FieldTextProps } from "./field";
 
-/** The text box itself, for the field components. */
-export const inputBox = cn(
-	fieldBox,
-	"focus-ring placeholder:text-text-muted read-only:not-data-invalid:data-hovered:border-border-control",
-);
-
-export type InputProps = Omit<TextFieldProps, "children" | "className"> &
+export type InputProps = Omit<
+	TextFieldProps,
+	"children" | "className" | "aria-label" | "aria-labelledby"
+> &
 	FieldTextProps & {
 		/** Hint inside the empty box. Not a label, and not example copy. */
 		placeholder?: string;
@@ -43,7 +42,22 @@ export function Input({
 				description={description}
 				errorMessage={errorMessage}
 			>
-				<AriaInput placeholder={placeholder} className={inputBox} />
+				<AriaInput
+					placeholder={placeholder}
+					className={({ isHovered, isFocused, isInvalid, isDisabled }) =>
+						cn(
+							fieldBox,
+							"focus-ring",
+							fieldBoxColours({
+								hovered: isHovered,
+								focused: isFocused,
+								invalid: isInvalid,
+								disabled: isDisabled,
+								readOnly: props.isReadOnly,
+							}),
+						)
+					}
+				/>
 			</FieldFrame>
 		</TextField>
 	);
