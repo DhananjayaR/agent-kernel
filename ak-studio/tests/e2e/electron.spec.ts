@@ -146,6 +146,12 @@ test("built app starts and shows the shell with the version from the real main p
 		expect(page.url()).toBe("app://studio/#/canvas");
 		await expect(page.getByRole("banner")).toBeVisible();
 		await expect(page.getByText("No project open")).toBeVisible();
+		await expect(page.getByRole("group", { name: "Local run" })).toHaveText(
+			"No project to run",
+		);
+		await expect(page.locator('[data-slot="deploy-status"]')).toHaveText(
+			"Deployment: Not deployed",
+		);
 		await expect(page.getByRole("region", { name: "Panel" })).toBeVisible();
 	});
 });
@@ -390,7 +396,10 @@ test("uses the bundled fonts (UI, heading, mono), loaded from app:// with no CSP
 		for (const face of fonts.loaded) expect(face.status).toBe("loaded");
 		// Every file the loaded faces can come from is a bundled asset on app://. Resource timing, when it records
 		// the fetches (not on every load in Electron 45), must agree.
-		expect(fonts.sources.length).toBeGreaterThan(0);
+		for (const family of ["inter", "archivo", "jetbrains-mono"])
+			expect(
+				fonts.sources.some((src) => src.includes(`/assets/${family}-`)),
+			).toBe(true);
 		for (const file of [...fonts.sources, ...fonts.files]) {
 			expect(file).toMatch(
 				/^app:\/\/studio\/assets\/(inter|archivo|jetbrains-mono)-[^/]+\.woff2?$/,

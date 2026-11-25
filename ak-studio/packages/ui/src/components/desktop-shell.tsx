@@ -6,8 +6,9 @@
 //
 // Layout: one 48 px top bar row. The project name shrinks first (down to 96 px, with an ellipsis; the full name and
 // path stay in its tooltip and menu), the tabs never shrink, and the controls keep their labels; at 1100 px and
-// wider every label is shown in full (stories `At1100`, `At1440`). Narrower than that (the window allows 800 px),
-// the top bar is compact (`TOP_BAR_COMPACT_BELOW`, story `At800Compact`): the tabs sit 16 px apart instead of 24,
+// wider every label is shown in full (stories `At1100`, `At1440`; at 1100 px the worst case leaves the project 26 px
+// above its minimum). Narrower than that (the window allows 800 px), or when the full form does not fit even so
+// (badges on the tabs, a longer label; story `At1100WithBadges`), the top bar is compact (`TOP_BAR_COMPACT_BELOW`, story `At800Compact`): the tabs sit 16 px apart instead of 24,
 // Build with AI shows its sparkle only (its name in a tooltip), the run control drops the port, and the deploy
 // status drops its time. Nothing scrolls sideways at any width (asserted by the stories).
 //
@@ -62,7 +63,10 @@ export function isAppTabId(value: unknown): value is AppTabId {
 	return (APP_TABS as readonly unknown[]).includes(value);
 }
 
-/** Below this top bar width (CSS pixels) the top bar is compact. At 1100 px every label shows in full. */
+/**
+ * Below this top bar width (CSS pixels) the top bar is compact. At 1100 px every label shows in full; wider, it is
+ * compact only if the full form overflows.
+ */
 export const TOP_BAR_COMPACT_BELOW = 1100;
 
 const CompactContext = createContext(false);
@@ -96,14 +100,30 @@ export type TopBarProps = {
 export function TopBar({ project, tabs, actions, className }: TopBarProps) {
 	const ref = useRef<HTMLElement>(null);
 	const [compact, setCompact] = useState(false);
+	// The width at which the full top bar last overflowed (its content grew: a badge, a longer label).
+	const overflowedAt = useRef(0);
 	useLayoutEffect(() => {
 		const el = ref.current;
 		if (!el) return;
-		const measure = () =>
-			setCompact(el.getBoundingClientRect().width < TOP_BAR_COMPACT_BELOW);
+		const measure = () => {
+			const width = el.getBoundingClientRect().width;
+			setCompact((was) => {
+				if (width < TOP_BAR_COMPACT_BELOW) return true;
+				if (!was) {
+					// Compact as well when the full form does not fit, even at 1100 px or wider.
+					if (el.scrollWidth <= el.clientWidth) return false;
+					overflowedAt.current = width;
+					return true;
+				}
+				// Back to the full form only once wider than where it overflowed (no flip-flop).
+				return width <= overflowedAt.current;
+			});
+		};
 		measure();
 		const observer = new ResizeObserver(measure);
 		observer.observe(el);
+		// Content changes too (a badge appears): the parts resize.
+		for (const child of el.children) observer.observe(child);
 		return () => observer.disconnect();
 	}, []);
 	return (

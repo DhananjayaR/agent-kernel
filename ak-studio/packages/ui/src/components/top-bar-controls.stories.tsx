@@ -56,10 +56,14 @@ type Story = StoryObj<typeof meta>;
 const chip = (canvasElement: HTMLElement) =>
 	canvasElement.querySelector('[data-slot="status-chip"]') as HTMLElement;
 
-/** The four run states side by side: each an icon and a label (never colour alone), then start or stop. */
+/**
+ * The run states side by side: no project (P1a's state: no control), stopped, starting, running, failed; each an
+ * icon and a label (never colour alone), then start or stop.
+ */
 export const RunStates: Story = {
 	render: (args) => (
 		<Bar>
+			<RunControl {...args} state="no-project" />
 			<RunControl {...args} state="stopped" />
 			<RunControl {...args} state="starting" />
 			<RunControl {...args} state="running" port={8000} />
@@ -69,13 +73,17 @@ export const RunStates: Story = {
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		const groups = canvas.getAllByRole("group", { name: "Local run" });
-		await expect(groups).toHaveLength(4);
-		const [stopped, starting, running, failed] = groups as [
+		await expect(groups).toHaveLength(5);
+		const [noProject, stopped, starting, running, failed] = groups as [
+			HTMLElement,
 			HTMLElement,
 			HTMLElement,
 			HTMLElement,
 			HTMLElement,
 		];
+		// No project: the state only, no control (nothing to start).
+		await expect(noProject).toHaveTextContent("No project to run");
+		await expect(within(noProject).queryByRole("button")).toBeNull();
 		await expect(stopped).toHaveTextContent("Stopped");
 		await expect(
 			within(stopped).getByRole("button", { name: "Start the local run" }),
@@ -90,12 +98,14 @@ export const RunStates: Story = {
 			within(failed).getByRole("button", { name: "Show the run log" }),
 		).toBeVisible();
 		const icons = new Set(
-			groups.map(
-				(g) =>
-					g
-						.querySelector('[data-slot="status-chip"] svg')
-						?.getAttribute("class") ?? "",
-			),
+			groups
+				.slice(1)
+				.map(
+					(g) =>
+						g
+							.querySelector('[data-slot="status-chip"] svg')
+							?.getAttribute("class") ?? "",
+				),
 		);
 		await expect(icons.size).toBe(4);
 	},

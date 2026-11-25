@@ -54,6 +54,7 @@ export const uiStrings = {
 	},
 	runControl: {
 		group: "Local run",
+		noProject: "No project to run",
 		stopped: "Stopped",
 		starting: "Starting",
 		running: "Running",

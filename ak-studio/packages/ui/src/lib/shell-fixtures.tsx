@@ -178,6 +178,8 @@ export type FixtureShellProps = {
 	layout?: BottomPanelLayout;
 	status?: StatusBarProps;
 	problemCount?: number;
+	/** Badges on the app tabs (background job notices). */
+	tabBadges?: Partial<Record<AppTabId, ReactNode>>;
 	/** Replaces the selected tab's empty state. */
 	content?: ReactNode;
 	/** Replaces the Problems view's empty state. */
@@ -189,7 +191,7 @@ export type FixtureShellProps = {
 
 /**
  * The shell with fixture data, keeping its own tab and layout state (as the renderer does, through the bridge).
- * Run control and deploy status show only with a project, as in the app.
+ * With no project, the run control and deploy status show their not-yet states, as in the app.
  */
 export function FixtureShell({
 	project = supportTriage,
@@ -202,6 +204,7 @@ export function FixtureShell({
 	layout = { open: true, height: 240 },
 	status = supportTriageStatus,
 	problemCount,
+	tabBadges,
 	content,
 	problems,
 	onLayoutChange,
@@ -219,6 +222,7 @@ export function FixtureShell({
 		<DesktopShell
 			selectedTab={selected}
 			onTabChange={setSelected}
+			tabBadges={tabBadges}
 			project={
 				<ProjectSwitcher
 					project={project ?? undefined}
@@ -232,7 +236,12 @@ export function FixtureShell({
 							<RunControl state={run} port={port} onShowLog={() => {}} />
 							<DeployStatus state={deploy} deployedAgo={deployedAgo} />
 						</>
-					) : null}
+					) : (
+						<>
+							<RunControl state="no-project" />
+							<DeployStatus state="not-deployed" />
+						</>
+					)}
 					<BuildWithAIButton />
 					{settings ?? <SettingsButton onPress={onOpenSettings} />}
 				</>

@@ -22,7 +22,17 @@ test("the shell renders on the mock transport", async ({ page }) => {
 	await expect(appVersion(page)).toHaveText(MOCK_VERSION);
 	expect(await page.evaluate(() => "studio" in window)).toBe(false);
 	await expect(page.getByRole("banner")).toBeVisible();
+	// No project can be opened yet: every project-scoped part shows its not-yet state.
 	await expect(page.getByText("No project open")).toBeVisible();
+	const run = page.getByRole("group", { name: "Local run" });
+	await expect(run).toHaveText("No project to run");
+	await expect(run.getByRole("button")).toHaveCount(0);
+	await expect(page.locator('[data-slot="deploy-status"]')).toHaveText(
+		"Deployment: Not deployed",
+	);
+	await expect(page.getByRole("contentinfo")).toContainText(
+		"Claude Agent not set up",
+	);
 	await expect(
 		page.getByRole("tablist", { name: "Project views" }).getByRole("tab"),
 	).toHaveText(TABS.map(([name]) => name));

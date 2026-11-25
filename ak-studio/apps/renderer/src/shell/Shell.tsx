@@ -1,8 +1,9 @@
 // The desktop shell in the app: the design system's DesktopShell wired to the bridge. Real data where it exists in
 // P1a: the Studio's version (status bar), the theme preference (settings) and the remembered panel layout (an app
-// preference, stored by main through `app.setLayout`). No project can be opened before P2, so the project switcher
-// says so, the project-scoped controls (run, deploy) are not drawn, and each tab and panel view shows the empty
-// state that names the phase that fills it.
+// preference, stored by main through `app.setLayout`). No project can be opened before P2, so everything else shows
+// its not-yet state: the project switcher "No project open", the run control "No project to run" (no start
+// control), the deploy status "Not deployed", the coding agent "not set up" (P6), and each tab and panel view the
+// empty state that names the phase that fills it.
 import {
 	DEFAULT_SHELL_LAYOUT,
 	type OutputOf,
@@ -15,11 +16,13 @@ import {
 	type BottomPanelTabId,
 	BuildWithAIButton,
 	createToastQueue,
+	DeployStatus,
 	DesktopShell,
 	InlineBanner,
 	notifyBackgroundResult,
 	Popover,
 	ProjectSwitcher,
+	RunControl,
 	SettingsButton,
 	SettingsModal,
 	StatusBar,
@@ -107,6 +110,8 @@ function LoadedShell({
 				project={<ProjectSwitcher />}
 				actions={
 					<>
+						<RunControl state="no-project" />
+						<DeployStatus state="not-deployed" />
 						<Popover
 							title={shellStrings.buildWithAI.title}
 							placement="bottom end"
@@ -135,7 +140,12 @@ function LoadedShell({
 				}
 				bottomPanelLayout={layout.bottomPanel}
 				onBottomPanelLayoutChange={rememberPanel}
-				statusBar={<StatusBar appVersion={info?.version} />}
+				statusBar={
+					<StatusBar
+						codingAgent={shellStrings.codingAgentNotSetUp}
+						appVersion={info?.version}
+					/>
+				}
 			>
 				{error ? (
 					<div className="p-4">

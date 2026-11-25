@@ -15,6 +15,7 @@ import {
 	expectTokenColour,
 	tabTo,
 } from "../lib/story-checks";
+import { Badge } from "./badge";
 import { type AppTabId, AppTabList, isAppTabId, TopBar } from "./desktop-shell";
 import { ProjectSwitcher } from "./project-switcher";
 import { StatusBar } from "./status-bar";
@@ -196,33 +197,67 @@ export const At800Compact: Story = {
 };
 
 /**
- * The shell as the app shows it in P1a: no project can be opened yet, so the project switcher says so, the
- * project-scoped controls (run, deploy) are not drawn, and the status bar shows only the Studio's version. Each
- * tab shows its empty state, naming the phase that fills it.
+ * The shell as the app shows it in P1a: no project can be opened yet, so the project switcher says so, the run
+ * control says there is no project to run (no start control), the deploy status "Not deployed", and the status
+ * bar the coding agent not set up and the Studio's version. Each tab shows its empty state, naming the phase that
+ * fills it.
  */
 export const NoProject: Story = {
 	...atViewport("studio1100"),
 	args: {
 		project: null,
-		status: { appVersion: "0.1.0" },
+		status: {
+			codingAgent: { status: "not-set-up", label: "Claude Agent not set up" },
+			appVersion: "0.1.0",
+		},
 	},
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		await expect(canvas.getByText("No project open")).toBeVisible();
+		const run = canvas.getByRole("group", { name: "Local run" });
+		await expect(run).toHaveTextContent("No project to run");
+		await expect(within(run).queryByRole("button")).toBeNull();
 		await expect(
-			canvas.queryByRole("group", { name: "Local run" }),
-		).not.toBeInTheDocument();
-		await expect(
-			canvas.queryByText(/deploy/i, { selector: "span" }),
-		).toBeNull();
-		await expect(canvas.getByRole("contentinfo")).toHaveTextContent(
-			"Studio 0.1.0",
-		);
+			canvasElement.querySelector('[data-slot="deploy-status"]'),
+		).toHaveTextContent("Deployment: Not deployed");
+		const status = canvas.getByRole("contentinfo");
+		await expect(status).toHaveTextContent("Claude Agent not set up");
+		await expect(status).toHaveTextContent("Studio 0.1.0");
 		await expect(
 			canvas.getByRole("heading", { name: "Canvas", level: 2 }),
 		).toBeVisible();
 		await expect(canvas.getByText(/arrives in P3/)).toBeVisible();
-		await expectNoSidewaysOverflow(shell(canvasElement));
+		await expect(topBar(canvasElement)).not.toHaveAttribute("data-compact");
+		await expectTopBarHolds(canvasElement);
+	},
+};
+
+/**
+ * Badges on the tabs (background job notices) at 1100 px with the worst case: the full form no longer fits, so
+ * the top bar turns compact rather than pushing a control past the edge.
+ */
+export const At1100WithBadges: Story = {
+	...atViewport("studio1100"),
+	args: {
+		project: longProject,
+		run: "running",
+		port: 8000,
+		deploy: "deployed",
+		deployedAgo: "3 days ago",
+		tabBadges: {
+			"test-trace": <Badge>2</Badge>,
+			deploy: <Badge>1</Badge>,
+		},
+	},
+	play: async ({ canvasElement }) => {
+		await expect(window.innerWidth).toBe(1100);
+		await waitFor(() =>
+			expect(topBar(canvasElement)).toHaveAttribute("data-compact"),
+		);
+		await expectTopBarHolds(canvasElement);
+		await expect(
+			within(canvasElement).getByRole("tab", { name: /Deploy/ }),
+		).toHaveTextContent("Deploy1");
 	},
 };
 
@@ -481,5 +516,43 @@ export const OptionTabsOnOwnRow: Story = {
 			bar.getBoundingClientRect().bottom,
 		);
 		await expectNoSidewaysOverflow(shell(canvasElement));
+	},
+};
+
+/**
+ * Keyboard, bottom panel tabs (the Tabs model): ArrowRight moves to and selects the next view; End jumps to the last.
+ * While the panel is closed, selecting a tab (also by arrow key) opens it.
+ */
+export const BottomPanelTabsKeyboard: Story = {
+	...atViewport("studio1100"),
+	play: async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+		const panel = canvas.getByRole("region", { name: "Panel" });
+		const problems = within(panel).getByRole("tab", { name: "Problems" });
+		await tabTo(problems);
+		await expectFocusRing(problems);
+		await userEvent.keyboard("{ArrowRight}");
+		const runLog = within(panel).getByRole("tab", { name: "Run log" });
+		await expect(runLog).toHaveFocus();
+		await expect(runLog).toHaveAttribute("aria-selected", "true");
+		await expect(
+			within(panel).getByRole("tabpanel", { name: "Run log" }),
+		).toHaveTextContent("No run yet");
+		// The app tabs keep their own selection (the panel's tab state is its own).
+		await expect(canvas.getByRole("tab", { name: "Canvas" })).toHaveAttribute(
+			"aria-selected",
+			"true",
+		);
+		// Closed, then ArrowRight opens it on the next view.
+		await userEvent.click(
+			canvas.getByRole("button", { name: "Hide the panel" }),
+		);
+		await waitFor(() => expectHeight(bottomPanel(canvasElement), 48));
+		runLog.focus();
+		await userEvent.keyboard("{End}");
+		await waitFor(() => expectHeightNear(bottomPanel(canvasElement), 240));
+		await expect(
+			within(panel).getByRole("tabpanel", { name: "Commands" }),
+		).toHaveTextContent("No commands yet");
 	},
 };

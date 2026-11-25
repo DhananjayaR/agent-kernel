@@ -4,8 +4,9 @@
 // (narrower than 1100 px) the run control drops the port and the deploy status its time; Build with AI keeps its
 // sparkle and its name, shown in a tooltip.
 //
-// Presentational: the local run arrives in P8 and deploying in P10; until then the renderer does not show them
-// (a project-scoped control has nothing to act on while no project is open).
+// Presentational: the local run arrives in P8 and deploying in P10. While no project is open (all of P1a) the app
+// shows their not-yet states: the run control "No project to run" with no start control (a start button with
+// nothing to start would be a dead control), and the deploy status "Not deployed".
 import {
 	PlayIcon,
 	ScrollTextIcon,
@@ -27,9 +28,16 @@ import { useTopBarCompact } from "./desktop-shell";
 import { type Status, StatusChip } from "./status-chip";
 import { Tooltip } from "./tooltip";
 
-export type RunState = "stopped" | "starting" | "running" | "failed";
+/** The local run's state; `no-project` while no project is open (nothing to run, so no start control). */
+export type RunState =
+	| "no-project"
+	| "stopped"
+	| "starting"
+	| "running"
+	| "failed";
 
 const RUN_STATUS: Record<RunState, Status> = {
+	"no-project": "not-set-up",
 	stopped: "not-set-up",
 	starting: "running",
 	running: "passed",
@@ -64,7 +72,7 @@ function ActionIcon({
 	);
 }
 
-/** The local run: its state, start or stop, and (when it failed) a way to its log. */
+/** The local run: its state, start or stop, and (when it failed) a way to its log. No control without a project. */
 export function RunControl({
 	state,
 	port,
@@ -80,7 +88,9 @@ export function RunControl({
 			? port !== undefined && !compact
 				? fillString(text.runningOnPort, { port })
 				: text.running
-			: text[state];
+			: state === "no-project"
+				? text.noProject
+				: text[state];
 	const live = state === "starting" || state === "running";
 	return (
 		<Group
@@ -90,7 +100,7 @@ export function RunControl({
 			className="flex shrink-0 items-center gap-1"
 		>
 			<StatusChip status={RUN_STATUS[state]} label={label} />
-			{live ? (
+			{state === "no-project" ? null : live ? (
 				<ActionIcon
 					label={text.stop}
 					icon={<SquareIcon aria-hidden="true" />}

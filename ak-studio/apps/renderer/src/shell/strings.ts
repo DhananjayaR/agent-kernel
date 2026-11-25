@@ -63,6 +63,11 @@ export const shellStrings = {
 		title: "The panel layout could not be saved",
 		description: "The app opens with the previous layout next time.",
 	},
+	/** The status bar's coding agent item until P6 connects one. */
+	codingAgentNotSetUp: {
+		status: "not-set-up",
+		label: "Claude Agent not set up",
+	},
 	themeNotSaved:
 		"Try again. If it keeps failing, check that the app's data folder can be written to.",
 	bridgeError:
