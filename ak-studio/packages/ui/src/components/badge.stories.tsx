@@ -28,7 +28,7 @@ export const Default: Story = {
 		const badges = canvasElement.querySelectorAll("[data-slot=badge]");
 		for (const badge of badges) {
 			await expectHeight(badge, 20);
-			await expectStyle(badge, "border-top-left-radius", "9999px");
+			await expectStyle(badge, "border-top-left-radius", "8px");
 		}
 		await expect(badges).toHaveLength(2);
 	},

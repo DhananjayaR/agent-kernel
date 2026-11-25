@@ -20,7 +20,7 @@ export const Default: Story = {
 		>
 			<Skeleton className="h-5 w-1/3" />
 			<Skeleton className="w-2/3" />
-			<Skeleton className="h-control-s w-1/2 rounded-pill" />
+			<Skeleton className="h-control-s w-1/2 rounded-control" />
 		</section>
 	),
 	play: async ({ canvasElement }) => {

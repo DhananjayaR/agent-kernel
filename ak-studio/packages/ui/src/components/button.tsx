@@ -1,5 +1,7 @@
-// Button: added with the shadcn CLI (aria-nova, React Aria `Button`), restyled to Spectrum 2 medium.
-// One primary action per view: `primary` for it; everything else is `secondary`, `outline` or `ghost`.
+// Button: added with the shadcn CLI (aria-nova, React Aria `Button`), restyled to Spectrum 2 medium in OAK's shape:
+// rectangular, the 8 px control radius (branding/README.md, "Shape"), never a pill.
+// One primary action per view: `primary` for it; everything else is `secondary`, `outline` or `ghost`. The primary
+// label is Archivo SemiBold (branding: "Archivo for headlines and CTA buttons"); every other label is Inter.
 // `danger` names the thing it destroys ("Destroy deployment") and always shows an icon, so it is never told
 // from `primary` by colour alone (the two hues are close). `ai` is the AI button style, for an action that hands
 // work to the coding agent ("Build with AI") and nothing else: an outline in the AI colour with a sparkle icon
@@ -34,7 +36,7 @@ const buttonVariants = cva(
 		variants: {
 			variant: {
 				primary:
-					"bg-accent-primary text-on-accent-primary data-hovered:bg-accent-primary-hover data-pressed:bg-accent-primary-hover",
+					"bg-accent-primary font-heading font-cta text-on-accent-primary data-hovered:bg-accent-primary-hover data-pressed:bg-accent-primary-hover",
 				secondary:
 					"bg-fill text-text data-hovered:bg-fill-hover data-pressed:bg-fill-pressed",
 				outline:
@@ -46,8 +48,8 @@ const buttonVariants = cva(
 				ai: "border-text-accent-ai bg-transparent text-text-accent-ai data-hovered:bg-accent-ai data-hovered:text-on-accent-ai data-pressed:bg-accent-ai data-pressed:text-on-accent-ai data-disabled:border-disabled-border data-disabled:bg-transparent",
 			},
 			shape: {
-				// Spectrum 2 Button: pill, 16 px (height / 2) padding, 700.
-				label: "rounded-pill px-pill-edge",
+				// Spectrum 2 Button's 16 px (height / 2) padding and 700 weight, in OAK's 8 px control radius.
+				label: "rounded-control px-button-edge",
 				// Spectrum 2 ActionButton, icon only: 32 x 32, 8 px radius.
 				icon: "size-control-m rounded-control px-0",
 			},

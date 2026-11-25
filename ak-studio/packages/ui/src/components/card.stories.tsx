@@ -56,7 +56,7 @@ export const Default: Story = {
 	),
 	play: async ({ canvasElement }) => {
 		const card = canvasElement.querySelector("[data-slot=card]") as HTMLElement;
-		await expectStyle(card, "border-top-left-radius", "10px");
+		await expectStyle(card, "border-top-left-radius", "16px");
 		await expectStyle(card, "padding-left", "16px");
 		await expect(
 			within(card).getByRole("heading", { level: 3, name: "claude" }),

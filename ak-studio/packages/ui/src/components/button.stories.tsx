@@ -32,7 +32,10 @@ function Row({ children }: { children: ReactNode }) {
 	return <div className="flex flex-wrap items-center gap-3">{children}</div>;
 }
 
-/** Every variant at rest: 32 px; buttons are pills with 16 px padding, ghost is Spectrum's 8 px ActionButton. */
+/**
+ * Every variant at rest: 32 px, rectangular with the 8 px control radius; buttons have 16 px padding, ghost is
+ * Spectrum's ActionButton (12 px). The primary label is Archivo SemiBold, every other label Inter.
+ */
 export const Default: Story = {
 	render: () => (
 		<Row>
@@ -63,10 +66,15 @@ export const Default: Story = {
 			await expectHeight(button, 32);
 		}
 		const primary = canvas.getByRole("button", { name: "Open folder" });
-		await expectStyle(primary, "border-top-left-radius", "9999px");
+		await expectStyle(primary, "border-top-left-radius", "8px");
 		await expectStyle(primary, "padding-left", "16px");
-		await expectStyle(primary, "font-weight", "700");
+		await expectStyle(primary, "font-weight", "600");
 		await expectStyle(primary, "font-size", "14px");
+		await expect(getComputedStyle(primary).fontFamily).toContain("Archivo");
+		const secondary = canvas.getByRole("button", { name: "Show commands" });
+		await expectStyle(secondary, "border-top-left-radius", "8px");
+		await expectStyle(secondary, "font-weight", "700");
+		await expect(getComputedStyle(secondary).fontFamily).toContain("Inter");
 		const ghost = canvas.getByRole("button", { name: "Clear list" });
 		await expectStyle(ghost, "border-top-left-radius", "8px");
 		await expectStyle(ghost, "padding-left", "12px");
@@ -117,7 +125,7 @@ export const AI: Story = {
 		for (const button of within(canvasElement).getAllByRole("button")) {
 			await expectHeight(button, 32);
 			await expectStyle(button, "border-top-width", "2px");
-			await expectStyle(button, "border-top-left-radius", "9999px");
+			await expectStyle(button, "border-top-left-radius", "8px");
 			await expectTokenColour(button, "color", "text-text-accent-ai");
 			await expectTokenColour(
 				button,

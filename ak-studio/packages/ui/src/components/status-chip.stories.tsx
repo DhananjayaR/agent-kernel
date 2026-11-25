@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
-import { expectHeight } from "../lib/story-checks";
+import { expectHeight, expectStyle } from "../lib/story-checks";
 import { type Status, StatusChip } from "./status-chip";
 
 const meta = {
@@ -21,7 +21,7 @@ const STATUSES: Status[] = [
 ];
 
 /**
- * Static: every state, each with its own icon and label (never colour alone). 24 px pills. The spinner of
+ * Static: every state, each with its own icon and label (never colour alone). 24 px, with the 8 px control radius. The spinner of
  * "running" stops under reduced motion.
  */
 export const Default: Story = {
@@ -46,6 +46,7 @@ export const Default: Story = {
 		const icons = new Set<string>();
 		for (const chip of chips) {
 			await expectHeight(chip, 24);
+			await expectStyle(chip, "border-top-left-radius", "8px");
 			const icon = chip.querySelector("svg");
 			await expect(icon).not.toBeNull();
 			icons.add(icon?.getAttribute("class") ?? "");

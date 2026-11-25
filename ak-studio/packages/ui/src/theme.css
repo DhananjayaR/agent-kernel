@@ -1,5 +1,5 @@
 /*
- * Agent Kernel Studio design tokens: the Tailwind 4 entry for the renderer and Storybook.
+ * OAK Studio design tokens: the Tailwind 4 entry for the renderer and Storybook.
  *
  * Decided at the P1a design gate (signed off 25 November 2026; options and measured contrast in
  * docs/specs/950-agent-kernel-studio/research/p1a-design-gate-options.md): palette A (Agent Kernel's brand from
@@ -221,7 +221,7 @@
 
 	/* Relative and component spacing */
 	--spacing-edge: 12px; /* edge-to-text = height x 3/8 (TextField, Picker padding-x) */
-	--spacing-pill-edge: 16px; /* pill = height / 2 (Button padding-x) */
+	--spacing-button-edge: 16px; /* Button padding-x (height / 2) */
 	--spacing-text-to-visual: 6px; /* fontRelative(6) at 14 px */
 	--spacing-row: 40px; /* TableView and TreeView row, desktop regular */
 	--spacing-row-compact: 32px; /* TableView compact and header row; tables only */
@@ -239,13 +239,20 @@
 	--spacing-border-field: 2px; /* border-width-200 (fields) */
 	--spacing-tree-indent: 16px; /* TreeView indent per level (S, not measured in S1) */
 
-	/* Radii (T corner-radius-*) */
-	--radius-sm: 4px; /* small: tree row, tab focus */
-	--radius-control: 8px; /* medium: TextField, Picker, menu item, ActionButton */
+	/*
+	 * Radii. OAK's two shapes (branding/README.md, "Shape"): `control` (8 px) for every control, rectangular
+	 * (buttons, icon buttons, fields, pickers, the segmented control, tags, badges and chips), and `card`
+	 * (16 px) for cards and panels. The floating layers and structures keep Spectrum 2's measured radii
+	 * (T corner-radius-*): `popover`, `dialog`, `table`, and `sm` for rows nested inside a control.
+	 * `pill` is for round marks only (the switch, selection edges, the empty state's icon disc), never a control.
+	 */
+	--radius-sm: 4px; /* small: tree row, tab focus, a segment inside the segmented control */
+	--radius-control: 8px; /* OAK control: buttons, fields, tags, badges, chips, menu items */
+	--radius-card: 16px; /* OAK card: cards and panels */
 	--radius-table: 6px; /* TableView outer border (L) */
 	--radius-popover: 10px; /* large: Popover, Menu */
 	--radius-dialog: 16px; /* extra-large: Dialog */
-	--radius-pill: 9999px; /* pill = height / 2 (Button) */
+	--radius-pill: 9999px; /* round marks only: switch, selection edges, icon disc */
 
 	/* UI type scale (T font-size-50..500) and weights; `text-ui` (14 px) is the base size */
 	--text-ui-xs: 11px;
@@ -260,13 +267,16 @@
 	--text-heading--line-height: 26px;
 	--font-weight-control: 700; /* Button label */
 	--font-weight-action: 500; /* ActionButton */
+	--font-weight-cta: 600; /* primary Button label, in Archivo SemiBold */
 
 	/*
 	 * Families (bundled in fonts.css). `font-ui`: Inter, all UI and body text. `font-heading`: Archivo,
-	 * headings only. `font-mono`: JetBrains Mono, for code, paths, identifiers, durations, token counts and
-	 * money; with figures, use `mono-figures` (below) for tabular digits. Button labels stay in Inter
-	 * (`font-ui` with weight `font-control`), so every control in a row (buttons, action buttons, fields,
-	 * menus, tabs) shares one face at 14 px; Archivo is kept for headings, where it reads as the brand.
+	 * headings and the primary call to action (branding/README.md: "Archivo for headlines and CTA buttons").
+	 * `font-mono`: JetBrains Mono, for code, paths, identifiers, durations, token counts and money; with
+	 * figures, use `mono-figures` (below) for tabular digits. The other button labels stay in Inter
+	 * (`font-ui` with weight `font-control`), so every other control in a row (buttons, action buttons,
+	 * fields, menus, tabs) shares one face at 14 px; the one primary action per view is Archivo SemiBold
+	 * (`font-heading font-cta`).
 	 */
 	--font-ui: var(--font-family-inter);
 	--font-heading: var(--font-family-archivo);

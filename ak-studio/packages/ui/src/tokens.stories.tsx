@@ -191,7 +191,7 @@ function ThemePanel({ theme }: { theme: Theme }) {
 			ref={ref}
 			data-theme={theme}
 			aria-labelledby={`tokens-${theme}`}
-			className="flex flex-col gap-6 rounded-popover border border-border-default bg-surface p-6 text-text"
+			className="flex flex-col gap-6 rounded-card border border-border-default bg-surface p-6 text-text"
 		>
 			<h2 id={`tokens-${theme}`} className="text-heading font-bold">
 				{theme === "dark" ? "Dark" : "Light"}
@@ -240,7 +240,7 @@ function ThemePanel({ theme }: { theme: Theme }) {
 						return (
 							<li key={fill}>
 								<span
-									className="inline-flex h-control-m items-center rounded-pill px-pill-edge"
+									className="inline-flex h-control-m items-center rounded-control px-button-edge"
 									style={{
 										backgroundColor: `var(--role-${fill})`,
 										color: `var(--role-${on})`,
@@ -303,7 +303,7 @@ const SIZE_TOKENS = [
 	"--spacing-control-l",
 	"--spacing-control-xl",
 	"--spacing-edge",
-	"--spacing-pill-edge",
+	"--spacing-button-edge",
 	"--spacing-text-to-visual",
 	"--spacing-row",
 	"--spacing-row-compact",
@@ -318,6 +318,7 @@ const SIZE_TOKENS = [
 	"--spacing-border-field",
 	"--radius-sm",
 	"--radius-control",
+	"--radius-card",
 	"--radius-table",
 	"--radius-popover",
 	"--radius-dialog",
@@ -329,6 +330,8 @@ const SIZE_TOKENS = [
 	"--text-ui-2xl",
 	"--text-ui-3xl",
 	"--text-heading",
+	"--font-weight-control",
+	"--font-weight-cta",
 ] as const;
 
 function Stack({ children }: { children: ReactNode }) {
@@ -384,7 +387,7 @@ export const Colours: Story = {
 	},
 };
 
-const SAMPLE = "Agent Kernel Studio 0123456789";
+const SAMPLE = "OAK Studio 0123456789";
 
 export const Fonts: Story = {
 	render: () => (
@@ -425,13 +428,13 @@ export const Fonts: Story = {
 			</section>
 			<section aria-labelledby="font-control">
 				<h2 id="font-control" className="text-ui-lg font-bold">
-					Button labels at 14 px, 700: Inter (chosen) and Archivo (for
-					comparison)
+					Button labels at 14 px: Inter 700 (every button but the primary) and
+					Archivo SemiBold 600 (the primary call to action)
 				</h2>
 				<p className="font-ui text-ui font-control">
 					Run agent Deploy Discard changes
 				</p>
-				<p className="font-heading text-ui font-control">
+				<p className="font-heading text-ui font-cta">
 					Run agent Deploy Discard changes
 				</p>
 			</section>

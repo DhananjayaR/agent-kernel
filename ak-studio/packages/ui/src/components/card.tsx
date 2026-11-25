@@ -1,5 +1,5 @@
 // Card: a group of related content on a raised surface (a recent project, the toolchain check). Added with the
-// shadcn CLI (aria-nova), restyled: raised surface, decorative hairline, 10 px radius, 16 px padding, title in
+// shadcn CLI (aria-nova), restyled: raised surface, decorative hairline, OAK's 16 px card radius, 16 px padding, title in
 // the heading face. Text roles all hold 4.5:1 on the raised surface.
 import type { HTMLAttributes } from "react";
 import { cn } from "../lib/utils";
@@ -11,7 +11,7 @@ export function Card({ className, ...props }: DivProps) {
 		<div
 			data-slot="card"
 			className={cn(
-				"flex flex-col gap-4 rounded-popover border border-border-default bg-surface-raised p-4 text-ui text-text",
+				"flex flex-col gap-4 rounded-card border border-border-default bg-surface-raised p-4 text-ui text-text",
 				className,
 			)}
 			{...props}

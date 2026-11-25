@@ -54,10 +54,11 @@ describe("cn merges the Studio's classes", () => {
 
 	it("treats custom radii as one group", () => {
 		expect(cn("rounded-pill", "rounded-control")).toBe("rounded-control");
+		expect(cn("rounded-control", "rounded-card")).toBe("rounded-card");
 	});
 
 	it("treats custom spacing as spacing", () => {
-		expect(cn("px-pill-edge", "px-edge")).toBe("px-edge");
+		expect(cn("px-button-edge", "px-edge")).toBe("px-edge");
 		expect(cn("h-control-m", "h-control-s")).toBe("h-control-s");
 		expect(cn("w-field-width", "w-full")).toBe("w-full");
 	});
@@ -66,6 +67,9 @@ describe("cn merges the Studio's classes", () => {
 		expect(cn("font-control", "font-ui")).toBe("font-control font-ui");
 		expect(cn("font-ui", "font-mono")).toBe("font-mono");
 		expect(cn("font-control", "font-action")).toBe("font-action");
+		expect(cn("font-ui font-control", "font-heading font-cta")).toBe(
+			"font-heading font-cta",
+		);
 	});
 
 	it("treats the state fills as background colours", () => {

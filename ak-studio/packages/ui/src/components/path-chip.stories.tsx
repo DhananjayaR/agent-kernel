@@ -23,14 +23,14 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Monospace, 24 px pill; reveal and copy are 24 px round buttons inside it. */
+/** Monospace, 24 px, the 8 px control radius; reveal and copy are 24 px buttons inside it. */
 export const Default: Story = {
 	play: async ({ canvasElement }) => {
 		const chip = canvasElement.querySelector(
 			"[data-slot=path-chip]",
 		) as HTMLElement;
 		await expectHeight(chip, 24);
-		await expectStyle(chip, "border-top-left-radius", "9999px");
+		await expectStyle(chip, "border-top-left-radius", "8px");
 		await expect(getComputedStyle(chip).fontFamily).toContain("JetBrains Mono");
 		const canvas = within(canvasElement);
 		await expect(

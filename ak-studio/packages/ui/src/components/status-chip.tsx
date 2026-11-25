@@ -1,6 +1,6 @@
 // StatusChip: the state of something (a check, a command, a tool). The one component for it: never a coloured
-// word, a bare dot or a Badge. Written by hand (shadcn has no equivalent). 24 px pill with a decorative
-// hairline; each state has its own icon and label, so it is never colour alone (the status colours are close
+// word, a bare dot or a Badge. Written by hand (shadcn has no equivalent). 24 px, the 8 px control
+// radius, a decorative hairline; each state has its own icon and label, so it is never colour alone (the status colours are close
 // to the primary one), and the icon takes the state's text colour.
 import {
 	IconCircleCheck,
@@ -64,7 +64,7 @@ export function StatusChip({
 			data-slot="status-chip"
 			data-status={status}
 			className={cn(
-				"inline-flex h-control-s shrink-0 items-center gap-1.5 rounded-pill border border-border-default px-2.5 text-ui-sm font-action text-text whitespace-nowrap",
+				"inline-flex h-control-s shrink-0 items-center gap-1.5 rounded-control border border-border-default px-2.5 text-ui-sm font-action text-text whitespace-nowrap",
 				className,
 			)}
 			{...props}
