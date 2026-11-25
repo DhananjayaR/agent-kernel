@@ -57,7 +57,7 @@ export const shellStrings = {
 	buildWithAI: {
 		title: "Build with AI",
 		description:
-			"The coding agent will build on your project from a drawer beside every tab, and you review each change. It arrives in P6, once a project can be opened.",
+			"Claude Agent will build on your project from a drawer beside every tab, and you review each change. It arrives in P6, once a project can be opened.",
 	},
 	layoutNotSaved: {
 		title: "The panel layout could not be saved",

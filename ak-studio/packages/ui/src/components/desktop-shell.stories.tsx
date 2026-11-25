@@ -1,6 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, fn, userEvent, waitFor, within } from "storybook/test";
+import {
+	expect,
+	fireEvent,
+	fn,
+	userEvent,
+	waitFor,
+	within,
+} from "storybook/test";
 import {
 	atViewport,
 	expectNoSidewaysOverflow,
@@ -258,6 +265,66 @@ export const At1100WithBadges: Story = {
 		await expect(
 			within(canvasElement).getByRole("tab", { name: /Deploy/ }),
 		).toHaveTextContent("Deploy1");
+	},
+};
+
+/** The worst case at 1100 px, with badges that the story adds and removes (a hidden control, pressed by the test). */
+function BadgesComeAndGoShell() {
+	const [badges, setBadges] = useState(false);
+	return (
+		<>
+			<FixtureShell
+				project={longProject}
+				run="running"
+				port={8000}
+				deploy="deployed"
+				deployedAgo="3 days ago"
+				tabBadges={
+					badges
+						? { "test-trace": <Badge>2</Badge>, deploy: <Badge>1</Badge> }
+						: undefined
+				}
+			/>
+			<button
+				type="button"
+				tabIndex={-1}
+				className="sr-only"
+				onClick={() => setBadges((on) => !on)}
+			>
+				Toggle badges
+			</button>
+		</>
+	);
+}
+
+/**
+ * Changing form keeps focus, and a transient overflow does not stick: with focus on Build with AI, badges appear
+ * (the bar turns compact; the same button keeps focus), then go (the full form comes back at the same width; focus
+ * still there).
+ */
+export const BadgesComeAndGo: Story = {
+	...atViewport("studio1100"),
+	render: () => <BadgesComeAndGoShell />,
+	play: async ({ canvasElement }) => {
+		const bar = topBar(canvasElement);
+		const toggle = within(canvasElement).getByRole("button", {
+			name: "Toggle badges",
+			hidden: true,
+		});
+		const ai = within(bar).getByRole("button", { name: "Build with AI" });
+		await expect(bar).not.toHaveAttribute("data-compact");
+		ai.focus();
+		await expect(ai).toHaveFocus();
+		fireEvent.click(toggle);
+		await waitFor(() => expect(bar).toHaveAttribute("data-compact"));
+		await expect(ai.isConnected).toBe(true);
+		await expect(ai).toHaveFocus();
+		await expectTopBarHolds(canvasElement);
+		fireEvent.click(toggle);
+		await waitFor(() => expect(bar).not.toHaveAttribute("data-compact"));
+		await expect(ai).toHaveFocus();
+		await expect(ai).toHaveTextContent("Build with AI");
+		await expectTopBarHolds(canvasElement);
 	},
 };
 

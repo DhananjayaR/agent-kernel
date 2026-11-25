@@ -3,6 +3,7 @@
 import { BOTTOM_PANEL_HEIGHT, DEFAULT_SHELL_LAYOUT } from "@ak-studio/contract";
 import {
 	APP_TABS,
+	BOTTOM_PANEL_MAX_HEIGHT,
 	BOTTOM_PANEL_MIN_HEIGHT,
 	BOTTOM_PANEL_TABS,
 } from "@ak-studio/ui";
@@ -60,9 +61,18 @@ describe("empty states", () => {
 	});
 });
 
+describe("copy", () => {
+	it("names the coding agent feature Claude Agent (copy rules)", async () => {
+		const { shellStrings } = await import("./strings");
+		expect(shellStrings.buildWithAI.description).toMatch(/^Claude Agent /);
+		expect(JSON.stringify(shellStrings)).not.toMatch(/coding agent/i);
+	});
+});
+
 describe("panel bounds", () => {
 	it("agree between the design system and the contract", () => {
 		expect(BOTTOM_PANEL_MIN_HEIGHT).toBe(BOTTOM_PANEL_HEIGHT.min);
+		expect(BOTTOM_PANEL_MAX_HEIGHT).toBe(BOTTOM_PANEL_HEIGHT.max);
 		expect(DEFAULT_SHELL_LAYOUT.bottomPanel.height).toBeGreaterThanOrEqual(
 			BOTTOM_PANEL_MIN_HEIGHT,
 		);

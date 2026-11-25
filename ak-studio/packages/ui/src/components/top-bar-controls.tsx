@@ -188,23 +188,20 @@ export function BuildWithAIButton({
 	...props
 }: BuildWithAIButtonProps) {
 	const compact = useTopBarCompact();
-	const button = (
-		<Button
-			data-slot="build-with-ai"
-			variant="ai"
-			icon={<SparklesIcon aria-hidden="true" />}
-			className={cn(compact && "gap-0 px-1.5", className)}
-			{...props}
-		>
-			<span className={cn(compact && "sr-only")}>{label}</span>
-		</Button>
-	);
-	return compact ? (
-		<Tooltip content={label} placement="bottom">
-			{button}
+	// The same tree in both forms (the tooltip is only switched off in the full form), so the button is never
+	// remounted when the top bar changes form and keeps focus (and a popover's trigger) across the change.
+	return (
+		<Tooltip content={label} placement="bottom" isDisabled={!compact}>
+			<Button
+				data-slot="build-with-ai"
+				variant="ai"
+				icon={<SparklesIcon aria-hidden="true" />}
+				className={cn(compact && "gap-0 px-1.5", className)}
+				{...props}
+			>
+				<span className={cn(compact && "sr-only")}>{label}</span>
+			</Button>
 		</Tooltip>
-	) : (
-		button
 	);
 }
 

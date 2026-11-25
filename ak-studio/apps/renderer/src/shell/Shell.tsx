@@ -121,7 +121,13 @@ function LoadedShell({
 								{shellStrings.buildWithAI.description}
 							</p>
 						</Popover>
-						<SettingsButton onPress={() => setSettingsOpen(true)} />
+						<SettingsButton
+							onPress={() => {
+								// A failure from an earlier visit is not shown again.
+								saveTheme.reset();
+								setSettingsOpen(true);
+							}}
+						/>
 					</>
 				}
 				bottomPanel={

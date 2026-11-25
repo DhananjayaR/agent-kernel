@@ -65,6 +65,7 @@ export {
 	AppTabList,
 	type AppTabListProps,
 	BOTTOM_PANEL_COLLAPSED_HEIGHT,
+	BOTTOM_PANEL_MAX_HEIGHT,
 	BOTTOM_PANEL_MIN_HEIGHT,
 	type BottomPanelLayout,
 	DesktopShell,

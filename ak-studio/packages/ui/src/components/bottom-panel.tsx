@@ -126,7 +126,9 @@ export function BottomPanel({
 	return (
 		// The panel usually sits inside the app's Tabs (DesktopShell). Its own Tabs must not see that outer tab state:
 		// React Aria's collection pass would render this TabList against it and change the app tabs' ids (React Aria
-		// clears these contexts the same way inside a TabPanel).
+		// clears these contexts the same way inside a TabPanel). Depends on react-aria 3.53.1 internals (the collection
+		// pass, react-aria-components 1.22.1 pinned): check it again on any upgrade (axe's aria-controls check and the
+		// shell stories catch a regression).
 		<Provider
 			values={[
 				[TabsContext, null],
