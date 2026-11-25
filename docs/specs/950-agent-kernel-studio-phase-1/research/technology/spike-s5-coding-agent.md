@@ -8,7 +8,7 @@
 > **Superseded in part, 24 November 2026.** This spike tested a design in which the user pastes an API key
 > into the Studio. The owner has since settled that the Studio uses the user's own Claude Code, already
 > installed and signed in with a subscription, and holds no credential
-> ([architecture](../architecture.md#the-coding-agent-and-the-users-claude-code)).
+> ([architecture](../../implementation/architecture.md#the-coding-agent-and-the-users-claude-code)).
 > - **Still holds:** the single adapter, the session and permission mapping, the authentication error shape,
 >   the packaging finding about `pathToClaudeCodeExecutable`, and that a project hook runs unprompted.
 > - **No longer the design:** the key store, the write-only command, the environment built from nothing

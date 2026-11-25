@@ -4,7 +4,7 @@
 # productName is the full name, "Open Agent Kernel Studio" (brand name rule: the full name in titles; the compact UI
 # says "OAK Studio"); it names the installer, the Linux desktop entry and the app's data folder.
 # The appId (reverse DNS of the project domain kernel.yaala.ai) is unchanged.
-# P12 confirms both (docs/specs/950-agent-kernel-studio/README.md, open question 3).
+# P12 confirms both (docs/specs/950-agent-kernel-studio-phase-1/README.md, open decision 3).
 appId: ai.yaala.kernel.studio
 productName: Open Agent Kernel Studio
 directories:

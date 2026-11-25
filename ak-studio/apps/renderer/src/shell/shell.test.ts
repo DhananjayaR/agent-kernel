@@ -27,7 +27,7 @@ describe("tab routes", () => {
 });
 
 describe("empty states", () => {
-	it("name the phase that fills each tab (later-phases.md, P3.md)", () => {
+	it("name the phase that fills each tab (P4-P12.md, P3.md)", () => {
 		const phases = {
 			canvas: ["P3"],
 			code: ["P3"],

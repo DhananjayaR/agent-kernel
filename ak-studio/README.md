@@ -101,7 +101,7 @@ set per `data-theme` from OAK's brand (`docs/src/css/custom.css`). Surfaces (`su
 `accent-ai`, `status-success|warning|danger`) each with an `on-*` text colour at least 4.5:1; `border-control`
 and `focus-ring` at least 3:1; `border-default` for decorative dividers only. The naming is documented at the top
 of `theme.css`, and the values with their measured ratios in
-`docs/specs/950-agent-kernel-studio/research/p1a-design-gate-options.md` (section 6). Size, radius, spacing and
+`docs/specs/950-agent-kernel-studio-phase-1/research/technology/p1a-design-gate-options.md` (section 6). Size, radius, spacing and
 type tokens are Spectrum 2 medium, one density (32 px controls, 40 px rows, 14 px base text, 48 px top bar), in
 OAK's shape (`branding/README.md`, "Shape"): two radii, `rounded-control` (8 px) for every control, rectangular
 (buttons, icon buttons, fields, pickers, the segmented control, tags, badges, status and path chips; no pill

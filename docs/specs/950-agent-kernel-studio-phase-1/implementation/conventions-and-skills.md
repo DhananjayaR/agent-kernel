@@ -35,7 +35,7 @@ Component names are working names until the P1a design gate.
 - **The basic style resembles React Spectrum (Spectrum 2):** its control sizes and density, state styling and
   spacing rhythm, expressed as the Studio's own tokens. When a new component has no precedent in the Studio,
   look at how Spectrum 2 sizes and states its equivalent before inventing one.
-- **The brand wins where it is explicit** ([branding/README.md](../../../branding/README.md); branding change
+- **The brand wins where it is explicit** ([branding/README.md](../../../../branding/README.md); branding change
   of 25 November 2026). Colours are those of Open Agent Kernel (OAK). Buttons, inputs and tags are rectangular at the 8 px control
   radius, not Spectrum 2's pill; cards and panels use the 16 px card radius. The logo mark
   (`branding/logo-mark/`) is the app icon and sits in the top bar, used as supplied: never redrawn,
@@ -64,7 +64,7 @@ Component names are working names until the P1a design gate.
   title is "Open Agent Kernel Studio"), "OAK" everywhere else; the compact interface says "OAK Studio". The company is not named in the app.
   Identifiers keep their form: the `agentkernel` package, the `ak` CLI, `AKConfig`, `AK_*` variables,
   `.akstudio/`, the `ak-*` skills. (The team's brief 00 and the brand's
-  [name rule](../../../branding/README.md#name).)
+  [name rule](../../../../branding/README.md#name).)
 - The Studio's coding-agent feature is "Claude Agent"; the Studio never calls itself or its feature
   "Claude Code". Anthropic's Agent SDK branding rule permits "Claude Agent" or "Powered by Claude" and does
   not permit "Claude Code" as a label. "Claude Code" names only the user's installed program ("Sign in to
@@ -148,7 +148,7 @@ through the design gate, so the next screen can reuse it.
 In `ak-studio/.agents/skills/`, with `ak-studio/.claude/skills` linked to it, mirroring the repository root.
 Claude Code scopes skills in a subdirectory to work in that directory, so the Studio skills do not load for
 Python work on `ak-py`, and the root `ak-dev-*` skills stay as they are. `ak-studio/AGENTS.md` points to them,
-and the root [AGENTS.md](../../../AGENTS.md) gains one line naming the third skill set. They use the same
+and the root [AGENTS.md](../../../../AGENTS.md) gains one line naming the third skill set. They use the same
 frontmatter as the `ak-dev-*` skills.
 
 The link is a symbolic link, as at the repository root. On Windows a clone needs symbolic links enabled in

@@ -17,7 +17,7 @@ decision record are brought back.
 (React Aria base), React Flow, CodeMirror 6, zod, Vitest, Playwright, Storybook, electron-builder, pnpm.
 
 **Spec:** [P0-technology-selection.md](P0-technology-selection.md). Evidence:
-[research/tech-stack-evaluation.md](research/tech-stack-evaluation.md). The architecture the spikes must not
+[research/technology/tech-stack-evaluation.md](../research/technology/tech-stack-evaluation.md). The architecture the spikes must not
 contradict: [architecture.md](architecture.md).
 
 ## Global Constraints
@@ -46,7 +46,7 @@ contradict: [architecture.md](architecture.md).
   difference in the spike note**. A difference is a finding, not a failure.
 - **Time boxes** from the spec: S1 three days, S2 two days, S3 two days, S4 two days, S5 under one day. An overrun is recorded
   and counts against the candidate.
-- **Every task ends with a findings note** in `docs/specs/950-agent-kernel-studio/research/`, in this shape:
+- **Every task ends with a findings note** in `docs/specs/950-agent-kernel-studio-phase-1/research/technology/`, in this shape:
 
   ```markdown
   # Spike S<n>: <title>
@@ -81,7 +81,7 @@ ak-studio-spikes/                 on branch spike/950-studio-p0 only
       spikes/layout.worker.ts     S4
       styles/app.css              Tailwind and tokens (S1)
     tests/                        Vitest and Playwright
-docs/specs/950-agent-kernel-studio/research/
+docs/specs/950-agent-kernel-studio-phase-1/research/technology/
   spike-s1-components.md  spike-s2-build.md  spike-s3-bridge.md  spike-s4-canvas-code.md
   spike-s5-coding-agent.md
 .github/workflows/studio-spike.yml   on the spike branch only
@@ -205,7 +205,7 @@ git add ak-studio-spikes && git commit -m "chore(spike): scaffold P0 spike app w
 - Create: `src/renderer/src/styles/app.css`, `src/renderer/src/spikes/ComponentsSpike.tsx`,
   `tests/components.keyboard.spec.ts`
 - Modify: `src/renderer/src/main.tsx`, `src/renderer/src/App.tsx`
-- Note: `research/spike-s1-components.md`
+- Note: `research/technology/spike-s1-components.md`
 
 All paths are under `ak-studio-spikes/app/`.
 
@@ -374,7 +374,7 @@ Expected: PASS. A failure here is a finding about that component, not a test to 
   shape, spacing and states should read as the same family; colour and font differ on purpose. Attach the
   screenshots to the note and list every place the restyle could not match, with the reason.
 
-- [ ] **Step 9: Write `research/spike-s1-components.md` and commit**
+- [ ] **Step 9: Write `research/technology/spike-s1-components.md` and commit**
 
 Pass criteria to report (from the spec): the components read as the same family as Spectrum 2 in the
 side-by-side screenshots; every component matches the tokens without overriding library internals; every component is keyboard-operable; no more than two components need a second primitive library.
@@ -384,7 +384,7 @@ State the D1 base (React Aria or Base UI), D2 and D12 recommendations.
 `@tanstack/react-virtual` for the table and a tree component, and report both.
 
 ```bash
-git add ak-studio-spikes docs/specs/950-agent-kernel-studio/research/spike-s1-components.md
+git add ak-studio-spikes docs/specs/950-agent-kernel-studio-phase-1/research/technology/spike-s1-components.md
 git commit -m "chore(spike): S1 components and theming, with findings"
 ```
 
@@ -397,7 +397,7 @@ git commit -m "chore(spike): S1 components and theming, with findings"
   `src/main/handlers.ts`, `src/main/ws-server.ts`, `src/renderer/src/spikes/BridgeSpike.tsx`,
   `tests/handlers.test.ts`
 - Modify: `src/main/index.ts`, `src/preload/index.ts`
-- Note: `research/spike-s3-bridge.md`
+- Note: `research/technology/spike-s3-bridge.md`
 
 **Interfaces:**
 - Produces:
@@ -724,14 +724,14 @@ oRPC's Electron transport. Answer three questions in the note: does a streamed r
 in the renderer; does aborting it in the renderer stop the child process in main; does the same client code
 work over HTTP or WebSocket. If any answer is no, the decision is the in-house contract.
 
-- [ ] **Step 12: Write `research/spike-s3-bridge.md` and commit**
+- [ ] **Step 12: Write `research/technology/spike-s3-bridge.md` and commit**
 
 Report the table from Step 10 per operating system, the oRPC answers, and the D5 recommendation. For D8, note
 whether anything observed argues against Zustand, TanStack Query and TanStack Router; otherwise recommend
 them as listed.
 
 ```bash
-git add ak-studio-spikes docs/specs/950-agent-kernel-studio/research/spike-s3-bridge.md
+git add ak-studio-spikes docs/specs/950-agent-kernel-studio-phase-1/research/technology/spike-s3-bridge.md
 git commit -m "chore(spike): S3 typed bridge over IPC and WebSocket, with findings"
 ```
 
@@ -742,7 +742,7 @@ git commit -m "chore(spike): S3 typed bridge over IPC and WebSocket, with findin
 **Files:**
 - Create: `src/renderer/src/spikes/CanvasSpike.tsx`, `src/renderer/src/spikes/layout.worker.ts`,
   `src/renderer/src/spikes/CodeSpike.tsx`
-- Note: `research/spike-s4-canvas-code.md`
+- Note: `research/technology/spike-s4-canvas-code.md`
 
 **Interfaces:**
 - Consumes: tokens and `.glass` from Task 2.
@@ -884,13 +884,13 @@ If 13.0.2 is not workable within half a day, `pnpm add -E @xyflow/react@12.12.0`
 | YAML error | Appears on the right line within 500 ms of typing |
 | Bundle | `pnpm build`, then record the size of the renderer chunks that contain CodeMirror |
 
-- [ ] **Step 7: Write `research/spike-s4-canvas-code.md` and commit**
+- [ ] **Step 7: Write `research/technology/spike-s4-canvas-code.md` and commit**
 
 State the D6 recommendation (React Flow 13.0.2 or 12.12.0; dagre sufficient or not; glass on nodes or not)
 and D7 (CodeMirror 6 confirmed, or what was missing).
 
 ```bash
-git add ak-studio-spikes docs/specs/950-agent-kernel-studio/research/spike-s4-canvas-code.md
+git add ak-studio-spikes docs/specs/950-agent-kernel-studio-phase-1/research/technology/spike-s4-canvas-code.md
 git commit -m "chore(spike): S4 canvas and code viewer, with findings"
 ```
 
@@ -902,7 +902,7 @@ git commit -m "chore(spike): S4 canvas and code viewer, with findings"
 - Create: `ak-studio-spikes/app/electron-builder.yml`, `ak-studio-spikes/app/.dependency-cruiser.cjs`,
   `ak-studio-spikes/app/biome.json`, `ak-studio-spikes/app/tests/smoke.electron.spec.ts`,
   `.github/workflows/studio-spike.yml`
-- Note: `research/spike-s2-build.md`
+- Note: `research/technology/spike-s2-build.md`
 
 **Interfaces:**
 - Consumes: the app and tests from Tasks 1 to 4.
@@ -1045,7 +1045,7 @@ gh run watch
 Expected: all three jobs green; three installer artifacts. The `tests/handlers.test.ts` cancel test passing
 on Windows is the key result here.
 
-- [ ] **Step 7: Write `research/spike-s2-build.md` and commit**
+- [ ] **Step 7: Write `research/technology/spike-s2-build.md` and commit**
 
 Report: cold build time and hot reload time (Task 1), each tool's result on TypeScript 7, CI result per
 operating system, installer produced per system, and anything electron-vite needed that the scaffold did not
@@ -1056,7 +1056,7 @@ D10, D11 and D13.
 repeat Tasks 1 and 5 with Electron Forge 8 and its Vite plugin, and report both.
 
 ```bash
-git add docs/specs/950-agent-kernel-studio/research/spike-s2-build.md
+git add docs/specs/950-agent-kernel-studio-phase-1/research/technology/spike-s2-build.md
 git commit -m "docs(spike): S2 findings" && git push
 ```
 
@@ -1065,9 +1065,9 @@ git commit -m "docs(spike): S2 findings" && git push
 ### Task 6: Decision record and close-out
 
 **Files:**
-- Modify: `docs/specs/950-agent-kernel-studio/P0-technology-selection.md` (decision record, checklist, status),
-  `docs/specs/950-agent-kernel-studio/README.md` (progress row, decision log, open decisions),
-  `docs/specs/950-agent-kernel-studio/P1a-app-foundation.md` (stack names)
+- Modify: `docs/specs/950-agent-kernel-studio-phase-1/implementation/P0-technology-selection.md` (decision record, checklist, status),
+  `docs/specs/950-agent-kernel-studio-phase-1/README.md` (progress row, decision log, open decisions),
+  `docs/specs/950-agent-kernel-studio-phase-1/implementation/P1a-app-foundation.md` (stack names)
 
 **Interfaces:**
 - Consumes: the five spike notes.
@@ -1077,7 +1077,7 @@ git commit -m "docs(spike): S2 findings" && git push
 
 ```bash
 git switch claude/agent-studio-phases-plan-285138
-git checkout spike/950-studio-p0 -- docs/specs/950-agent-kernel-studio/research
+git checkout spike/950-studio-p0 -- docs/specs/950-agent-kernel-studio-phase-1/research/technology
 git status --short
 ```
 
@@ -1110,7 +1110,7 @@ approver and date in the table.
 - [ ] **Step 6: Commit, then retire the spike code**
 
 ```bash
-git add docs/specs/950-agent-kernel-studio && git commit -m "docs: record P0 technology decisions for #950"
+git add docs/specs/950-agent-kernel-studio-phase-1 && git commit -m "docs: record P0 technology decisions for #950"
 ```
 
 **Done 25 November 2026:** the owner asked for the spike code to be removed. The branch was never pushed, so only
@@ -1133,7 +1133,7 @@ Runs on branch `spike/950-studio-p0`, in `ak-studio-spikes/app/`.
   `src/renderer/src/spikes/AgentSpike.tsx`, `tests/agent.electron.spec.ts`
 - Modify: `src/renderer/src/bridge/contract.ts` (agent operations), `src/main/handlers.ts`,
   `electron-builder.yml` (`asarUnpack`), `package.json`
-- Create: `docs/specs/950-agent-kernel-studio/research/spike-s5-coding-agent.md`
+- Create: `docs/specs/950-agent-kernel-studio-phase-1/research/technology/spike-s5-coding-agent.md`
 
 **Interfaces:**
 - Consumes: the bridge contract and `Transport` from Task 3 (request, subscribe, sender check).
@@ -1191,7 +1191,7 @@ Runs on branch `spike/950-studio-p0`, in `ak-studio-spikes/app/`.
   crosses the bridge, how permissions map, packaging), what was not run. Commit:
 
 ```bash
-git add ak-studio-spikes docs/specs/950-agent-kernel-studio/research/spike-s5-coding-agent.md
+git add ak-studio-spikes docs/specs/950-agent-kernel-studio-phase-1/research/technology/spike-s5-coding-agent.md
 git commit -m "chore(spike): S5 coding agent with a key, with findings"
 ```
 
@@ -1214,7 +1214,7 @@ the owner's go-ahead for that machine. Never read, print or copy a credential fi
   `src/renderer/src/bridge/contract.ts`, `src/renderer/src/spikes/AgentSpike.tsx`, `electron-builder.yml`,
   `tests/agent.electron.spec.ts`
 - Delete: `src/main/agent/keyStore.ts`, `src/main/agent/keyStore.test.ts`
-- Modify: `docs/specs/950-agent-kernel-studio/research/spike-s5-coding-agent.md`
+- Modify: `docs/specs/950-agent-kernel-studio-phase-1/research/technology/spike-s5-coding-agent.md`
 
 **Interfaces:**
 - Consumes: the adapter interface and agent contract from Task 7.
@@ -1253,7 +1253,7 @@ the owner's go-ahead for that machine. Never read, print or copy a credential fi
   evidence, and what was not run. Commit:
 
 ```bash
-git add ak-studio-spikes docs/specs/950-agent-kernel-studio/research/spike-s5-coding-agent.md
+git add ak-studio-spikes docs/specs/950-agent-kernel-studio-phase-1/research/technology/spike-s5-coding-agent.md
 git commit -m "chore(spike): S5 second half, the user's own Claude Code"
 ```
 

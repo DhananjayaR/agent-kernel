@@ -39,7 +39,7 @@ below are written and configured but marked Deferred until they can run ([plan](
 
 Follow [design-process.md](design-process.md). Existing input: briefs 00 and 01 and the System page of the
 canvas. Options for palette, fonts, density and theme, with measured contrast:
-[research/p1a-design-gate-options.md](research/p1a-design-gate-options.md). This gate sets the look every later screen inherits, so it is the most important one.
+[research/technology/p1a-design-gate-options.md](../research/technology/p1a-design-gate-options.md). This gate sets the look every later screen inherits, so it is the most important one.
 
 | Subject | Requirements | Questions to settle |
 |---|---|---|
@@ -55,7 +55,7 @@ canvas. Options for palette, fonts, density and theme, with measured contrast:
 | Subject | Options explored | Decision | Approved by | Date |
 |---|---|---|---|---|
 | Style reference: how closely to follow Spectrum 2 (floating layers are solid, decided in P0) | | | | |
-| Palette, tokens, density, theme | 3 palettes, 2 font pairings, 3 densities, 3 default themes ([options](research/p1a-design-gate-options.md)) | Option A palette: OAK's current brand. Orange `#FF5E32` primary (dark text on fills), ice `#B1CDFF` / dusk `#3F598A` for the coding agent, navy ground; every role gets per-surface text variants tuned to 4.5:1. Fonts: Inter for UI, Archivo for headings, JetBrains Mono for code. Density: one, Spectrum 2 medium (32 px controls, 40 px rows, 14 px text, 48 px top bar). Default theme: follow the system setting, dark when unknown | Dhananjaya Rajasinghe | 25 Nov 2026 |
+| Palette, tokens, density, theme | 3 palettes, 2 font pairings, 3 densities, 3 default themes ([options](../research/technology/p1a-design-gate-options.md)) | Option A palette: OAK's current brand. Orange `#FF5E32` primary (dark text on fills), ice `#B1CDFF` / dusk `#3F598A` for the coding agent, navy ground; every role gets per-surface text variants tuned to 4.5:1. Fonts: Inter for UI, Archivo for headings, JetBrains Mono for code. Density: one, Spectrum 2 medium (32 px controls, 40 px rows, 14 px text, 48 px top bar). Default theme: follow the system setting, dark when unknown | Dhananjaya Rajasinghe | 25 Nov 2026 |
 | Shell layout | | | | |
 | Base component set | | | | |
 
@@ -65,7 +65,7 @@ the Task 10 report): the app tabs' empty states have no first action in P1a, a w
 phase that fills each tab, as 1.5 asks.
 
 Notes for the "Style reference" and "Base component set" sign-offs: a **branding change**, ruled on 25 November
-2026 at the owner's request (README decision log). Where [branding/README.md](../../../branding/README.md) is
+2026 at the owner's request (README decision log). Where [branding/README.md](../../../../branding/README.md) is
 explicit, it wins over Spectrum 2:
 
 - Buttons, inputs and tags are rectangular at the 8 px control radius (`--ak-radius-control`). This replaces the
@@ -75,7 +75,7 @@ explicit, it wins over Spectrum 2:
 - The logo mark is the app icon and sits in the top bar.
 - Kept, as approved: palette A (it is the brand), 32 px controls, dark when the system gives no answer, solid
   floating layers. The team's brief 00 assumes 40 px controls, Archivo for all UI text and a light fallback;
-  those are [open decision 10](README.md#open-decisions).
+  those are [open decision 10](../README.md#open-decisions).
 
 The changes have landed in `ak-studio/` (`c3085c7c`); the component stories are reviewed for sign-off.
 
@@ -126,7 +126,7 @@ if the owner wants 8 or 16 px.
 - [x] The app makes no network calls of its own. (Checked on Chromium's network stack; Node networking in the
       main process is not covered by the check.)
 - [ ] Extend the "no network calls" check to Node networking in the main process. It is a standing principle
-      ([README](README.md#standing-principles)): with usage data off, the app makes no network calls of its own.
+      ([principles](../PHASE-1-PLAN.md#principles)): with usage data off, the app makes no network calls of its own.
 
 ### 1.3 The bridge
 
@@ -211,10 +211,10 @@ in the status bar where P2 shows the version.
 
 - The product name and the app identifier. The working name is "OAK Studio" ("Open Agent Kernel Studio" on
   first mention) since 25 November 2026; `ak-studio/` and `.akstudio/` stay. The final name is decided by P12
-  at the latest ([open decision 3](README.md#open-decisions)).
+  at the latest ([open decision 3](../README.md#open-decisions)).
 - The Studio's licence, before any build leaves the team. The PRD recommends free to use locally, ideally
   open source; this repository's Apache 2.0 licence would apply on merge unless the owner decides otherwise
-  ([open decision 9](README.md#open-decisions)).
+  ([open decision 9](../README.md#open-decisions)).
 - Whether the approved components are fed back into the Agent Kernel Design System used by the docs site.
 
 ## Risks

@@ -1,5 +1,5 @@
 // Class recipes shared by the components, so one Spectrum 2 measurement lives in one place (spike S1 table in
-// docs/specs/950-agent-kernel-studio/research/spike-s1-components.md; tokens in theme.css). React Aria sets the
+// docs/specs/950-agent-kernel-studio-phase-1/research/technology/spike-s1-components.md; tokens in theme.css). React Aria sets the
 // state attributes these read: data-hovered, data-pressed, data-focused, data-focus-visible, data-disabled,
 // data-invalid, data-selected, data-readonly.
 

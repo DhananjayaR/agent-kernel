@@ -6,17 +6,17 @@ the gate once; each phase doc lists only its screens, the questions to settle an
 ## Ground rules
 
 - **Requirements are fixed, designs are not.** What the user must be able to do comes from the team's
-  [Phase 1 PRD](../950-agent-kernel-studio-phase-1/PHASE-1-PRD.md) (revised 25 November 2026), which
+  [Phase 1 PRD](../PHASE-1-PRD.md) (revised 25 November 2026), which
   supersedes [issue #950](https://github.com/yaalalabs/agent-kernel/issues/950) where they differ, and from
   the screen's brief. The gate does not reopen those requirements. It decides how the screen delivers them.
-- **Existing designs are input, not a contract.** The briefs (00 to 09) in
-  [`docs/specs/950-agent-kernel-studio-phase-1/`](../950-agent-kernel-studio-phase-1/README.md) and the
+- **Existing designs are input, not a contract.** The briefs (00 to 09) in this folder
+  ([README](../README.md#phase-1-files)) and the
   Claude Design canvas are input. Use them as a starting sketch. Keep what works, change what does not, and
   do not spend time defending or attacking them.
 - **A signed-off story supersedes its artboard.** Artboard and component names stay the code names where they
   fit. After each gate, the team gets the list of differences, so the canvas can follow: the PRD lists the
   redrawn canvas as a team deliverable. Who owns it is
-  [open decision 11](README.md#open-decisions).
+  [open decision 11](../README.md#open-decisions).
 - **Good UX is a deliverable.** A screen is not done because it matches an artboard. It is done when it passes
   the checklist below.
 - **Design in the real components.** Final designs are built in Storybook from the Studio's own component
@@ -72,21 +72,21 @@ Recorded so nobody rediscovers them:
 
 - **Style reference.** The Studio's basic style resembles React Spectrum (Spectrum 2) in size, density and
   states. Where the brand is explicit it wins: rectangular buttons, inputs and tags at the 8 px control
-  radius, Tabler outline icons, OAK's colours ([branding](../../../branding/README.md)). Where a brief's
+  radius, Tabler outline icons, OAK's colours ([branding](../../../../branding/README.md)). Where a brief's
   styling differs, the Studio's tokens win; the brief's layout and content still apply.
 - **The team's styling assumptions.** The briefs and canvas were moved to the OAK identity on 25 November
   2026, with orange primary and solid floating layers, as ours. Three assumptions still differ from our
   approved gate: 40 px controls (ours 32 px), Archivo for all UI text (ours Inter, with Archivo for headings
   and primary call-to-action labels) and light when the system gives no answer (ours dark). See
-  [open decision 10](README.md#open-decisions).
+  [open decision 10](../README.md#open-decisions).
 - **The coding agent's name in copy.** The briefs label it "Claude Code". The Studio's feature is "Claude
   Agent" ([conventions-and-skills.md](conventions-and-skills.md#copy-rules)); "Claude Code" names only the
   user's installed program.
 - **Fonts are loaded from Google Fonts** on the canvas. The app makes no network calls of its own, so fonts
   are bundled.
-- **Second-pass artboards are not drawn** (listed in the team's README).
-- **The redrawn canvas is not reviewed.** The team's README says the re-skin of 25 November was not rendered
-  and checked.
+- **Second-pass artboards are not drawn** (listed in the README's [artboard map](../README.md#design-canvas)).
+- **The redrawn canvas is not reviewed.** The README's [design canvas](../README.md#design-canvas) section
+  says the re-skin of 25 November was not rendered and checked.
 - **No version states.** No brief mentions the project's OAK version; the designs assume one.
 - **Five deploy targets.** The PRD names five; Azure Functions is retired
   (`docs/specs/957-retire-azure-functions/design.md`). The catalog decides what a project's version offers.

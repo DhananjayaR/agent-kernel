@@ -1,6 +1,6 @@
 // The shell's own copy in the app (copy rules: sentence case, final copy, one module). The design system's
 // defaults (tab names, control labels) are in @ak-studio/ui's strings; this module holds what only the app
-// says: each area's empty state, naming the phase that fills it (later-phases.md, P2.md, P3.md), and the shell's
+// says: each area's empty state, naming the phase that fills it (P4-P12.md, P2.md, P3.md), and the shell's
 // errors.
 import type { AppTabId, BottomPanelTabId } from "@ak-studio/ui";
 

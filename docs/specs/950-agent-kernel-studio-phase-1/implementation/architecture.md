@@ -224,7 +224,7 @@ Revised 24 November 2026. The owner's decision: the user's machine already has C
 subscription, and that subscription is used. Our reading of Anthropic's rules, which the owner has yet to
 confirm: the Studio therefore runs that Claude Code and never takes, stores or passes on its token. This replaces the design of 23 November, in which the user pasted an API key into the Studio.
 
-Spike [S5](research/spike-s5-coding-agent.md) tested the earlier design, on Linux, with no real credential.
+Spike [S5](../research/technology/spike-s5-coding-agent.md) tested the earlier design, on Linux, with no real credential.
 Its results on the adapter, approvals, errors and the untrusted folder still apply. Its results on the key
 store and the isolated environment are superseded. The spike's second half (24 November, Linux) ran the
 mechanics of the new design. **No turn has run on a subscription:** the sign-in on the spike machine had

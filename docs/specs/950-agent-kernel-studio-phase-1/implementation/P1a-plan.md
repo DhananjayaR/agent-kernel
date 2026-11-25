@@ -19,7 +19,7 @@ dependency-cruiser, electron-builder, pnpm 12, Node 24.
 
 **Spec:** [P1a-app-foundation.md](P1a-app-foundation.md). Decisions and versions:
 [P0 decision record](P0-technology-selection.md#decision-record). Design input:
-[research/p1a-design-gate-options.md](research/p1a-design-gate-options.md).
+[research/technology/p1a-design-gate-options.md](../research/technology/p1a-design-gate-options.md).
 
 ## Global Constraints
 
@@ -36,7 +36,7 @@ dependency-cruiser, electron-builder, pnpm 12, Node 24.
 - **Electron security baseline:** `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false`, a content
   security policy, a custom protocol, navigation and new windows blocked, the sender checked on every message.
 - **The app makes no network calls of its own.** Fonts are bundled.
-- **No spike code.** The P0 spike code was deleted on 25 November 2026. Its findings are in `research/spike-s*.md`;
+- **No spike code.** The P0 spike code was deleted on 25 November 2026. Its findings are in `research/technology/spike-s*.md`;
   `ak-studio/` is written fresh, and no `SPIKE_*` switch exists.
 - **Design-gate boundary.** Token *values*, base components and the shell layout wait for the P1a design gate
   sign-off. Before it, `packages/ui` holds the mechanism only, with stand-in tokens from
@@ -98,7 +98,7 @@ ak-studio/
 
 **Files:** create `ak-studio/package.json`, `pnpm-workspace.yaml`, `biome.json`, `tsconfig.base.json`,
 `README.md`, one `package.json` and `tsconfig.json` per member; modify `Makefile`, `DEVELOPER_GUIDE.md`,
-`docs/specs/950-agent-kernel-studio/P0-technology-selection.md` (D8 versions).
+`docs/specs/950-agent-kernel-studio-phase-1/implementation/P0-technology-selection.md` (D8 versions).
 
 **Produces:** the commands `pnpm dev`, `pnpm build`, `pnpm test`, `pnpm lint`, `pnpm typecheck`,
 `pnpm storybook`, `pnpm package` at `ak-studio/`; package names `@ak-studio/desktop`, `@ak-studio/renderer`,

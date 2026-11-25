@@ -1,14 +1,14 @@
 # P1a design gate: options for palette, fonts, density and theme
 
 **Date:** 24 November 2026. **Gate steps covered:** 1 (requirements), 2 (review of the sketch) and 3 (options),
-for the subjects in [P1a](../P1a-app-foundation.md#design-gate) that need no prototype to decide. Shell layout and
+for the subjects in [P1a](../../implementation/P1a-app-foundation.md#design-gate) that need no prototype to decide. Shell layout and
 the base component set need step 4 (stories) and are not settled here. **Approved 25 November 2026 by Dhananjaya Rajasinghe: all four recommendations (palette A, fonts 1, density I, follow the system with dark when unknown).** Before that, nothing here was approved. The owner
 picks; the pick is recorded in the P1a sign-off table and the README decision log.
 
 ## Sources
 
-- The briefs: `00-project-brief.md` and `01-app-components.md` on `feature/950-agent-kernel-studio-phase-1`
-  (unapproved input).
+- The briefs: `00-project-brief.md` and `01-app-components.md`, read on `feature/950-agent-kernel-studio-phase-1`
+  (unapproved input). They are now in this folder: [00](../../00-project-brief.md), [01](../../01-app-components.md).
 - The repository's current brand tokens: `docs/src/css/custom.css` (after the Open Agent Kernel rebrand).
 - The Spectrum 2 measurements from spike S1 ([spike-s1-components.md](spike-s1-components.md)).
 - Contrast is the WCAG 2 ratio, computed from the hex values below. Surfaces are the docs site's own:
