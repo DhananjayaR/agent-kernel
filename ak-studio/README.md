@@ -63,19 +63,27 @@ TypeScript 7 (without it a run is silently green: "0 modules"), so `depcruise:se
 violating fixture in `tools/depcruise-selftest/fixture/` (ignored by Biome and the tsconfigs) and fails if
 fewer than 2 modules are cruised or any rule goes unreported.
 
-**Design system (mechanism only until the P1a design gate signs off).** `packages/ui/src/theme.css` is the
-Tailwind 4 entry: the default palette is removed (`--color-*: initial`), the role colours (`surface`,
-`surface-raised`, `surface-overlay`, `text`, `text-muted`, `border-default`, `accent-primary`, `accent-ai`,
-`status-success`, `status-warning`, `status-danger`) are set per `data-theme` from stand-in values out of
-`docs/src/css/custom.css`, each marked `provisional: P1a design gate`, and the size, radius, spacing and type
-tokens are Spectrum 2 medium. `fonts.css` bundles Archivo, Inter and JetBrains Mono through `@fontsource`
-(served from the app, never fetched); which family is used where waits for the gate. Until then one stand-in
-token, `--font-ui` (Inter, class `font-ui`), is used by the placeholder page, so the app loads a bundled font.
+**Design system** (values decided at the P1a design gate, 25 November 2026). `packages/ui/src/theme.css` is the
+Tailwind 4 entry: the default palette is removed (`--color-*: initial`) and only the Studio's colour tokens exist,
+set per `data-theme` from Agent Kernel's brand (`docs/src/css/custom.css`). Surfaces (`surface`,
+`surface-raised`, `surface-overlay`); text roles (`text`, `text-muted`, `text-accent-primary`, `text-accent-ai`,
+`text-status-success|warning|danger`), each at least 4.5:1 on all three surfaces; fills (`accent-primary`,
+`accent-ai`, `status-success|warning|danger`) each with an `on-*` text colour at least 4.5:1; `border-control`
+and `focus-ring` at least 3:1; `border-default` for decorative dividers only. The naming is documented at the top
+of `theme.css`, and the values with their measured ratios in
+`docs/specs/950-agent-kernel-studio/research/p1a-design-gate-options.md` (section 6). Size, radius, spacing and
+type tokens are Spectrum 2 medium, one density (32 px controls, 40 px rows, 14 px base text, 48 px top bar).
+`fonts.css` bundles Archivo, Inter and JetBrains Mono through `@fontsource` (served from the app, never fetched):
+`font-ui` (Inter, the page default and button labels), `font-heading` (Archivo, the default for headings),
+`font-mono` (JetBrains Mono) and `mono-figures` (JetBrains Mono with tabular figures, for durations, counts and
+money). The default theme preference is `system`, which follows the OS and is dark when the OS reports neither
+(`apps/renderer/src/theme.ts`).
 The fonts are under the SIL Open Font License 1.1: their copyright lines and the licence text are in
 `apps/desktop/resources/THIRD-PARTY-NOTICES.txt`, which the packaged app ships in its `resources/` folder. The renderer imports the
 tokens from `apps/renderer/src/styles.css`; Storybook from `packages/ui/.storybook/preview.css`. The token story
-(`src/tokens.stories.tsx`) shows each role colour on each surface in both themes with its computed contrast
-ratio. `packages/ui/components.json` configures the shadcn CLI (React Aria base, style `aria-nova`); run
+(`src/tokens.stories.tsx`) renders every text-on-surface and on-fill pair as real text in both themes, with its
+computed ratio, so `pnpm test:storybook` (axe's contrast rule plus the story's own assertions) fails if a pair
+drops below 4.5:1, or a control border or focus ring below 3:1. `packages/ui/components.json` configures the shadcn CLI (React Aria base, style `aria-nova`); run
 `pnpm --filter @ak-studio/ui exec shadcn add <name>` (the pinned CLI) once the gate approves a component, and
 pin whatever it adds.
 

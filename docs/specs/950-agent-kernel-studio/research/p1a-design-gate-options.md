@@ -117,4 +117,65 @@ All three families are under the SIL Open Font License and can be bundled. **Rec
   stories (gate step 4).
 - **Base component set:** proposed in the P1a plan as only what P2 and P3 use; approved with the stories.
 - **Exact text-variant hex values** for each role and surface: produced with the token stories, once the
-  palette is chosen, and checked by the accessibility test on every story.
+  palette is chosen, and checked by the accessibility test on every story. Done: see section 6.
+
+## 6. Final values (Task 8, 25 November 2026)
+
+The approved picks as tokens in `ak-studio/packages/ui/src/theme.css`; the naming (fill, `text-*`, `on-*`,
+`border-control`, `focus-ring`) is documented at the top of that file.
+
+**How the text values were computed.** Each text role starts from its brand colour and changes only its OKLCH
+lightness (hue kept; chroma clipped into sRGB where a lighter value leaves the gamut), by the smallest step that
+gives at least 4.6:1 on the hardest surface of its theme (the overlay). 4.6 leaves a margin over 4.5, since axe
+passes a pair only when its ratio is strictly above 4.5. Non-text lines use the same method with 3.1. Because the
+overlay is the hardest surface in both themes, **one value per role per theme passes on all three surfaces; no
+per-surface variant was needed.** Values that already passed keep the brand colour (`text`, ice, dusk, dark
+warning).
+
+Two values go past the minimum. Tuned to the same ratio, the brand's orange and red converge (dark `#FF6A42`
+against `#FF6863`; light `#C53500` against `#C73034`), so danger and primary text would look the same. The brand
+keeps red darker than orange; the final values keep that order: dark primary text is the brand's own
+`--ak-primary-light` `#FF8260` (5.37:1 at worst), and light danger text is tuned to 6:1 (`#B11221`).
+
+The brand red `#DB4444` fails as a fill with both navy (4.35) and white (4.27) text, so the danger fill is
+darkened to `#D43D3E` with white text. Every other fill keeps the pure brand colour.
+
+Ratios below are computed from the hex values in `theme.css` with the WCAG 2 formula (the same code as the token
+story) and truncated to two decimals, as axe reports them. The token story renders every text and on-fill pair
+as 14 px text in both themes; `pnpm test:storybook` fails when any drops to 4.5:1 or below (axe's
+`color-contrast` rule and the story's own assertion), or when `border-control` or `focus-ring` drops below 3:1.
+
+| Token | Kind | Dark | ground / raised / overlay | Light | ground / raised / overlay | Worst case |
+|---|---|---|---|---|---|---|
+| `surface` | surface | `#011428` | | `#FFFFFF` | | |
+| `surface-raised` | surface | `#02284F` | | `#F1F5FA` | | |
+| `surface-overlay` | surface | `#0D315A` | | `#E7EEF7` | | |
+| `text` | text (4.5) | `#EAF3F8` | 16.49 / 13.16 / 11.64 | `#02284F` | 14.79 / 13.51 / 12.66 | 11.64 |
+| `text-muted` | text (4.5) | `#889ABD` | 6.54 / 5.21 / 4.61 | `#576A92` | 5.40 / 4.94 / 4.62 | 4.61 |
+| `text-accent-primary` | text (4.5) | `#FF8260` | 7.60 / 6.07 / 5.37 | `#C53500` | 5.40 / 4.93 / 4.62 | 4.62 |
+| `text-accent-ai` | text (4.5) | `#B1CDFF` | 11.52 / 9.19 / 8.13 | `#3F598A` | 6.98 / 6.37 / 5.97 | 5.97 |
+| `text-status-success` | text (4.5) | `#32AF55` | 6.53 / 5.21 / 4.61 | `#007B31` | 5.41 / 4.94 / 4.63 | 4.61 |
+| `text-status-warning` | text (4.5) | `#F7A544` | 9.20 / 7.34 / 6.49 | `#995C00` | 5.40 / 4.93 / 4.62 | 4.62 |
+| `text-status-danger` | text (4.5) | `#FF6863` | 6.54 / 5.22 / 4.62 | `#B11221` | 7.05 / 6.44 / 6.03 | 4.62 |
+| `border-control` | non-text (3) | `#597EAE` | 4.43 / 3.53 / 3.12 | `#7D8794` | 3.64 / 3.32 / 3.11 | 3.11 |
+| `focus-ring` | non-text (3) | `#FF5E32` | 6.09 / 4.86 / 4.30 | `#EF4E20` | 3.63 / 3.31 / 3.10 | 3.10 |
+| `border-default` | decorative | `#173964` | 1.59 / 1.27 / 1.12 | `#D3DEEC` | 1.36 / 1.24 / 1.16 | n/a (decorative) |
+
+| Fill | Dark fill / on-fill | ratio | Light fill / on-fill | ratio |
+|---|---|---|---|---|
+| `accent-primary` / `on-accent-primary` | `#FF5E32` / `#011428` | 6.09 | `#FF5E32` / `#011428` | 6.09 |
+| `accent-ai` / `on-accent-ai` | `#B1CDFF` / `#011428` | 11.52 | `#3F598A` / `#FFFFFF` | 6.98 |
+| `status-success` / `on-status-success` | `#26A64D` / `#011428` | 5.86 | `#26A64D` / `#011428` | 5.86 |
+| `status-warning` / `on-status-warning` | `#F7A544` / `#011428` | 9.20 | `#F7A544` / `#011428` | 9.20 |
+| `status-danger` / `on-status-danger` | `#D43D3E` / `#FFFFFF` | 4.62 | `#D43D3E` / `#FFFFFF` | 4.62 |
+
+`border-default` is a decorative divider only (panel edges, table rules); a control's boundary uses
+`border-control`.
+
+**Fonts:** `font-ui` Inter for UI and body text, and for button labels (one face across every control in a row;
+Archivo is kept for headings); `font-heading` Archivo, the default for `h1` to `h6`; `font-mono` JetBrains Mono for
+code, paths and identifiers, and `mono-figures` (JetBrains Mono with tabular figures) for durations, token counts
+and money. **Density:** Spectrum 2 medium, one density (`control-m` 32 px, `row` 40 px, `row-compact` 32 px in
+tables only, `text-ui` 14 px base, `topbar` 48 px). **Default theme:** the stored preference defaults to
+`system`; `system` follows `prefers-color-scheme` and is dark when the system reports neither dark nor light
+(`ak-studio/apps/renderer/src/theme.ts`).
