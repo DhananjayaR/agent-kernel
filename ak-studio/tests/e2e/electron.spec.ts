@@ -270,29 +270,32 @@ test("holds at 1100 px: the top bar in one row, no horizontal scroll", async () 
 		await app.evaluate(({ BrowserWindow }) => {
 			BrowserWindow.getAllWindows()[0]?.setContentSize(1100, 720);
 		});
-		await expect.poll(() => page.evaluate(() => window.innerWidth)).toBe(1100);
-		const layout = await page.evaluate(() => {
-			const bar = document.querySelector(
-				'[data-slot="top-bar"]',
-			) as HTMLElement;
-			return {
-				scrollWidth: document.documentElement.scrollWidth,
-				barHeight: bar.getBoundingClientRect().height,
-				barScroll: bar.scrollWidth - bar.clientWidth,
-				compact: bar.hasAttribute("data-compact"),
-			};
-		});
-		expect(layout).toEqual({
-			scrollWidth: 1100,
-			barHeight: 48,
-			barScroll: 0,
-			compact: false,
-		});
+		// Polled: the resize reaches the page, then the top bar measures itself again.
+		await expect
+			.poll(() =>
+				page.evaluate(() => {
+					const bar = document.querySelector(
+						'[data-slot="top-bar"]',
+					) as HTMLElement;
+					return {
+						innerWidth: window.innerWidth,
+						scrollWidth: document.documentElement.scrollWidth,
+						barHeight: bar.getBoundingClientRect().height,
+						barScroll: bar.scrollWidth - bar.clientWidth,
+						compact: bar.hasAttribute("data-compact"),
+					};
+				}),
+			)
+			.toEqual({
+				innerWidth: 1100,
+				scrollWidth: 1100,
+				barHeight: 48,
+				barScroll: 0,
+				compact: false,
+			});
 	});
 });
 
-// The request gate sits on Chromium's network stack (session.webRequest): it sees the renderer's requests and
-// main's `net` requests, not Node networking (`fetch`, `http`, `net` modules) in the main process.
 test("makes no network request (Chromium requests only; Node networking in main is not covered)", async () => {
 	await withStudio(async ({ app, page }) => {
 		await expect(appVersion(page)).not.toBeEmpty();
@@ -306,10 +309,11 @@ test("makes no network request (Chromium requests only; Node networking in main 
 });
 
 // A font the CSP blocks never reaches the request gate, so a zero count alone would not catch it: this test
-// records `securitypolicyviolation` events from the first script on, and checks where the font file came from.
+// records `securitypolicyviolation` events from the first script on, and checks where the loaded faces' files are
+// declared (their @font-face sources, resolved) and, when resource timing records them, where they were fetched.
 test("uses the bundled fonts (UI, heading, mono), loaded from app:// with no CSP violation", async () => {
 	await withStudio(async ({ app, page }) => {
-		// The window loaded before the test could add a listener: add it as an init script, then reload.
+		// The window loaded before the test could add a listener: add it as an init script, then load again.
 		await page.addInitScript(() => {
 			const w = window as unknown as { __cspViolations: string[] };
 			w.__cspViolations = [];
@@ -319,9 +323,8 @@ test("uses the bundled fonts (UI, heading, mono), loaded from app:// with no CSP
 				);
 			});
 		});
-		// Load the page again from its root. The test reads where each font came from in the resource timing
-		// entries, and in Electron 45 a reload of `app://studio/#/canvas` left none (not even the script's); loading
-		// the root records them (it redirects to `#/canvas` after).
+		// From the root (it redirects to `#/canvas`). Resource timing is not dependable here: in Electron 45 some
+		// loads record no resource entry at all (not even the script's), so the sources come from the CSS.
 		await page.goto("app://studio/");
 		await expect(appVersion(page)).not.toBeEmpty();
 		const fonts = await page.evaluate(async () => {
@@ -349,9 +352,26 @@ test("uses the bundled fonts (UI, heading, mono), loaded from app:// with no CSP
 					loaded.push({ family: face.family, status: face.status });
 			}
 			await document.fonts.ready;
+			// Where each loaded family's files are declared: the @font-face `src` URLs, resolved against their
+			// stylesheet (the bundled CSS on app://).
+			const families = new Set(loaded.map((face) => face.family));
+			const sources: string[] = [];
+			for (const sheet of document.styleSheets) {
+				for (const rule of sheet.cssRules) {
+					if (!(rule instanceof CSSFontFaceRule)) continue;
+					const family = rule.style
+						.getPropertyValue("font-family")
+						.replace(/["']/g, "");
+					if (!families.has(family)) continue;
+					const src = rule.style.getPropertyValue("src");
+					for (const m of src.matchAll(/url\(["']?([^"')]+)["']?\)/g))
+						sources.push(new URL(m[1] ?? "", sheet.href ?? location.href).href);
+				}
+			}
 			return {
 				used,
 				loaded,
+				sources,
 				files: performance
 					.getEntriesByType("resource")
 					.map((entry) => entry.name)
@@ -368,10 +388,12 @@ test("uses the bundled fonts (UI, heading, mono), loaded from app:// with no CSP
 			new Set(["Inter Variable", "Archivo Variable", "JetBrains Mono"]),
 		);
 		for (const face of fonts.loaded) expect(face.status).toBe("loaded");
-		expect(fonts.files.length).toBeGreaterThan(0);
-		for (const file of fonts.files) {
+		// Every file the loaded faces can come from is a bundled asset on app://. Resource timing, when it records
+		// the fetches (not on every load in Electron 45), must agree.
+		expect(fonts.sources.length).toBeGreaterThan(0);
+		for (const file of [...fonts.sources, ...fonts.files]) {
 			expect(file).toMatch(
-				/^app:\/\/studio\/assets\/(inter|archivo|jetbrains-mono)-[^/]+\.woff2$/,
+				/^app:\/\/studio\/assets\/(inter|archivo|jetbrains-mono)-[^/]+\.woff2?$/,
 			);
 		}
 		expect(fonts.violations).toEqual([]);
