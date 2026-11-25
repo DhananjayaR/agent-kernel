@@ -9,8 +9,9 @@ The display name is "OAK Studio" (window title, menus, About, the `productName`)
 Kernel Studio" on first mention and in the About panel and the package description; identifiers keep their form
 (`ak-studio/`, `@ak-studio/*`, the `ak-studio` executable, the app id). The palette is already the token palette
 (`packages/ui/src/theme.css`). Interface icons are Tabler outline icons (`@tabler/icons-react`, pinned; Biome's
-`noRestrictedImports` refuses `lucide-react`), stroke 2, at the sizes the lucide icons had (16 px, `size-4`, almost
-everywhere; 12 px for the checkbox mark, 14 px in Tag and PathChip, 24 px in EmptyState's disc), and always `aria-hidden`
+`noRestrictedImports` refuses `lucide-react`), stroke 2, in two sizes: 16 px (inline, controls, chips; the default
+`theme.css` gives `.tabler-icon`) and 20 px (`size-5`: the top bar, empty states, larger affordances). Storybook's
+`afterEach` (`.storybook/preview.tsx`) fails any story that shows an icon of another size. Icons are always `aria-hidden`
 (Tabler, unlike the lucide it replaced, does not hide them itself): the control around an icon carries the name.
 The top bar starts with the mark, `packages/ui/src/assets/oak-mark-orange.svg`, a byte-for-byte copy of
 `branding/logo-mark/oak-mark-orange.svg` (a unit test compares them, line endings normalised; the Studio
@@ -20,7 +21,7 @@ the production CSP. The app icon, `apps/desktop/build/icon.png` (1024 x 1024: th
 `pnpm make-app-icon` (`tools/make-app-icon.mjs`, Playwright's Chromium); run it again when the mark changes and
 commit the PNG. electron-builder makes the Linux icon sizes, the macOS `.icns` and the Windows `.ico` from it (its
 converter works on Linux too), and main sets it as the window icon on Linux (from `resources/icon.png` when
-packaged).
+packaged). The icon is a full-bleed square; the macOS rounded-square template is made with signing, in P12.
 
 ```bash
 cd ak-studio
@@ -30,6 +31,7 @@ pnpm typecheck   # tsc -b over all members
 pnpm test        # every member's unit tests (Vitest), then check-palette's own test
 pnpm check-palette        # no default-palette class, arbitrary value or colour literal in apps/renderer, packages/ui
 pnpm make-app-icon        # render apps/desktop/build/icon.png from branding/logo-mark/oak-mark-orange.svg
+pnpm third-party-notices  # rewrite the bundled-code licences in apps/desktop/resources/THIRD-PARTY-NOTICES.txt
 pnpm storybook            # Storybook dev server for packages/ui on 127.0.0.1:6006
 pnpm build-storybook      # static Storybook into packages/ui/storybook-static/
 pnpm test:storybook       # every story, dark and light, in headless Chromium with axe (fails on a violation)
@@ -92,7 +94,7 @@ fewer than 2 modules are cruised or any rule goes unreported.
 
 **Design system** (values decided at the P1a design gate, 25 November 2026). `packages/ui/src/theme.css` is the
 Tailwind 4 entry: the default palette is removed (`--color-*: initial`) and only the Studio's colour tokens exist,
-set per `data-theme` from Agent Kernel's brand (`docs/src/css/custom.css`). Surfaces (`surface`,
+set per `data-theme` from OAK's brand (`docs/src/css/custom.css`). Surfaces (`surface`,
 `surface-raised`, `surface-overlay`); text roles (`text`, `text-muted`, `text-accent-primary`, `text-accent-ai`,
 `text-status-success|warning|danger`), each at least 4.5:1 on all three surfaces; fills (`accent-primary`,
 `accent-ai`, `status-success|warning|danger`) each with an `on-*` text colour at least 4.5:1; `border-control`
@@ -102,9 +104,10 @@ of `theme.css`, and the values with their measured ratios in
 type tokens are Spectrum 2 medium, one density (32 px controls, 40 px rows, 14 px base text, 48 px top bar), in
 OAK's shape (`branding/README.md`, "Shape"): two radii, `rounded-control` (8 px) for every control, rectangular
 (buttons, icon buttons, fields, pickers, the segmented control, tags, badges, status and path chips; no pill
-buttons), and `rounded-card` (16 px) for cards and panels. Popovers and menus (10 px), the dialog (16 px), the
-table frame (6 px) and rows nested in a control (4 px) keep their measured Spectrum 2 radii; `rounded-pill` is left
-for round marks only (the switch, selection edges, the empty state's icon disc).
+buttons; the DataTable frame too, since a table is not a card), and `rounded-card` (16 px) for cards and panels.
+Popovers and menus (10 px), the dialog (16 px) and rows nested in a control (4 px) keep their measured Spectrum 2
+radii; `rounded-pill` is left for round marks only (the switch, a track rather than a box; selection edges; the
+empty state's icon disc).
 `fonts.css` bundles Archivo, Inter and JetBrains Mono through `@fontsource` (served from the app, never fetched):
 `font-ui` (Inter, the page default and every button label but one), `font-heading` (Archivo, the default for
 headings, and the primary button's label in SemiBold, `font-heading font-cta`: "Archivo for headlines and CTA
@@ -114,7 +117,10 @@ money). The default theme preference is `system`, which follows the OS and is da
 (`apps/renderer/src/theme.ts`). Chromium reports light when the OS gives no signal (for example bare Linux), so in practice such a machine
 opens light; the dark fallback applies only where neither scheme is reported.
 The fonts are under the SIL Open Font License 1.1: their copyright lines and the licence text are in
-`apps/desktop/resources/THIRD-PARTY-NOTICES.txt`, which the packaged app ships in its `resources/` folder. The renderer imports the
+`apps/desktop/resources/THIRD-PARTY-NOTICES.txt`, which the packaged app ships in its `resources/` folder. The same file
+lists every package bundled into main and the renderer with its licence text, written by `pnpm third-party-notices`
+(`tools/third-party-notices.mjs`: a production build with source maps names the packages; the two the stylesheet
+compiles in, Tailwind's preflight and tw-animate-css, are listed in the script). Run it after a dependency change. The renderer imports the
 tokens from `apps/renderer/src/styles.css`; Storybook from `packages/ui/.storybook/preview.css`. The token story
 (`src/tokens.stories.tsx`) renders every text-on-surface and on-fill pair as real text in both themes, with its
 computed ratio, so `pnpm test:storybook` (axe's contrast rule plus the story's own assertions) fails if a pair
@@ -205,7 +211,7 @@ bottom panel clears the outer tab state for its own Tabs (as React Aria's TabPan
 regression). In the app
 (`apps/renderer/src/shell/`), the tabs are hash routes (`#/canvas` ... `#/deploy`) whose empty states name the phase
 that fills them; no project can be opened before P2, so everything project-scoped shows its not-yet state (the switcher "No project open", the run control "No project to run" with no start control, the deploy status "Not deployed", the coding agent "not set up"); Build with AI opens a popover saying it arrives in P6; settings open a modal with
-the theme; the status bar shows the Studio's version (the project's Agent Kernel version is a separate slot P2
+the theme; the status bar shows the Studio's version (the project's OAK version is a separate slot P2
 fills). A failed layout save is a background toast.
 
 **check-palette: known limits.** It reads source as text, so it cannot see class names built at run time
@@ -238,7 +244,10 @@ installer on Windows, a dmg on macOS (Windows and macOS are configured, not yet 
 asar holds `out/` and `package.json` only (the contract and zod are bundled into main, so no `node_modules`).
 The product name is "OAK Studio" and `appId` (`ai.yaala.kernel.studio`) is unchanged; P12 confirms both. The
 icon comes from `build/` (`buildResources`), and `build/icon.png` also ships as `resources/icon.png` for the Linux
-window icon (`pnpm test:packaged` checks it is there). Electron fuses are flipped at
+window icon (`pnpm test:packaged` checks it is there). On Linux, `desktopName` (`oak-studio.desktop`, in
+`apps/desktop/package.json`) with `linux.syncDesktopName` names the launcher entry and its `StartupWMClass`
+(`oak-studio`), and Electron takes the window's app id from the same field, so the desktop links the window to the
+launcher. Electron fuses are flipped at
 package time: `RunAsNode`, `EnableNodeOptionsEnvironmentVariable`, `EnableNodeCliInspectArguments` and
 `GrantFileProtocolExtraPrivileges` off; `EnableCookieEncryption`, `OnlyLoadAppFromAsar` and
 `EnableEmbeddedAsarIntegrityValidation` (macOS and Windows only; no effect on Linux) on. So

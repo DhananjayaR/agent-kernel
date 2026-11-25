@@ -24,7 +24,8 @@
 		"depcruise:selftest": "node tools/depcruise-selftest/run.mjs",
 		"check-palette": "node tools/check-palette.mjs",
 		"check-palette:test": "vitest run tools/check-palette.test.mjs",
-		"make-app-icon": "node tools/make-app-icon.mjs"
+		"make-app-icon": "node tools/make-app-icon.mjs",
+		"third-party-notices": "node tools/third-party-notices.mjs"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.6.8",

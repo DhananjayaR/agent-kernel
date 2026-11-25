@@ -17,7 +17,7 @@ export function Tag({ icon, className, children, ...props }: TagProps) {
 			data-slot="tag"
 			className={cn(
 				"inline-flex h-control-s max-w-full shrink-0 items-center gap-1 rounded-control bg-fill px-2 text-ui-sm text-text whitespace-nowrap",
-				"[&_svg]:size-3.5 [&_svg]:shrink-0",
+				"[&_svg]:size-4 [&_svg]:shrink-0",
 				className,
 			)}
 			{...props}

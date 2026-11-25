@@ -21,7 +21,29 @@ function DocumentTheme({
 	return children;
 }
 
+/** The two interface icon sizes (theme.css, `.tabler-icon`): 16 px and 20 px. */
+const ICON_SIZES = [16, 20];
+
 const preview: Preview = {
+	// Every story, after its play function: each Tabler icon on the page is 16 or 20 px square.
+	async afterEach() {
+		// The computed size, not the box: a spinning icon's bounding box is larger while it turns.
+		const off = [...document.querySelectorAll<SVGElement>("svg.tabler-icon")]
+			.map((icon) => {
+				const style = getComputedStyle(icon);
+				return {
+					name: icon.getAttribute("class") ?? "",
+					width: Number.parseFloat(style.width),
+					height: Number.parseFloat(style.height),
+				};
+			})
+			.filter(
+				({ width, height }) => !ICON_SIZES.includes(width) || height !== width,
+			)
+			.map(({ name, width, height }) => `${name} ${width}x${height}`);
+		if (off.length > 0)
+			throw new Error(`icons not 16 or 20 px:\n  ${off.join("\n  ")}`);
+	},
 	parameters: {
 		layout: "fullscreen",
 		// Every story is checked by axe in the Vitest run (`pnpm test:storybook`); a violation fails it.

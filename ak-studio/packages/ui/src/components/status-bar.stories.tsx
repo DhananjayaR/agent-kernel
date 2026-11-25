@@ -21,7 +21,7 @@ type Story = StoryObj<typeof meta>;
 
 /**
  * support-triage: the working directory and git branch at the start; the Python environment, file sync and the
- * coding agent (StatusChips), the project's Agent Kernel version (P2's slot) and the Studio's version at the end.
+ * coding agent (StatusChips), the project's OAK version (P2's slot) and the Studio's version at the end.
  */
 export const Default: Story = {
 	play: async ({ canvasElement }) => {
@@ -40,7 +40,7 @@ export const Default: Story = {
 			'[data-slot="coding-agent"] > svg',
 		) as Element;
 		await expectTokenColour(sparkle, "color", "text-text-accent-ai");
-		await expect(bar).toHaveTextContent("Agent Kernel 0.10.2");
+		await expect(bar).toHaveTextContent("OAK 0.10.2");
 		const version = bar.querySelector(
 			'[data-slot="app-version-number"]',
 		) as HTMLElement;

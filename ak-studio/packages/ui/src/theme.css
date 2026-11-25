@@ -2,7 +2,7 @@
  * OAK Studio design tokens: the Tailwind 4 entry for the renderer and Storybook.
  *
  * Decided at the P1a design gate (signed off 25 November 2026; options and measured contrast in
- * docs/specs/950-agent-kernel-studio/research/p1a-design-gate-options.md): palette A (Agent Kernel's brand from
+ * docs/specs/950-agent-kernel-studio/research/p1a-design-gate-options.md): palette A (OAK's brand from
  * docs/src/css/custom.css), Inter for UI text, Archivo for headings, JetBrains Mono for code and figures,
  * one density (Spectrum 2 medium, spike S1 measurements in research/spike-s1-components.md), and the default
  * theme follows the system (dark when unknown; apps/renderer/src/theme.ts).
@@ -178,7 +178,7 @@
 
 	/*
 	 * State colours (Task 9, base components). Spectrum 2 moves a control to the "next colour stop" on hover and
-	 * press and gives disabled controls dedicated colours, not opacity. Agent Kernel has no grey ramp, so:
+	 * press and gives disabled controls dedicated colours, not opacity. OAK has no grey ramp, so:
 	 * - the hover fills of the two filled buttons are explicit per-theme values above (the token story checks
 	 *   their on-* text at 4.5:1);
 	 * - the neutral fills are the theme's text colour mixed into transparency. Only `text`-coloured content sits
@@ -242,14 +242,14 @@
 	/*
 	 * Radii. OAK's two shapes (branding/README.md, "Shape"): `control` (8 px) for every control, rectangular
 	 * (buttons, icon buttons, fields, pickers, the segmented control, tags, badges and chips), and `card`
-	 * (16 px) for cards and panels. The floating layers and structures keep Spectrum 2's measured radii
-	 * (T corner-radius-*): `popover`, `dialog`, `table`, and `sm` for rows nested inside a control.
+	 * (16 px) for cards and panels; a table's frame takes `control` (a table is not a card). The floating layers
+	 * keep Spectrum 2's measured radii (T corner-radius-*): `popover` and `dialog`, and `sm` for rows nested
+	 * inside a control.
 	 * `pill` is for round marks only (the switch, selection edges, the empty state's icon disc), never a control.
 	 */
 	--radius-sm: 4px; /* small: tree row, tab focus, a segment inside the segmented control */
-	--radius-control: 8px; /* OAK control: buttons, fields, tags, badges, chips, menu items */
+	--radius-control: 8px; /* OAK control: buttons, fields, tags, badges, chips, menu items, table frame */
 	--radius-card: 16px; /* OAK card: cards and panels */
-	--radius-table: 6px; /* TableView outer border (L) */
 	--radius-popover: 10px; /* large: Popover, Menu */
 	--radius-dialog: 16px; /* extra-large: Dialog */
 	--radius-pill: 9999px; /* round marks only: switch, selection edges, icon disc */
@@ -371,5 +371,13 @@
 	h5,
 	h6 {
 		font-family: var(--font-heading);
+	}
+	/*
+	 * Interface icons (Tabler outline, stroke 2) come in two sizes: 16 px (inline, controls, chips; this default)
+	 * and 20 px (`size-5`: the top bar, empty states, larger affordances). Tabler's own default is 24 px.
+	 */
+	.tabler-icon {
+		width: calc(var(--spacing) * 4);
+		height: calc(var(--spacing) * 4);
 	}
 }

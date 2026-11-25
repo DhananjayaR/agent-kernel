@@ -15,7 +15,7 @@ const meta = {
 	title: "Overlays/Popover",
 	component: Popover,
 	args: {
-		title: "Agent Kernel 0.9.2",
+		title: "OAK 0.9.2",
 		trigger: (
 			<IconButton
 				aria-label="About this version"
@@ -47,7 +47,7 @@ export const Open: Story = {
 	args: { defaultOpen: true },
 	play: async () => {
 		const el = await within(document.body).findByRole("dialog", {
-			name: "Agent Kernel 0.9.2",
+			name: "OAK 0.9.2",
 		});
 		const layer = el.closest("[data-slot=popover]") as HTMLElement;
 		await expectSolidLayer(layer);

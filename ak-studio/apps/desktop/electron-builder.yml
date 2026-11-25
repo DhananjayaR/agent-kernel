@@ -49,6 +49,9 @@ linux:
   target:
     - AppImage
   executableName: ak-studio
+  # desktopName (package.json, "oak-studio.desktop") names the .desktop entry and its StartupWMClass; Electron
+  # takes its app_id / WM_CLASS from the same field, so the desktop links the running window to the launcher.
+  syncDesktopName: true
   category: Development
 win:
   # Configured, not built in P1a (Windows is deferred).

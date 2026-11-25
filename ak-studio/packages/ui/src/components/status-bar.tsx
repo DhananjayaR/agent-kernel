@@ -1,6 +1,6 @@
 // StatusBar: the 32 px bar at the bottom of the window (the `contentinfo` landmark). At the start: the working
 // directory (PathChip) and the git branch. At the end: the Python environment, the file sync state and the coding
-// agent's state (StatusChips: icon and label), the project's Agent Kernel version (a slot P2 fills, with its own
+// agent's state (StatusChips: icon and label), the project's OAK version (a slot P2 fills, with its own
 // design at P2's gate), and the Studio's own version. Every item is optional: an item with nothing to say is not
 // drawn. It never scrolls sideways: the path shrinks first (cut in the middle, the folder name kept), then the
 // branch; the start keeps at least 128 px. Items at the end keep their size; below about 1100 px, with every item
@@ -28,7 +28,7 @@ export type StatusBarProps = {
 	python?: StatusBarState;
 	fileSync?: StatusBarState;
 	codingAgent?: StatusBarState;
-	/** The project's Agent Kernel version: the slot P2 fills. */
+	/** The project's OAK version: the slot P2 fills. */
 	kernelVersion?: ReactNode;
 	/** The Studio's own version ("0.1.0"). */
 	appVersion?: string;

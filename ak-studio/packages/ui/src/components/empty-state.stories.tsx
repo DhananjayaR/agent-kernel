@@ -10,7 +10,7 @@ const meta = {
 	args: {
 		title: "No projects yet",
 		description:
-			"Open a folder that holds an Agent Kernel project to see its agents, code and configuration.",
+			"Open a folder that holds an OAK project to see its agents, code and configuration.",
 		icon: <IconFolderOpen aria-hidden="true" />,
 		action: (
 			<>

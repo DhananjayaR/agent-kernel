@@ -83,7 +83,7 @@ export const supportTriageStatus: StatusBarProps = {
 	python: { status: "passed", label: "Python 3.12 (.venv)" },
 	fileSync: { status: "passed", label: "Files in sync" },
 	codingAgent: { status: "passed", label: "Claude Agent connected" },
-	kernelVersion: <span className="mono-figures">Agent Kernel 0.10.2</span>,
+	kernelVersion: <span className="mono-figures">OAK 0.10.2</span>,
 	appVersion: "0.1.0",
 };
 

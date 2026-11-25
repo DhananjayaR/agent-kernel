@@ -22,7 +22,7 @@ export const THEME_KEYS = {
 		"ui-3xl",
 		"heading",
 	],
-	radius: ["sm", "control", "card", "table", "popover", "dialog", "pill"],
+	radius: ["sm", "control", "card", "popover", "dialog", "pill"],
 	spacing: [
 		"control-s",
 		"control-m",

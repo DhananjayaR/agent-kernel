@@ -119,7 +119,7 @@ const column = (canvasElement: HTMLElement, name: RegExp) =>
 	within(canvasElement).getByRole("columnheader", { name });
 
 /**
- * A 32 px bold header on the raised surface, 40 px rows, 16 px cell padding, a 6 px radius on a decorative
+ * A 32 px bold header on the raised surface, 40 px rows, 16 px cell padding, the 8 px control radius on a decorative
  * border; sorted by command, ascending, shown with an arrow and aria-sort.
  */
 export const Default: Story = {
@@ -147,7 +147,7 @@ export const Default: Story = {
 		const frame = canvasElement.querySelector(
 			"[data-slot=data-table-frame]",
 		) as HTMLElement;
-		await expectStyle(frame, "border-top-left-radius", "6px");
+		await expectStyle(frame, "border-top-left-radius", "8px");
 		await expectTokenColour(frame, "border-top-color", "border-border-default");
 		const bodyRows = within(canvasElement).getAllByRole("row").slice(1);
 		await expect(bodyRows.map((r) => r.textContent?.split(" ")[0])).toEqual([

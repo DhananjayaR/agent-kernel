@@ -64,7 +64,7 @@ function ChipAction({
 					"press focus-ring flex size-control-s shrink-0 cursor-default items-center justify-center rounded-control text-text outline-none",
 					motion,
 					"data-hovered:bg-fill data-pressed:bg-fill-hover",
-					"[&_svg]:size-3.5",
+					"[&_svg]:size-4",
 				)}
 			>
 				{children}

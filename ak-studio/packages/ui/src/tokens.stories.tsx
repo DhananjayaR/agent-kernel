@@ -319,7 +319,6 @@ const SIZE_TOKENS = [
 	"--radius-sm",
 	"--radius-control",
 	"--radius-card",
-	"--radius-table",
 	"--radius-popover",
 	"--radius-dialog",
 	"--text-ui-xs",
@@ -344,7 +343,7 @@ const meta = {
 		docs: {
 			description: {
 				component:
-					"Tokens decided at the P1a design gate (25 November 2026): Agent Kernel's palette, Inter, Archivo and JetBrains Mono, Spectrum 2 medium density.",
+					"Tokens decided at the P1a design gate (25 November 2026): OAK's palette, Inter, Archivo and JetBrains Mono, Spectrum 2 medium density.",
 			},
 		},
 	},

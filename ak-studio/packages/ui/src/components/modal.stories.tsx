@@ -24,8 +24,8 @@ const meta = {
 		trigger: <Button>Show environment</Button>,
 		children: (
 			<p>
-				The project runs on Python 3.12 from <code>.venv</code>. Agent Kernel
-				0.9.2 is installed with the OpenAI Agents and LangGraph extras.
+				The project runs on Python 3.12 from <code>.venv</code>. OAK 0.9.2 is
+				installed with the OpenAI Agents and LangGraph extras.
 			</p>
 		),
 		actions: (close: () => void) => (

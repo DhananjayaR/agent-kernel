@@ -1,6 +1,6 @@
 // DataTable: rows of records with columns (the Commands panel's runs, the toolchain check, the Problems panel).
 // Added with the shadcn CLI as `table` (aria-nova, React Aria `Table`), restyled to Spectrum 2's TableView: a
-// decorative 1 px border with a 6 px radius, a 32 px header in bold on the raised surface, 40 px rows (32 px
+// decorative 1 px border with the 8 px control radius, a 32 px header in bold on the raised surface, 40 px rows (32 px
 // with `density="compact"`), 16 px cell padding, decorative rules between rows. Not virtualised: it renders
 // every row. Virtualising it (React Aria `Virtualizer` with `TableLayout`, as spike S1 did) is left to the
 // first table that needs thousands of rows.
@@ -76,7 +76,7 @@ export function DataTable({
 			<div
 				data-slot="data-table-frame"
 				className={cn(
-					"relative w-full overflow-auto rounded-table border border-border-default",
+					"relative w-full overflow-auto rounded-control border border-border-default",
 					className,
 				)}
 			>

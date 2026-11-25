@@ -21,7 +21,7 @@ export const tabEmptyStates: Record<AppTabId, EmptyCopy> = {
 	config: {
 		title: "Config",
 		description:
-			"Each section of config.yaml as a form, from your Agent Kernel version's schema. It arrives in P3; editing comes in P4.",
+			"Each section of config.yaml as a form, from your OAK version's schema. It arrives in P3; editing comes in P4.",
 	},
 	"test-trace": {
 		title: "Test & trace",

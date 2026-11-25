@@ -38,7 +38,7 @@ export function EmptyState({
 			{icon ? (
 				<div
 					aria-hidden="true"
-					className="flex size-control-xl items-center justify-center rounded-pill bg-fill text-text [&_svg]:size-6"
+					className="flex size-control-xl items-center justify-center rounded-pill bg-fill text-text [&_svg]:size-5"
 				>
 					{icon}
 				</div>

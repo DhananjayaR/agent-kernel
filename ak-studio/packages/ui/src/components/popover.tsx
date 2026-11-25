@@ -1,5 +1,5 @@
 // Popover: more detail on demand, anchored to the control that opened it (the resolved version and its source in
-// the status bar, why a feature needs a newer Agent Kernel, a tool's path and version). Added with the shadcn CLI
+// the status bar, why a feature needs a newer OAK, a tool's path and version). Added with the shadcn CLI
 // (aria-nova, React Aria `DialogTrigger`, `Popover` and `Dialog`), restyled: the solid floating layer (overlay
 // surface, decorative hairline, elevated shadow, 10 px radius), 12 px padding, at most 336 px wide (Spectrum 2
 // Popover S). Not for menus (Menu) or short labels (Tooltip).

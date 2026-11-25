@@ -73,7 +73,8 @@ export function Checkbox({
 								readOnly: isReadOnly,
 							}),
 							isFocusVisible && "focus-outline",
-							"[&_svg]:size-3 [&_svg]:stroke-3",
+							// The 16 px icon, centred on the 16 px box (it overflows the 12 px inside of the border evenly).
+							"[&_svg]:size-4 [&_svg]:shrink-0",
 						)}
 					>
 						{isIndeterminate ? (

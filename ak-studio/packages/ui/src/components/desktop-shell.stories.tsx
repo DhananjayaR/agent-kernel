@@ -95,13 +95,16 @@ async function expectTopBarHolds(canvasElement: HTMLElement, except?: string) {
 		switcher &&
 			mark.compareDocumentPosition(switcher) & Node.DOCUMENT_POSITION_FOLLOWING,
 	).toBeTruthy();
-	// Nothing reaches into the bar's end padding.
-	const end = box.right - Number.parseFloat(getComputedStyle(bar).paddingRight);
-	for (const part of bar.children) {
-		await expect(part.getBoundingClientRect().right).toBeLessThanOrEqual(
-			end + 0.5,
-		);
-	}
+	// Nothing overflows the bar and its last control is whole and inside it. No exact padding is asserted: font
+	// metrics can differ by a pixel or two between systems.
+	await expect(bar.scrollWidth).toBeLessThanOrEqual(bar.clientWidth);
+	const buttons = bar.querySelectorAll("button");
+	const last = buttons[buttons.length - 1] as HTMLElement;
+	const r = last.getBoundingClientRect();
+	await expect(r.width).toBeGreaterThan(0);
+	await expect(r.left).toBeGreaterThanOrEqual(box.left);
+	await expect(r.right).toBeLessThanOrEqual(box.right);
+	await expect(last.scrollWidth).toBeLessThanOrEqual(last.clientWidth);
 	await expectNoSidewaysOverflow(shell(canvasElement), except);
 }
 

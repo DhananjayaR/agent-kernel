@@ -28,8 +28,7 @@ export const Default: Story = {
 				className="w-dialog-m"
 				actions={<Button variant="outline">Show upgrade command</Button>}
 			>
-				This project uses Agent Kernel 0.3.1. The Studio edits projects on 0.5
-				or later.
+				This project uses OAK 0.3.1. The Studio edits projects on 0.5 or later.
 			</InlineBanner>
 			<InlineBanner
 				tone="danger"
