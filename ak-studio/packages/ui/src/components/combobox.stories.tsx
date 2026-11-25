@@ -5,6 +5,7 @@ import {
 	expectHeight,
 	expectNoFocusRing,
 	expectStyle,
+	expectTokenColour,
 	hover,
 	tabTo,
 } from "../lib/story-checks";
@@ -91,7 +92,16 @@ export const PointerFocus: Story = {
 export const Disabled: Story = {
 	args: { isDisabled: true, defaultSelectedKey: "gpt-5" },
 	play: async ({ canvasElement }) => {
-		await expect(input(canvasElement)).toBeDisabled();
+		const field = input(canvasElement);
+		await expect(field).toBeDisabled();
+		const group = field.parentElement as HTMLElement;
+		await expect(group).toHaveAttribute("data-disabled");
+		await expectTokenColour(
+			group,
+			"border-top-color",
+			"border-disabled-border",
+		);
+		await expectTokenColour(field, "color", "text-disabled-text");
 	},
 };
 
@@ -103,7 +113,15 @@ export const Invalid: Story = {
 			"This framework has no model called gpt-9. Pick one from the list.",
 	},
 	play: async ({ canvasElement }) => {
-		await expect(input(canvasElement)).toHaveAttribute("aria-invalid", "true");
+		const field = input(canvasElement);
+		await expect(field).toHaveAttribute("aria-invalid", "true");
+		const group = field.parentElement as HTMLElement;
+		await expect(group).toHaveAttribute("data-invalid");
+		await expectTokenColour(
+			group,
+			"border-top-color",
+			"border-text-status-danger",
+		);
 	},
 };
 

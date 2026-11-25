@@ -7,6 +7,7 @@ import {
 	expectFocusRing,
 	expectHeight,
 	expectStyle,
+	expectTokenColour,
 	hover,
 	settle,
 	tabTo,
@@ -149,10 +150,25 @@ export const Disabled: Story = {
 		</Row>
 	),
 	play: async ({ canvasElement }) => {
-		for (const button of within(canvasElement).getAllByRole("button")) {
+		const canvas = within(canvasElement);
+		for (const button of canvas.getAllByRole("button")) {
 			await expect(button).toBeDisabled();
 			await expectDisabledLook(button);
+			await expectTokenColour(button, "color", "text-disabled-text");
 		}
+		// The filled variants take the disabled fill instead of their own.
+		for (const name of ["Open folder", "Show commands", "Destroy deployment"]) {
+			await expectTokenColour(
+				canvas.getByRole("button", { name }),
+				"background-color",
+				"bg-disabled-fill",
+			);
+		}
+		await expectTokenColour(
+			canvas.getByRole("button", { name: "Check again" }),
+			"border-top-color",
+			"border-disabled-border",
+		);
 	},
 };
 

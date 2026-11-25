@@ -1,6 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
-import { expectHeight, hover, settle, tabTo } from "../lib/story-checks";
+import {
+	expectHeight,
+	expectTokenColour,
+	hover,
+	settle,
+	tabTo,
+} from "../lib/story-checks";
 import { Checkbox } from "./checkbox";
 
 const meta = {
@@ -79,6 +85,20 @@ export const Disabled: Story = {
 		for (const checkbox of within(canvasElement).getAllByRole("checkbox")) {
 			await expect(checkbox).toBeDisabled();
 		}
+		// Selected and disabled: the disabled colours win over the selected fill.
+		const selectedBox = canvasElement.querySelectorAll(
+			"[data-slot=checkbox-box]",
+		)[1] as HTMLElement;
+		await expectTokenColour(
+			selectedBox,
+			"background-color",
+			"bg-disabled-fill",
+		);
+		await expectTokenColour(
+			selectedBox,
+			"border-top-color",
+			"border-disabled-border",
+		);
 	},
 };
 
@@ -88,12 +108,32 @@ export const Invalid: Story = {
 		isInvalid: true,
 		errorMessage: "Confirm the plan before deploying.",
 	},
+	render: (args) => (
+		<div className="flex flex-col gap-2">
+			<Checkbox {...args} />
+			<Checkbox isInvalid defaultSelected>
+				Configure Redis
+			</Checkbox>
+		</div>
+	),
 	play: async ({ canvasElement }) => {
-		const checkbox = within(canvasElement).getByRole("checkbox");
+		const checkbox = within(canvasElement).getByRole("checkbox", {
+			name: "I have read the deployment plan",
+		});
 		await expect(checkbox).toHaveAttribute("aria-invalid", "true");
 		await expect(checkbox).toHaveAccessibleDescription(
 			"Confirm the plan before deploying.",
 		);
+		// Invalid keeps the danger border, selected or not.
+		for (const box of canvasElement.querySelectorAll(
+			"[data-slot=checkbox-box]",
+		)) {
+			await expectTokenColour(
+				box,
+				"border-top-color",
+				"border-text-status-danger",
+			);
+		}
 	},
 };
 

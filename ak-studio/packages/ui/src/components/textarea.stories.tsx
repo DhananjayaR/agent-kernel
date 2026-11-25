@@ -3,6 +3,7 @@ import { expect, within } from "storybook/test";
 import {
 	expectFocusRing,
 	expectStyle,
+	expectTokenColour,
 	hover,
 	tabTo,
 } from "../lib/story-checks";
@@ -56,7 +57,13 @@ export const Focus: Story = {
 export const Disabled: Story = {
 	args: { isDisabled: true },
 	play: async ({ canvasElement }) => {
-		await expect(box(canvasElement)).toBeDisabled();
+		const textarea = box(canvasElement);
+		await expect(textarea).toBeDisabled();
+		await expectTokenColour(
+			textarea,
+			"border-top-color",
+			"border-disabled-border",
+		);
 	},
 };
 
@@ -68,6 +75,12 @@ export const Invalid: Story = {
 		errorMessage: "Enter a system prompt.",
 	},
 	play: async ({ canvasElement }) => {
-		await expect(box(canvasElement)).toHaveAttribute("aria-invalid", "true");
+		const textarea = box(canvasElement);
+		await expect(textarea).toHaveAttribute("aria-invalid", "true");
+		await expectTokenColour(
+			textarea,
+			"border-top-color",
+			"border-text-status-danger",
+		);
 	},
 };

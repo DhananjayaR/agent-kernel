@@ -1,6 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
-import { expectHeight, hover, settle, tabTo } from "../lib/story-checks";
+import {
+	expectHeight,
+	expectTokenColour,
+	hover,
+	settle,
+	tabTo,
+} from "../lib/story-checks";
 import { Switch } from "./switch";
 
 const meta = {
@@ -71,6 +77,20 @@ export const Disabled: Story = {
 		for (const control of within(canvasElement).getAllByRole("switch")) {
 			await expect(control).toBeDisabled();
 		}
+		// On and disabled: the disabled colours win over the selected fill.
+		const tracks = canvasElement.querySelectorAll("[data-slot=switch-track]");
+		const onTrack = tracks[1] as HTMLElement;
+		await expectTokenColour(onTrack, "background-color", "bg-disabled-fill");
+		await expectTokenColour(
+			onTrack,
+			"border-top-color",
+			"border-disabled-border",
+		);
+		await expectTokenColour(
+			onTrack.firstElementChild as HTMLElement,
+			"background-color",
+			"bg-disabled-text",
+		);
 	},
 };
 

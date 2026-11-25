@@ -4,6 +4,7 @@ import { expect, userEvent, within } from "storybook/test";
 import {
 	expectFocusRing,
 	expectHeight,
+	expectTokenColour,
 	hover,
 	tabTo,
 } from "../lib/story-checks";
@@ -72,6 +73,10 @@ export const Disabled: Story = {
 		for (const item of within(canvasElement).getAllByRole("radio")) {
 			await expect(item).toBeDisabled();
 		}
+		// Selected and disabled: the disabled colours win over the selected fill and its text.
+		const system = radio(canvasElement, "System");
+		await expectTokenColour(system, "background-color", "bg-disabled-fill");
+		await expectTokenColour(system, "color", "text-disabled-text");
 	},
 };
 
@@ -98,6 +103,17 @@ export const Keyboard: Story = {
 		await userEvent.keyboard("{ArrowLeft}{Enter}");
 		await expect(light).toBeChecked();
 		await userEvent.keyboard(" ");
+		await expect(light).toBeChecked();
+		// Pressed while selected keeps the selected (hover) fill, not the neutral pressed fill.
+		await userEvent.keyboard("[Space>]");
+		await expect(light).toHaveAttribute("data-pressed");
+		await expectTokenColour(
+			light,
+			"background-color",
+			"bg-accent-primary-hover",
+		);
+		await expectTokenColour(light, "color", "text-on-accent-primary");
+		await userEvent.keyboard("[/Space]");
 		await expect(light).toBeChecked();
 	},
 };

@@ -82,7 +82,8 @@ export function SegmentedControlItem({
 				"data-hovered:bg-fill data-pressed:bg-fill-hover",
 				"data-selected:bg-accent-primary data-selected:text-on-accent-primary",
 				"data-selected:data-hovered:bg-accent-primary-hover",
-				"data-disabled:text-disabled-text data-selected:data-disabled:bg-disabled-fill",
+				"data-selected:data-pressed:bg-accent-primary-hover",
+				"data-disabled:text-disabled-text data-selected:data-disabled:bg-disabled-fill data-selected:data-disabled:text-disabled-text",
 				"[&_svg]:size-4 [&_svg]:shrink-0",
 			)}
 			{...props}

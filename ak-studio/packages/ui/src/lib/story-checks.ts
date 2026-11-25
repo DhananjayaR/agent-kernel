@@ -80,3 +80,22 @@ export async function expectDisabledLook(el: Element): Promise<void> {
 	await expect(el).toHaveAttribute("data-disabled");
 	await expect(getComputedStyle(el).opacity).toBe("1");
 }
+
+/**
+ * Checks that `property` of `el` resolves to the same colour as the token utility `utility` (for example
+ * "bg-disabled-fill") in the same theme, by measuring a probe beside `el`. Proves which of two state classes
+ * that set the same property actually won.
+ */
+export async function expectTokenColour(
+	el: Element,
+	property: "background-color" | "color" | "border-top-color",
+	utility: string,
+): Promise<void> {
+	await settle(el);
+	const probe = document.createElement("span");
+	probe.className = utility;
+	(el.parentElement ?? document.body).appendChild(probe);
+	const expected = getComputedStyle(probe).getPropertyValue(property);
+	probe.remove();
+	await expect(getComputedStyle(el).getPropertyValue(property)).toBe(expected);
+}

@@ -4,6 +4,7 @@ import {
 	expectFocusRing,
 	expectHeight,
 	expectStyle,
+	expectTokenColour,
 	hover,
 	settle,
 	tabTo,
@@ -74,7 +75,14 @@ export const Focus: Story = {
 export const Disabled: Story = {
 	args: { isDisabled: true },
 	play: async ({ canvasElement }) => {
-		await expect(trigger(canvasElement)).toBeDisabled();
+		const button = trigger(canvasElement);
+		await expect(button).toBeDisabled();
+		await expectTokenColour(
+			button,
+			"border-top-color",
+			"border-disabled-border",
+		);
+		await expectTokenColour(button, "color", "text-disabled-text");
 	},
 };
 
@@ -88,6 +96,18 @@ export const Invalid: Story = {
 	play: async ({ canvasElement }) => {
 		const button = trigger(canvasElement);
 		await expect(button).toHaveAttribute("data-invalid");
+		await expectTokenColour(
+			button,
+			"border-top-color",
+			"border-text-status-danger",
+		);
+		// Focused, it stays danger (Spectrum 2: focused invalid is negative too).
+		await tabTo(button);
+		await expectTokenColour(
+			button,
+			"border-top-color",
+			"border-text-status-danger",
+		);
 		await expect(
 			within(canvasElement).getByText("Choose where to keep sessions."),
 		).toBeVisible();

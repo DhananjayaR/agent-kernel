@@ -53,7 +53,7 @@ export function Checkbox({
 							"group-data-selected/checkbox:border-accent-primary group-data-selected/checkbox:bg-accent-primary",
 							"group-data-indeterminate/checkbox:border-accent-primary group-data-indeterminate/checkbox:bg-accent-primary",
 							"group-data-selected/checkbox:group-data-hovered/checkbox:border-accent-primary-hover group-data-selected/checkbox:group-data-hovered/checkbox:bg-accent-primary-hover",
-							"group-data-invalid/checkbox:border-text-status-danger",
+							"group-data-invalid/checkbox:border-text-status-danger group-data-invalid/checkbox:group-data-selected/checkbox:border-text-status-danger",
 							"group-data-disabled/checkbox:border-disabled-border group-data-disabled/checkbox:bg-disabled-fill group-data-disabled/checkbox:text-disabled-text",
 							"group-data-selected/checkbox:group-data-disabled/checkbox:border-disabled-border group-data-selected/checkbox:group-data-disabled/checkbox:bg-disabled-fill",
 							"group-data-focus-visible/checkbox:focus-outline",

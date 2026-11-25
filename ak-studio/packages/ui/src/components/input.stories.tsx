@@ -5,6 +5,7 @@ import {
 	expectHeight,
 	expectNoFocusRing,
 	expectStyle,
+	expectTokenColour,
 	hover,
 	tabTo,
 } from "../lib/story-checks";
@@ -81,6 +82,12 @@ export const Disabled: Story = {
 		const input = box(canvasElement);
 		await expect(input).toBeDisabled();
 		await expectStyle(input, "opacity", "1");
+		await expectTokenColour(
+			input,
+			"border-top-color",
+			"border-disabled-border",
+		);
+		await expectTokenColour(input, "color", "text-disabled-text");
 	},
 };
 
@@ -94,6 +101,11 @@ export const Invalid: Story = {
 	play: async ({ canvasElement }) => {
 		const input = box(canvasElement);
 		await expect(input).toHaveAttribute("aria-invalid", "true");
+		await expectTokenColour(
+			input,
+			"border-top-color",
+			"border-text-status-danger",
+		);
 		await expect(
 			within(canvasElement).getByText(
 				"Use lowercase letters, digits and hyphens.",

@@ -36,6 +36,7 @@ export function Switch({ children, className, ...props }: SwitchProps) {
 					"group-data-selected/switch:border-accent-primary group-data-selected/switch:bg-accent-primary",
 					"group-data-selected/switch:group-data-hovered/switch:border-accent-primary-hover group-data-selected/switch:group-data-hovered/switch:bg-accent-primary-hover",
 					"group-data-disabled/switch:border-disabled-border group-data-disabled/switch:bg-disabled-fill",
+					"group-data-selected/switch:group-data-disabled/switch:border-disabled-border group-data-selected/switch:group-data-disabled/switch:bg-disabled-fill",
 					"group-data-focus-visible/switch:focus-outline",
 				)}
 			>
@@ -44,7 +45,7 @@ export function Switch({ children, className, ...props }: SwitchProps) {
 						"size-2 rounded-pill bg-text-muted",
 						motion,
 						"group-data-selected/switch:translate-x-3 group-data-selected/switch:bg-on-accent-primary",
-						"group-data-disabled/switch:bg-disabled-text",
+						"group-data-disabled/switch:bg-disabled-text group-data-selected/switch:group-data-disabled/switch:bg-disabled-text",
 					)}
 				/>
 			</span>
