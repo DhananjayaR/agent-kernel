@@ -1,7 +1,13 @@
 # Phase 1 plan: a local desktop app
 
+**What this file is.** The product plan for Phase 1: what the app does, how it works on the user's computer,
+and why it is shaped this way. The build plan, in implementation phases P0 to P12, is
+[implementation/](implementation/); progress and decisions are in the [README](README.md). The
+[PRD](PHASE-1-PRD.md) is the source of scope.
+
 **Status:** planned, and the screens are designed on the [design canvas](https://claude.ai/artifact/VSewdGFtfYAQe4zGFVt3po) (see the artboard map in [README.md](README.md)). Nothing is built as an app yet. Items marked **Assumption** are my defaults and need a yes
-or a correction before design starts.
+or a correction before design starts. (Since then: the P1a app shell is built in `ak-studio/`, and most
+assumptions are settled; each says so below. See the README's [Progress](README.md#progress).)
 
 **Revised 25 November 2026** after the develop merge: the Open Agent Kernel (OAK) name and identity, five
 deploy targets now that Azure Functions is retired, the agent registry, and access rules as a business-rule
@@ -48,6 +54,21 @@ outlives the app.
 
 Later phases are not planned here. Their briefs are parked in [later-phases/](later-phases/).
 
+**Phase 1 milestones.** The PRD splits Phase 1 into six milestones (section 5). The implementation calls
+Phase 1 "Release 1" and builds it in phases P0 to P12, in the milestones' order. The outcome column is the
+team's build order, kept here.
+
+| PRD milestone | Outcome | Implementation phases |
+|---|---|---|
+| Before 1 | Technology chosen; app foundation (workspace, shell, bridge, design system); data and feature layer, shared patterns, Studio skills | [P0](implementation/P0-technology-selection.md), [P1a](implementation/P1a-app-foundation.md), [P1b](implementation/P1b-data-layer-and-patterns.md) |
+| 1. Open and read | Open a folder, detect an OAK project, show it on a read-only canvas and in Code and Config | [P2](implementation/P2-project-and-kernel-version.md), [P3](implementation/P3-read-only-builder.md) |
+| 2. Coding agent | Build with AI drawer over local Claude Code, through the coding-agent interface; accept and revert; business rules, rule tests and `ak rules check` | [P6](implementation/P4-P12.md#p6--build-with-ai), [P7](implementation/P4-P12.md#p7--business-rules) |
+| 3. Create and edit | New project wizard; config editing; adding nodes through scaffold templates | [P4](implementation/P4-P12.md#p4--create-and-configure-a-project), [P5](implementation/P4-P12.md#p5--build-on-the-canvas) |
+| 4. Run and test | Local server, chat, trace from the run's events and the local OTLP receiver, test file with judge reasons, run history and comparison, simulated users, the CI workflow | [P8](implementation/P4-P12.md#p8--run-chat-and-trace), [P9](implementation/P4-P12.md#p9--tests-scenarios-and-ci) |
+| 5. Deploy | Generate Terraform for one target; remote state backend; prerequisites, plan, confirm, apply, outputs, destroy | [P10](implementation/P4-P12.md#p10--deploy-to-one-target) |
+| 6. More targets | The remaining Terraform targets | [P11](implementation/P4-P12.md#p11--the-remaining-targets) |
+| None (installers are a PRD deliverable) | Signed installers for Windows, Linux and macOS | [P12](implementation/P4-P12.md#p12--packaging-and-release) |
+
 ## The user's journey in Phase 1
 
 1. **Start.** Launch the app. Open a folder, or start a new project. The app checks the local toolchain.
@@ -86,17 +107,25 @@ by the app is an ordinary OAK project that works without the app.
 
 ## Principles
 
+The first five are the PRD's requirements that apply everywhere (section 4); this plan adds the sixth. Every
+implementation phase keeps them. The additions from the implementation's decision log are marked.
+
 1. **Files are the source of truth.** The canvas and the Config tab are views of the files. If a file changes
    on disk, in an editor or by the coding agent, the app re-reads it.
 2. **Every command is visible.** The app runs `uv`, `python`, `terraform`, `docker` and the coding agent on the
    user's computer. Each command appears in a Commands panel with its output and exit status.
 3. **Real infrastructure needs an explicit yes.** `terraform apply` and `terraform destroy` run only after the
-   user has seen the plan and confirmed, naming the cloud account they affect.
+   user has seen the plan and confirmed, naming the cloud account they affect. *Implementation addition:* so
+   does creating the Terraform state backend, which is real infrastructure.
 4. **Credentials stay where they are.** The app uses the cloud profile already configured on the computer and
    never stores or displays cloud keys. Model keys live in `.env`; the UI shows key names only.
+   *Implementation addition:* a secret is a key name plus the OAK secret provider that resolves it; `.env` is
+   the local store of the `env` provider. The app never reads, stores or proxies Claude Code's credentials.
 5. **Nothing depends on the app.** Close the app and the folder is still a complete, runnable project.
 6. **No telemetry without consent.** Usage data is off by default and opt-in. With it off, the app makes no
    network calls of its own; the tools it runs and the project's model providers make their own.
+   *Implementation addition:* that holds in the renderer and the main process, and no project data leaves the
+   computer through the app.
 
 ## Built for the next phases
 
@@ -132,21 +161,14 @@ Phase 1 builds neither, but its seams are shaped so that both are additions, not
 
 ## Architecture sketch
 
-**Assumption:** Electron with a React and TypeScript renderer.
-
-| Layer | Piece | Responsibility |
-|-------|-------|----------------|
-| Renderer | The UI from these briefs | No direct file or process access; talks to the main process over a narrow, typed bridge. Uses no Electron-only API, so it can run in a browser. |
-| Bridge | Typed calls and events | One contract between renderer and services; the transport is Electron IPC in Phase 1 and can become HTTP or WebSocket for a hosted Studio |
-| Main process | Project service | Open and create folders, read and write project files, watch for changes on disk |
-| Main process | Introspection | Run a Python helper inside the project's environment to turn the project into a graph for the canvas |
-| Main process | Run service | Create the environment (`uv venv`, `uv sync`), start and stop the local server, stream its log, receive its OpenTelemetry spans on a local OTLP receiver, record test runs |
-| Main process | Agent bridge | The agent-neutral coding-agent interface and its Claude Code adapter: start the agent in the working directory, stream its events, relay permission requests. Takes the checkpoint before each turn. |
-| Main process | Rules service | Compute rule states with the same checks as `ak rules check` whenever a linked file changes |
-| Main process | Deploy service | Create the state backend, package, run Terraform in `deploy/`, parse the plan, stream logs, record deploy history |
-| Main process | Toolchain and secrets | Detect installed tools; read and write `.env`; never expose values to the renderer |
-
-All commands run inside the working directory. The renderer cannot start a process by itself.
+**Decided in P0** (no longer an assumption): Electron with a React and TypeScript renderer. The renderer is
+browser-safe and has no file or process access. It reaches the main process only through one typed bridge
+whose transport can change (Electron IPC now, WebSocket later). Main-process services, one per domain, own the
+project files, the commands, the local run, the coding-agent adapter, rules, deploy and secrets; only the
+command runner starts a process, and every command runs inside the working directory. The design, with its
+layers, services, contract shapes and jobs, is [implementation/architecture.md](implementation/architecture.md).
+The rules service calls `ak rules check` (one implementation, in Python) rather than computing the same checks
+itself ([decision log](README.md#decision-log), 25 Nov 2026).
 
 ## Local toolchain
 
@@ -175,52 +197,57 @@ All commands run inside the working directory. The renderer cannot start a proce
 
 ## Suggested build order
 
-| Milestone | Outcome |
-|-----------|---------|
-| 1. Open and read | Open a folder, detect an OAK project, show it on a read-only canvas and in Code and Config |
-| 2. Coding agent | Build with AI drawer over local Claude Code, through the coding-agent interface; accept and revert; business rules, rule tests and `ak rules check` |
-| 3. Create and edit | New project wizard; config editing; adding nodes through scaffold templates |
-| 4. Run and test | Local server, chat, trace from the run's events and the local OTLP receiver, test file with judge reasons, run history and comparison, simulated users, the CI workflow |
-| 5. Deploy | Generate Terraform for one target; remote state backend; prerequisites, plan, confirm, apply, outputs, destroy |
-| 6. More targets | The remaining Terraform targets |
+The build order is the PRD's milestones, mapped to the implementation phases under
+[Phases at a glance](#phases-at-a-glance). The phases' dependencies are in the README's
+[Order and dependencies](README.md#order-and-dependencies) and in [P4-P12.md](implementation/P4-P12.md#order).
 
 The coding agent and business rules come before canvas editing: they are what sets the app apart, and canvas
 editing is its costliest part. Nothing is dropped by the order.
 
 ## Risks and open questions
 
-| Topic | Why it matters | My default |
-|-------|----------------|-----------|
-| Canvas to code | Turning canvas edits into correct Python across eight frameworks is the hardest part of Phase 1 | Read by introspection. Write config deterministically. Write Python only through scaffold templates and the coding agent. No general-purpose Python rewriting. |
-| Code the canvas cannot read | A syntax error or an unusual project layout breaks the view | A clear "cannot read" state that points to the file and offers the coding agent |
-| Local trace detail | Stream events alone give frameworks without streaming run-level timing only, and carry no token usage | Stream events for the live view; a local OTLP receiver for span detail, tokens and cost in every framework. Run-level timing only when neither source has detail. |
-| Reverting agent changes | "Revert" must restore files exactly | Use git when the folder is a repository, otherwise app snapshots |
-| Terraform state | Local state files are easy to lose and must not be committed | A remote backend by default, created by the app after a confirmation that names the account, written to `deploy/backend.tf`. Local state stays available as an explicit choice for scratch deploys, with a visible warning. |
-| Coding-agent terms | Anthropic does not allow third-party products to offer claude.ai login or subscription limits, and tightened enforcement in 2026 | The app launches the Claude Code the user installed and signed in to, and never reads, stores or proxies its credentials. Confirm this with Anthropic before release, and settle the hosted-Studio model (API keys or commercial terms) in the same conversation. |
-| One coding agent | If Claude Code's terms or availability change, Build with AI and business rules stop | The coding-agent interface keeps a second adapter a contained piece of work |
-| Secrets in Terraform | Model keys must reach the deployment without being written into `terraform.tfvars` | Pass them as Terraform environment variables at run time |
-| Cost and safety | Applying creates billable resources | Plan first, name the account, confirm, and always offer destroy |
-| Three operating systems | The skills generate bash scripts (`build.sh`, `deploy.sh`) and Unix-style commands. Windows paths, line endings and process handling differ. Installers need signing on macOS and Windows. | The Run and Deploy services call `uv`, `terraform` and `docker` directly with argument lists, never through a shell script. The scripts are still written for people who use a terminal, and need Git Bash or WSL on Windows. Test on all three before release. |
-| One target per project | Several environments multiply state and variables | **Assumption:** one deploy target per project in Phase 1, in `deploy/` |
-| Re-skin not reviewed | The design system and all 45 artboards were moved to the OAK identity without rendering them | Review every artboard in the light and the dark mode before any handoff to implementation |
+| Topic | Why it matters | My default | Now |
+|-------|----------------|-----------|-----|
+| Canvas to code | Turning canvas edits into correct Python across eight frameworks is the hardest part of Phase 1 | Read by introspection. Write config deterministically. Write Python only through scaffold templates and the coding agent. No general-purpose Python rewriting. | Decided as the approach (PRD section 7, [P5](implementation/P4-P12.md#p5--build-on-the-canvas)); open parts are [decisions 5 and 6c](README.md#open-decisions) |
+| Code the canvas cannot read | A syntax error or an unusual project layout breaks the view | A clear "cannot read" state that points to the file and offers the coding agent | Planned in [P3](implementation/P3-read-only-builder.md): a cannot-read state with partial results |
+| Local trace detail | Stream events alone give frameworks without streaming run-level timing only, and carry no token usage | Stream events for the live view; a local OTLP receiver for span detail, tokens and cost in every framework. Run-level timing only when neither source has detail. | Planned in [P8](implementation/P4-P12.md#p8--run-chat-and-trace) |
+| Reverting agent changes | "Revert" must restore files exactly | Use git when the folder is a repository, otherwise app snapshots | Planned in [P6](implementation/P4-P12.md#p6--build-with-ai): a checkpoint before each turn |
+| Terraform state | Local state files are easy to lose and must not be committed | A remote backend by default, created by the app after a confirmation that names the account, written to `deploy/backend.tf`. Local state stays available as an explicit choice for scratch deploys, with a visible warning. | Decided 25 Nov 2026 ([decision log](README.md#decision-log), [P10](implementation/P4-P12.md#p10--deploy-to-one-target)) |
+| Coding-agent terms | Anthropic does not allow third-party products to offer claude.ai login or subscription limits, and tightened enforcement in 2026 | The app launches the Claude Code the user installed and signed in to, and never reads, stores or proxies its credentials. Confirm this with Anthropic before release, and settle the hosted-Studio model (API keys or commercial terms) in the same conversation. | Open: [decisions 1e and 7](README.md#open-decisions) |
+| One coding agent | If Claude Code's terms or availability change, Build with AI and business rules stop | The coding-agent interface keeps a second adapter a contained piece of work | Decided: the ACP-shaped interface ([architecture](implementation/architecture.md#the-coding-agent-and-the-users-claude-code)) |
+| Secrets in Terraform | Model keys must reach the deployment without being written into `terraform.tfvars` | Pass them as Terraform environment variables at run time | Planned in [P10](implementation/P4-P12.md#p10--deploy-to-one-target) |
+| Cost and safety | Applying creates billable resources | Plan first, name the account, confirm, and always offer destroy | Principle 3; planned in [P10](implementation/P4-P12.md#p10--deploy-to-one-target) |
+| Three operating systems | The skills generate bash scripts (`build.sh`, `deploy.sh`) and Unix-style commands. Windows paths, line endings and process handling differ. Installers need signing on macOS and Windows. | The Run and Deploy services call `uv`, `terraform` and `docker` directly with argument lists, never through a shell script. The scripts are still written for people who use a terminal, and need Git Bash or WSL on Windows. Test on all three before release. | Decided: argument lists, never a shell string ([P2](implementation/P2-project-and-kernel-version.md)). Windows and macOS are deferred to a re-entry point ([Order and dependencies](README.md#order-and-dependencies)) |
+| One target per project | Several environments multiply state and variables | **Assumption:** one deploy target per project in Phase 1, in `deploy/` | Settled by the PRD section 7 ([decision T3](README.md#open-decisions)) |
+| Re-skin not reviewed | The design system and all 45 artboards were moved to the OAK identity without rendering them | Review every artboard in the light and the dark mode before any handoff to implementation | Open: [decisions 10 and 11](README.md#open-decisions); the design gate treats the canvas as input |
 
 ## Assumptions to confirm
 
+Each item now says where it stands. Open ones link to the README's [open decisions](README.md#open-decisions).
+
 1. The deep configuration pages are parked, and Phase 1 reaches those settings through the inspector, the
-   Config tab and the coding agent.
+   Config tab and the coding agent. **Settled** by the PRD section 3 (decision T1).
 2. Claude Code is the only coding agent wired up in Phase 1, as the only adapter of an agent-neutral
-   coding-agent interface. Others appear as "not set up".
+   coding-agent interface. Others appear as "not set up". **Settled** by the PRD sections 2 and 3 (decision T4).
 3. One deploy target per project, Terraform only. The targets are the five supported Terraform modules: AWS
    serverless, AWS containerized, Azure containerized, Google Cloud serverless and containerized. Azure
-   Functions is retired (issue #957) and is not offered.
+   Functions is retired (issue #957) and is not offered. **Settled** by the PRD section 7 (decision T3); the
+   first target is open decision 8.
 4. The app keeps its own data in `.akstudio/` inside the working directory, and that folder can be committed.
+   **Settled** 25 Nov 2026: committed, except `.akstudio/runs/` (decision T5).
 5. Windows, Linux and macOS are all supported in Phase 1, from one codebase. Differences are handled in the main
-   process: paths, line endings, shell and command lookup, installers, signing and window controls.
+   process: paths, line endings, shell and command lookup, installers, signing and window controls. **In the
+   PRD.** The implementation builds on Linux first; Windows and macOS are deferred to a re-entry point
+   ([Order and dependencies](README.md#order-and-dependencies)).
 6. Electron with a React and TypeScript renderer. Where the app's source lives (this repository or a new one)
-   is open.
+   is open. **Decided:** the stack in [P0](implementation/P0-technology-selection.md) (its owner review is open
+   decision 1), and the source under `ak-studio/` in this repository (23 Nov 2026; open decision 12 tells the
+   PRD).
 7. The app wears the Open Agent Kernel identity, in a light and a dark mode (decided 25 November 2026). Two
    points in brief 00 are still my defaults: the coding agent is marked with the system's blue, and artboards
-   are drawn in the light mode.
+   are drawn in the light mode. **Identity settled.** The coding agent's blue is the same Baby Blue Ice and Dusk
+   Blue the P1a gate approved (settled). The light default is open decision 10: the app follows the system and
+   is dark when the system gives no answer.
 
 ## Phase 1 is done when
 
