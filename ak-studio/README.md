@@ -161,8 +161,7 @@ hover; existing roles only), `SettingsButton`, `BottomPanel` (Problems, Run log,
 `SettingsModal`. Fixtures and the width checks are in `src/lib/shell-fixtures.tsx`; shell stories render full bleed
 (`parameters.fullBleed`) at a set viewport (`parameters.viewport` and `globals.viewport`, which the Vitest run
 applies), so a story at 1100 px measures 1100 px. The top bar is one row: at 1100 px and wider every label shows in
-full and only the project name gives way (ellipsis, at least 96 px); below 1100 px (the window allows 800) it is
-compact: tabs 16 px apart, Build with AI shows its sparkle (name in a tooltip), the run control drops the port and
+full and only the project name gives way (ellipsis, at least 96 px); below 1100 px (the window allows 800), or when the full form does not fit (badges on the tabs), it is compact: tabs 16 px apart, Build with AI shows its sparkle (name in a tooltip), the run control drops the port and
 the deploy status its time. Nothing scrolls sideways (stories `At1100`, `At1440`, `At800Compact`; e2e at 1100 px);
 below about 1100 px the status bar may cut its last items (its narrow rule is P2's). The bottom panel collapses to
 its tab strip, so its toggle stays put; selecting a panel tab opens it; Mod+J (Ctrl+J, Cmd+J on macOS; declared in
@@ -172,8 +171,7 @@ toggle. React Aria's Tabs render their children once in a detached document to b
 react-resizable-panels refuses to mount, so `DesktopShell` mounts the panel group only once it is in a window; the
 bottom panel clears the outer tab state for its own Tabs (as React Aria's TabPanel does). In the app
 (`apps/renderer/src/shell/`), the tabs are hash routes (`#/canvas` ... `#/deploy`) whose empty states name the phase
-that fills them; no project can be opened before P2, so the switcher says "No project open" and the run control
-and deploy status are not drawn; Build with AI opens a popover saying it arrives in P6; settings open a modal with
+that fills them; no project can be opened before P2, so everything project-scoped shows its not-yet state (the switcher "No project open", the run control "No project to run" with no start control, the deploy status "Not deployed", the coding agent "not set up"); Build with AI opens a popover saying it arrives in P6; settings open a modal with
 the theme; the status bar shows the Studio's version (the project's Agent Kernel version is a separate slot P2
 fills). A failed layout save is a background toast.
 
