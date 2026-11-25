@@ -53,7 +53,7 @@ wait for the gate.
 - [ ] **State is never colour alone:** an icon or dot plus a label.
 - [ ] **The app's standing promises are visible** where they apply: files are the source of truth, every
       command is shown, real infrastructure needs an explicit yes, secrets are names only.
-- [ ] **Copy is final:** sentence case, OAK's own vocabulary and name rule, no placeholder text.
+- [ ] **Copy is final:** sentence case, the vocabulary and name rule of Open Agent Kernel (OAK), no placeholder text.
 - [ ] **Slow and failed operations are designed:** progress for anything over one second, a way to cancel long
       commands, an error that says what to do next.
 - [ ] **Motion respects** the reduced-motion setting.

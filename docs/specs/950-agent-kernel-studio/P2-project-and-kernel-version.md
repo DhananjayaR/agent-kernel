@@ -22,7 +22,7 @@ are marked unavailable instead of failing.
 
 - Welcome screen: open a folder, recent projects, toolchain check, first-launch state. The entry points
   "New project" and "Describe a project" (the AI entry) show their not-yet states until P4 and P6 fill them.
-- Project detection and the "not an OAK project" state, with "Create a project here" (wired in P4),
+- Project detection and the "not an Open Agent Kernel (OAK) project" state, with "Create a project here" (wired in P4),
   "Choose another folder" and "Cancel".
 - Toolchain detection.
 - The command runner and the Commands panel.
@@ -31,7 +31,8 @@ are marked unavailable instead of failing.
 
 **Out**
 
-- Showing the project's agents (P3). Creating a project (P4). Settings pages (P4).
+- Showing the project's agents (P3). Creating a project (P4). Settings pages (P4; the "Coding agents" section
+  in P6).
 
 ## Design gate
 
@@ -157,9 +158,9 @@ feature F?**
 | Phase | Uses the version for |
 |---|---|
 | P3 | Config form generated from the installed version's schema; canvas node kinds gated by the catalog |
+| P6, P7 | Which bundled skills exist; whether `ak rules check` exists in the installed version |
 | P4 | New project wizard picks the Agent Kernel version; templates are chosen by version range |
 | P5 | Palette tiles gated by the catalog |
-| P6, P7 | Which bundled skills exist; whether `ak rules check` exists in the installed version |
 | P8, P9 | Which stream event types and tracing options exist |
 | P10, P11 | Which deploy targets exist; which module version matches the package version |
 

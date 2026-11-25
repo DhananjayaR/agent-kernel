@@ -139,14 +139,15 @@ The component stories are reviewed for sign-off after these changes land in `ak-
 ### 1.4 Design system (`packages/ui`)
 
 - [ ] Size, shape, spacing and state tokens that follow Spectrum 2, from the table measured in P0 and the
-      decisions at the design gate. Adobe's icons, fonts and brand colours are not used. (Mechanism done with
-      provisional Spectrum 2 medium values; the values wait for the design gate, Task 8.)
+      decisions at the design gate, except where the brand is explicit: buttons, inputs and tags take the
+      brand's 8 px control radius (branding change, 25 Nov 2026). Adobe's icons, fonts and brand colours are
+      not used. (Final values from the gate are in, Task 8; the shape change lands separately.)
 - [ ] Tokens as CSS variables, dark and light, from the decisions at the design gate, declared in Tailwind's
       `@theme` with **Tailwind's default colour palette removed**, so only design-system colours exist. (Done
-      with stand-in values from the docs site, marked provisional; the values wait for the design gate, Task 8.)
+      with the approved palette A values, Task 8, 25 Nov 2026.)
 - [x] Fonts bundled with the app (no network font loading). Their SIL OFL notices ship with the app.
-- [ ] Base components, each with stories for default, hover, focus and disabled (waits for the design gate,
-      Task 9):
+- [ ] Base components, each with stories for default, hover, focus and disabled (built in Task 9; wait for
+      the "Base component set" sign-off, after the branding change lands):
   - Controls: Button (primary, secondary, outline, ghost, danger, icon), Input, Textarea, Select, Combobox,
     Checkbox, Radio, Toggle, Segmented control.
   - Display: Tag, Badge, Status chip, Path chip, Card, Code block, Tooltip, Skeleton, Spinner, Empty state,

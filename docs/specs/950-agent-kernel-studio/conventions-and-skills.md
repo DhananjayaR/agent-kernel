@@ -36,7 +36,7 @@ Component names are working names until the P1a design gate.
   spacing rhythm, expressed as the Studio's own tokens. When a new component has no precedent in the Studio,
   look at how Spectrum 2 sizes and states its equivalent before inventing one.
 - **The brand wins where it is explicit** ([branding/README.md](../../../branding/README.md); branding change
-  of 25 November 2026). Colours are OAK's. Buttons, inputs and tags are rectangular at the 8 px control
+  of 25 November 2026). Colours are those of Open Agent Kernel (OAK). Buttons, inputs and tags are rectangular at the 8 px control
   radius, not Spectrum 2's pill; cards and panels use the 16 px card radius. The logo mark
   (`branding/logo-mark/`) is the app icon and sits in the top bar, used as supplied: never redrawn,
   recoloured or stretched.
@@ -173,8 +173,8 @@ are extracted from the first real features at the end of the phase that produces
 | `ak-studio-testing` | Vitest, fakes, the fixture project, Playwright against the browser renderer and Electron, visual regression, keyboard tests | End of P2 |
 | `ak-studio-design-gate` | Running the [design gate](design-process.md) for a screen: requirements, options, stories, checklist, sign-off | End of P2 |
 | `ak-studio-kernel-capability` | Adding a catalog entry when `ak-py` gains or removes a feature, and gating the UI on it | P2 |
-| `ak-studio-scaffold-template` | Adding or changing a project template and its reference project | P4 |
 | `ak-studio-coding-agent-adapter` | The coding-agent interface and how an adapter implements it | P6 |
+| `ak-studio-scaffold-template` | Adding or changing a project template and its reference project | P4 |
 
 Existing skills that change:
 

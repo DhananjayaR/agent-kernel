@@ -1,11 +1,11 @@
-# OAK Studio: phased implementation plan
+# Open Agent Kernel Studio (OAK Studio): phased implementation plan
 
 Tracks [issue #950](https://github.com/yaalalabs/agent-kernel/issues/950). The scope comes from the team's
 [Phase 1 PRD](../950-agent-kernel-studio-phase-1/PHASE-1-PRD.md), revised 25 November 2026, which supersedes
 the issue where they differ. This file is the progress tracker: update the status table and the decision log
 as work lands.
 
-**The product.** Open Agent Kernel Studio (OAK Studio) is a desktop app (Electron) that builds, tests and
+**The product.** OAK Studio is a desktop app (Electron) that builds, tests and
 deploys an Open Agent Kernel (OAK) project from one folder on the user's computer. A visual canvas and a
 coding agent sit on top of the real project files. It builds locally, runs on Windows, macOS and Linux, and
 showcases the OAK feature set for whichever Agent Kernel version the project uses. Everything it produces is
@@ -43,8 +43,8 @@ PRD's milestones.
 | P12 | Packaging and release | None (installers are a PRD deliverable) | Not started | No | [outline](later-phases.md#p12--packaging-and-release) |
 
 **Next action:** the owner signs off the P1a shell layout and base component set, after the 25 Nov branding
-changes land in `ak-studio/` (Tabler outline icons, rectangular controls at the 8 px radius, Archivo on primary
-call-to-action labels, the logo mark). Owner review of the [P0 decision record](P0-technology-selection.md#decision-record)
+changes land in `ak-studio/` (rectangular controls at the 8 px radius, Archivo on primary call-to-action
+labels, the logo mark; Tabler outline icons landed on 25 Nov in `4d7fcfec`). Owner review of the [P0 decision record](P0-technology-selection.md#decision-record)
 is still open. The owner answers the [open decisions](#open-decisions) marked for 25 Nov. Anthropic's
 confirmation of the coding-agent design is needed before P6. Windows and macOS are deferred until the
 re-entry point under [Order and dependencies](#order-and-dependencies).
@@ -181,7 +181,7 @@ Detail: [P2](P2-project-and-kernel-version.md).
 | # | Decision | Needed by | Notes |
 |---|---|---|---|
 | 1 | Owner review of the rest of the P0 decision record. D8 (state, data, routing) was not exercised by any spike; D11 (Electron policy) was not tested. Windows and macOS are deferred by the owner, until the re-entry point under [Order and dependencies](#order-and-dependencies) | End of P0 | [P0 decision record](P0-technology-selection.md#decision-record) |
-| 1e | Coding agent (D14): the Studio uses the user's own signed-in Claude Code (decided 24 Nov 2026) and, on our reading of Anthropic's rules, holds no credential. Open: the owner's confirmation of that reading; Anthropic's confirmation that a third-party app may do this; a live turn on a working sign-in, moved to P6 (the spike machine's had expired; the mechanics ran; the spike code is deleted); what a user with only the Claude desktop app is told: the spike machine is one, and it reported "not installed" and "not signed in", so such a user may have to install and sign in to Claude Code separately. **Questions for Anthropic, from third-party reports that are not confirmed on an Anthropic page** ([research note 04](../950-agent-kernel-studio-phase-1/research/research_notes/AK%20Studio%20competitive%20landscape/04_ai_assisted_and_rules_driven_building.md)): that in May 2026 programmatic use, "whether via Anthropic's own Agent SDK, headless mode, or a third-party tool", moved into a separate usage pool; and that Anthropic advised businesses to use API keys for Agent SDK work. If either holds, a subscription user's Studio turns may be billed differently from their terminal turns. Whether an API-key route ships beside the subscription route is decided in P6 | Before P6 starts | [S5](research/spike-s5-coding-agent.md), [architecture](architecture.md#the-coding-agent-and-the-users-claude-code) |
+| 1e | Coding agent (D14): the Studio uses the user's own signed-in Claude Code (decided 24 Nov 2026) and, on our reading of Anthropic's rules, holds no credential. Open: the owner's confirmation of that reading; Anthropic's confirmation that a third-party app may do this; a live turn on a working sign-in, moved to P6 (the spike machine's had expired; the mechanics ran; the spike code is deleted); what a user with only the Claude desktop app is told: the spike machine is one, and it reported "not installed" and "not signed in", so such a user may have to install and sign in to Claude Code separately. **Questions for Anthropic, from third-party reports that are not confirmed on an Anthropic page** ([research note 04](../950-agent-kernel-studio-phase-1/research/research_notes/AK%20Studio%20competitive%20landscape/04_ai_assisted_and_rules_driven_building.md)): that in May 2026 programmatic use, "whether via Anthropic's own Agent SDK, headless mode, or a third-party tool", moved into a separate usage pool; and that Anthropic advised businesses to use API keys for Agent SDK work. Whether an API-key route ships beside the subscription route is decided in P6 | Before P6 starts | [S5](research/spike-s5-coding-agent.md), [architecture](architecture.md#the-coding-agent-and-the-users-claude-code) |
 | 1c | Canvas keyboard model: Tab reaches the first node only after all edges; `edgesFocusable={false}` fixes it but loses edge keyboard access | P3 design gate | [S4](research/spike-s4-canvas-code.md) |
 | 1d | CodeMirror cold open missed 200 ms (360 to 382 ms); try preload on idle. Also needs a person: side-by-side look against Spectrum 2, screen-reader pass, canvas smoothness on a real GPU (nodes are solid by default; compare glass only if reconsidered) | P1a design gate | [P0 exit criteria](P0-technology-selection.md#exit-criteria) |
 | 2 | Studio primary colour. **Closed 25 Nov 2026:** orange `#FF5E32`, chosen at the P1a gate; the team's briefs moved to the OAK identity the same day | Closed | [Decision log](#decision-log) |

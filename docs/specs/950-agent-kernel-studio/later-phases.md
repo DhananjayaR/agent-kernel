@@ -5,7 +5,7 @@ These phases are outlined, not detailed. Each gets its own detailed doc (same la
 done, so the detail is written against what was actually built. Every phase with screens passes the
 [design gate](design-process.md) first.
 
-What each phase must deliver comes from the team's
+What each phase of Open Agent Kernel (OAK) Studio must deliver comes from the team's
 [Phase 1 PRD](../950-agent-kernel-studio-phase-1/PHASE-1-PRD.md) (revised 25 November 2026), which supersedes
 issue #950 where they differ. The design input for each phase is the matching brief in the team's folder,
 [`docs/specs/950-agent-kernel-studio-phase-1/`](../950-agent-kernel-studio-phase-1/README.md). The briefs'
@@ -95,9 +95,9 @@ diff; accepts or reverts each turn.
 - The "Review changes" modal: a canvas diff and the file diffs, with "Accept all", "Accept selected" and
   "Revert".
 - Approval cards: "Approve", "Deny" and "Always allow this command in this project". The allow-list is a
-  per-project setting in `.akstudio/` ([architecture](architecture.md#where-each-kind-of-data-lives)). An
-  allow-list found in a newly opened folder is listed and confirmed before it is used, like the folder's
-  hooks.
+  per-project setting in the working directory (brief 09); proposed in `.akstudio/`
+  ([architecture](architecture.md#where-each-kind-of-data-lives)). Proposed: an allow-list found in a newly
+  opened folder is listed and confirmed before it is used, like the folder's hooks.
 - Settings, "Coding agents": Claude Code's state and path; permissions for this project ("Edit project files";
   running commands: "Ask every time" or "Allow listed commands"); a locked row "Never apply or destroy
   Terraform"; the toggle "Take a checkpoint before each turn"; Codex, Cursor, Windsurf and GitHub Copilot
@@ -129,7 +129,9 @@ the feature is "Claude Agent"; "Claude Code" names only the user's installed pro
 third-party app may drive the user's signed-in Claude Code (its pages do not say so; see the architecture).
 The questions for Anthropic in [open decisions 1e and 7](README.md#open-decisions), including two
 third-party reports that are not confirmed. Whether an API-key route ships beside the subscription route:
-decided in this phase. The lowest Claude Code version supported.
+decided in this phase. The lowest Claude Code version supported. Whether the per-project agent settings
+(permissions, the command allow-list) are committed with the project, and whether a committed allow-list is
+confirmed before use.
 
 ---
 
