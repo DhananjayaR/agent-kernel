@@ -35,14 +35,18 @@ function mapFiles(dir) {
 		.map((f) => join(dir, f));
 }
 
-/** The package root of a file under node_modules/, or undefined. */
-function packageRoot(file) {
+/** A build that bundles this few packages from source maps is a broken run (it found 21 when written). */
+const MIN_MAPPED_PACKAGES = 10;
+
+/** The package root of a file under node_modules/, or undefined. Separators are normalised to "/" (Windows). */
+function packageRoot(path) {
+	const file = path.replaceAll("\\", "/");
 	const marker = "/node_modules/";
 	const at = file.lastIndexOf(marker);
 	if (at < 0) return undefined;
 	const parts = file.slice(at + marker.length).split("/");
 	const name = parts[0].startsWith("@") ? `${parts[0]}/${parts[1]}` : parts[0];
-	return file.slice(0, at + marker.length) + name;
+	return join(file.slice(0, at + marker.length), name);
 }
 
 function describe(root) {
@@ -77,6 +81,11 @@ try {
 			const root = packageRoot(resolve(dirname(map), source));
 			if (root) roots.add(root);
 		}
+	}
+	if (roots.size < MIN_MAPPED_PACKAGES) {
+		throw new Error(
+			`found only ${roots.size} packages in the source maps (expected at least ${MIN_MAPPED_PACKAGES}): the build or the path handling is broken; the notices file was not changed`,
+		);
 	}
 	// packages/ui depends on them; pnpm links each into its node_modules.
 	for (const name of CSS_PACKAGES) {

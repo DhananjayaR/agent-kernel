@@ -1,6 +1,6 @@
 name: Studio
 
-# OAK Studio, Open Agent Kernel Studio (ak-studio/, issue #950): lint, type-check, boundary checks, unit tests, Storybook
+# Open Agent Kernel Studio (OAK Studio) (ak-studio/, issue #950): lint, type-check, boundary checks, unit tests, Storybook
 # accessibility run, end-to-end tests, and an unsigned installer whose app is started before upload, on Linux,
 # Windows and macOS.
 # P1a: written and parsed, not yet run (Windows, macOS and CI were deferred; see ak-studio/README.md).
@@ -82,6 +82,14 @@ jobs:
 
       - name: Unit tests
         run: pnpm test
+
+      # Regenerates the bundled-code licence list from a production build and fails if the committed file differs
+      # (a dependency change without `pnpm third-party-notices`). Linux only: the list does not depend on the OS.
+      - name: Third-party notices are current
+        if: runner.os == 'Linux'
+        run: |
+          pnpm third-party-notices
+          git diff --exit-code -- apps/desktop/resources/THIRD-PARTY-NOTICES.txt
 
       - name: Build Storybook
         run: pnpm build-storybook

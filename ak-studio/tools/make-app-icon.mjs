@@ -7,8 +7,10 @@
 // icon sizes, and the macOS .icns and Windows .ico, from it. The main process uses the same file as the window
 // icon on Linux (shipped next to the app in resources/, see electron-builder.yml).
 //
-// Run it again when the mark changes, and commit the PNG.
-import { readFileSync } from "node:fs";
+// Run it again when the mark changes, and commit the PNG and icon.source.sha256: the hash of the mark (line endings
+// as LF) the PNG was rendered from, which apps/desktop/src/main/app-icon.test.ts compares with the brand file.
+import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 
@@ -23,6 +25,10 @@ const markFile = fileURLToPath(
 );
 const outFile = fileURLToPath(
 	new URL("../apps/desktop/build/icon.png", import.meta.url),
+);
+
+const hashFile = fileURLToPath(
+	new URL("../apps/desktop/build/icon.source.sha256", import.meta.url),
 );
 
 const svg = readFileSync(markFile, "utf8");
@@ -47,4 +53,8 @@ try {
 } finally {
 	await browser.close();
 }
+writeFileSync(
+	hashFile,
+	`${createHash("sha256").update(svg.replaceAll("\r\n", "\n")).digest("hex")}\n`,
+);
 console.log(`make-app-icon: wrote ${outFile} (${SIZE} x ${SIZE})`);
