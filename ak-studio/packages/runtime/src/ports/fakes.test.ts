@@ -1,8 +1,10 @@
 // Tests of the port fakes, which later tasks and the browser's mock transport build on: FakeProjectFs keeps
-// every path inside the project and refuses a stale write; the others record and replay what they are given.
+// every path inside the project and refuses a stale write; FakeClock moves only when told; the others record and
+// replay what they are given.
 import { ERROR_CODES, Revision, StudioFailure } from "@ak-studio/contract";
 import { describe, expect, it, vi } from "vitest";
 import {
+	FakeClock,
 	FakeCommandRunner,
 	FakeProjectFs,
 	FakeWatcher,
@@ -215,5 +217,34 @@ describe("InMemoryJobRecordStore", () => {
 		await first.started(record);
 		const second = new InMemoryJobRecordStore(first.data);
 		expect(await second.unfinished()).toEqual([record]);
+	});
+});
+
+describe("FakeClock", () => {
+	it("wakes each sleep when time reaches it, earliest first, including sleeps started on the way", async () => {
+		const clock = new FakeClock(100);
+		const woke: string[] = [];
+		void clock.sleep(300).then(() => woke.push(`b at ${clock.now()}`));
+		void clock.sleep(100).then(async () => {
+			woke.push(`a at ${clock.now()}`);
+			await clock.sleep(100);
+			woke.push(`a2 at ${clock.now()}`);
+		});
+		await clock.advance(250);
+		expect(woke).toEqual(["a at 200", "a2 at 300"]);
+		expect(clock.now()).toBe(350);
+		await clock.advance(50);
+		expect(woke).toEqual(["a at 200", "a2 at 300", "b at 400"]);
+		expect(clock.sleeping).toBe(0);
+	});
+
+	it("rejects a sleep with the signal's reason when it aborts, and at once when it already has", async () => {
+		const clock = new FakeClock();
+		const controller = new AbortController();
+		const sleeping = clock.sleep(1000, controller.signal);
+		controller.abort(new Error("stopped"));
+		await expect(sleeping).rejects.toThrow("stopped");
+		expect(clock.sleeping).toBe(0);
+		await expect(clock.sleep(10, controller.signal)).rejects.toThrow("stopped");
 	});
 });

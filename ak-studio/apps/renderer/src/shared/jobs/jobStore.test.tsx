@@ -1,6 +1,7 @@
 // The job store: newest state by `seq`, one job per view (a progress update on job A does not re-render a view
-// of job B), and the calls that start, answer and cancel jobs. The app's contract declares no job kind in P1b, so
-// starting one goes through a recording transport; answering and cancelling go through the mock's JobService.
+// of job B), and the calls that start, answer and cancel jobs. Starting one goes through a recording transport, to
+// see the exact call; answering and cancelling go through the mock's JobService. A real job kind, started and
+// followed with useJob over the mock's events, is tested in features/about/api/useAboutDemoJob.test.tsx.
 import {
 	ERROR_CODES,
 	type Job,
@@ -15,6 +16,7 @@ import {
 	applyJobs,
 	cancelJob,
 	respondToJob,
+	startJob,
 	useJob,
 	useJobStore,
 	useStartJob,
@@ -110,7 +112,7 @@ describe("useStartJob", () => {
 			request,
 			subscribe: () => () => {},
 		} as unknown as Transport);
-		// No job kind is declared in P1b (Task 14 adds the first); any name stands in for one here.
+		// A recording transport answers any name; this one stands in for a job kind.
 		const name = "t.demo" as JobKindName;
 		const { result, rerender } = renderHook(() => useStartJob(name));
 		const first = result.current;
@@ -123,6 +125,11 @@ describe("useStartJob", () => {
 		rerender();
 		// The same object across renders, so it can sit in effect dependencies.
 		expect(result.current).toBe(first);
+		// Outside React (an app command), startJob makes the same call.
+		await expect(startJob(name, { projectId: "p2" } as never)).resolves.toBe(
+			"job-7",
+		);
+		expect(request).toHaveBeenLastCalledWith("t.demo", { projectId: "p2" });
 	});
 });
 

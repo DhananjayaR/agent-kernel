@@ -116,7 +116,7 @@ export function serviceMethod(x) {
 	if (shape === "job")
 		return `
 	/**
-	 * Runs a \`${op}\` job; its answer is the job's result.${project ? " JobService starts it only for an open project." : ""}
+	 * Runs one \`${op}\` job; its answer is the job's result.${project ? " JobService starts it only for an open project." : ""}
 	 */
 	async ${o.camel}(): Promise<JobResultOf<"${op}">> {
 		return {};
@@ -168,6 +168,7 @@ ${
 	runtimeImport === "@ak-studio/runtime"
 		? `import {
 	EventBus,
+	FakeClock,
 	InMemoryJobRecordStore,
 	JobService,
 	ProjectScopes,
@@ -180,7 +181,7 @@ import { describe, expect, it, vi } from "vitest";`
 		: `import { describe, expect, it, vi } from "vitest";
 import { EventBus } from "../events";
 import { JobService } from "../jobs";
-import { InMemoryJobRecordStore } from "../ports/fakes";
+import { FakeClock, InMemoryJobRecordStore } from "../ports/fakes";
 import { ServiceRegistry } from "../registry";
 import { ProjectScopes } from "../scope";
 import { SecretMasker } from "../secrets";
@@ -207,6 +208,8 @@ function serve() {
 	const sessions = new SessionService({ events, streams, scopes, masker, log });
 	const handlers = new Map<string, (input: never) => unknown>();
 	new ${f.pascal}Service({
+		app: { version: "1.2.3", platform: "linux" },
+		clock: new FakeClock(),
 		jobs,
 		sessions,
 		streams,
@@ -252,7 +255,7 @@ export function serviceCase(x) {
 		: "";
 	if (shape === "job")
 		return `
-	it("runs a ${op} job${project ? " for an open project" : ""} to its result", async () => {
+	it("runs one ${op} job${project ? " for an open project" : ""} to its result", async () => {
 		const { registry, jobs${project ? ", scopes" : ""} } = serve();${open}
 		const started = await registry.request("${op}", ${input(x)});
 		expect(started).toMatchObject({
@@ -376,7 +379,7 @@ afterEach(() => {
 });
 
 describe("${name}", () => {
-	it("starts a ${op} job, which runs to its result", async () => {
+	it("starts one ${op} job, which runs to its result", async () => {
 ${backend}
 		const { result } = renderHook(() => ${name}());
 		const jobId = await result.current.start(${input(x)});

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { platformSchema } from "./domain";
 import { ERROR_CODES, StudioFailure, studioError } from "./errors";
 import {
 	appInfo,
@@ -12,7 +13,6 @@ import {
 	lookup,
 	operations,
 	parseSafely,
-	platformSchema,
 	runOperation,
 	shellLayoutSchema,
 	streams,

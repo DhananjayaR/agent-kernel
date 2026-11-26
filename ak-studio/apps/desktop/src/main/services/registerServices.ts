@@ -13,6 +13,7 @@ import {
 	type ServiceRegistry,
 	SessionService,
 	StreamHub,
+	systemClock,
 } from "@ak-studio/runtime";
 import { NodeJobRecordStore } from "../infra/NodeJobRecordStore";
 import { AppService, type AppServiceOptions } from "./AppService";
@@ -75,7 +76,17 @@ export function registerServices(
 	// The features' services: the runtime's (browser-safe, also served by the mock transport), built from these
 	// dependencies (the ports join them in P2), then the desktop-only ones (`pnpm new:operation --desktop` adds
 	// each below the call).
-	const featureDeps = { jobs, sessions, streams, events, scopes, masker };
+	const { version, platform } = app.info();
+	const featureDeps = {
+		app: { version, platform },
+		clock: systemClock,
+		jobs,
+		sessions,
+		streams,
+		events,
+		scopes,
+		masker,
+	};
 	registerFeatureServices(registry, featureDeps);
 	return { app, window, masker, events, streams, scopes, jobs, sessions };
 }

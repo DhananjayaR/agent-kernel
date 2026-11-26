@@ -132,8 +132,9 @@ object); one that is missing or ambiguous is refused, never guessed.
     does not survive quit) in `packages/contract/src/release-notes.ts`, created and exported from the contract's
     index on the feature's first operation, and its entry in the `operations` map;
   - its handler, a method of `ReleaseNotesService` in `packages/runtime/src/release-notes/`, with a test through
-    a real `ServiceRegistry`. The service takes its dependencies in its constructor (`FeatureDeps`: the ports
-    `commandRunner`, `projectFs` and `watcher`, optional until P2, and the core services `jobs`, `sessions`,
+    a real `ServiceRegistry`. The service takes its dependencies in its constructor (`FeatureDeps`: `app`, the
+    app's version and platform; `clock`, through which every wait goes, a `FakeClock` in tests; the ports
+    `commandRunner`, `projectFs` and `watcher`, optional until P2; and the core services `jobs`, `sessions`,
     `streams`, `events`, `scopes`, `masker`). A job's method is its runner, given to `JobService` with
     `jobs.define`. The service is created on the first operation and its factory, `(deps) => new
     ReleaseNotesService(deps)`, listed in `packages/runtime/src/features.ts`, which `registerServices` (real
@@ -156,7 +157,9 @@ object); one that is missing or ambiguous is refused, never guessed.
   commit the screenshots.
 
 Session kinds and app commands are not generated: a session kind is declared with `defineSessionKind` in the
-feature's contract file and added to `sessionKinds`, and an app command with `defineCommand` in the manifest.
+feature's contract file and added to `sessionKinds`, its starter given with `sessions.define` in the service's
+`register`, and an app command with `defineCommand` in the manifest (one that starts a job calls `startJob`). The
+About feature (`features/about/`, `packages/runtime/src/about/`) has one of each.
 
 `pnpm test:generators` copies the workspace into a temporary folder (the files git sees, with `node_modules`
 linked so `@ak-studio/*` resolves inside the copy), checks the refusals leave the copy unchanged, runs all three

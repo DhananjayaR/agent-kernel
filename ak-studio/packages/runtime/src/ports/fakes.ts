@@ -1,7 +1,8 @@
-// In-memory fakes of the four ports, for tests and for the browser's mock transport (Task 7), which runs the
+// In-memory fakes of the ports, for tests and for the browser's mock transport (Task 7), which runs the
 // runtime's real services over them. They keep the ports' rules (FakeProjectFs refuses paths outside the root
 // and stale writes) so a service tested against them behaves the same against the desktop's Node versions.
 import type { JobId, JobState, Revision } from "@ak-studio/contract";
+import type { Clock } from "./clock";
 import type {
 	CommandOutputChannel,
 	CommandRequest,
@@ -218,6 +219,81 @@ export class FakeWatcher implements Watcher {
 	watching(root: string): boolean {
 		return this.#watches.has(root);
 	}
+}
+
+// ---- Clock ----
+
+interface Sleeper {
+	at: number;
+	wake: () => void;
+}
+
+/**
+ * A clock that moves only when a test calls `advance`. Each sleep is woken when time reaches it, earliest first;
+ * between wakes the woken code runs on (a macrotask), so a sleep it starts then is woken in the same `advance`
+ * when it falls inside it. Times are whole milliseconds since the start value.
+ */
+export class FakeClock implements Clock {
+	#now: number;
+	readonly #sleepers = new Set<Sleeper>();
+
+	constructor(start = 0) {
+		this.#now = start;
+	}
+
+	now(): number {
+		return this.#now;
+	}
+
+	sleep(ms: number, signal?: AbortSignal): Promise<void> {
+		return new Promise<void>((resolve, reject) => {
+			if (signal?.aborted) {
+				reject(signal.reason);
+				return;
+			}
+			const onAbort = (): void => {
+				this.#sleepers.delete(sleeper);
+				reject(signal?.reason);
+			};
+			const sleeper: Sleeper = {
+				at: this.#now + Math.max(0, ms),
+				wake: () => {
+					signal?.removeEventListener("abort", onAbort);
+					resolve();
+				},
+			};
+			this.#sleepers.add(sleeper);
+			signal?.addEventListener("abort", onAbort, { once: true });
+		});
+	}
+
+	/** Moves time on by `ms`, waking every sleep that falls due on the way; resolves once their code has run on. */
+	async advance(ms: number): Promise<void> {
+		const end = this.#now + ms;
+		for (;;) {
+			await settle();
+			let next: Sleeper | undefined;
+			for (const sleeper of this.#sleepers)
+				if (sleeper.at <= end && (!next || sleeper.at < next.at))
+					next = sleeper;
+			if (!next) break;
+			this.#sleepers.delete(next);
+			this.#now = next.at;
+			next.wake();
+		}
+		this.#now = end;
+		await settle();
+	}
+
+	/** How many sleeps are waiting. */
+	get sleeping(): number {
+		return this.#sleepers.size;
+	}
+}
+
+/** Lets every pending promise callback run (one macrotask). */
+function settle(): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 // ---- JobRecordStore ----

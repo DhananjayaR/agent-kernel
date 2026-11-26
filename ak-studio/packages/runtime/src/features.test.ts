@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import { EventBus } from "./events";
 import { registerFeatureServices } from "./features";
 import { JobService } from "./jobs";
-import { InMemoryJobRecordStore } from "./ports/fakes";
+import { FakeClock, InMemoryJobRecordStore } from "./ports/fakes";
 import { ProjectScopes } from "./scope";
 import { SecretMasker } from "./secrets";
 import { SessionService } from "./sessions";
@@ -28,7 +28,16 @@ function deps() {
 		log,
 	});
 	const sessions = new SessionService({ events, streams, scopes, masker, log });
-	return { jobs, sessions, streams, events, scopes, masker };
+	return {
+		app: { version: "1.2.3", platform: "linux" as const },
+		clock: new FakeClock(),
+		jobs,
+		sessions,
+		streams,
+		events,
+		scopes,
+		masker,
+	};
 }
 
 describe("registerFeatureServices", () => {

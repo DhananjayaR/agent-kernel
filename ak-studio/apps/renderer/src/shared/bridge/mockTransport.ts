@@ -30,6 +30,7 @@ import {
 	type Transport,
 } from "@ak-studio/contract";
 import {
+	type Clock,
 	EventBus,
 	FakeCommandRunner,
 	FakeProjectFs,
@@ -43,6 +44,7 @@ import {
 	ServiceRegistry,
 	SessionService,
 	StreamHub,
+	systemClock,
 } from "@ak-studio/runtime";
 import { desktopFixtureHandlers, type FixtureDeps } from "./desktopFixtures";
 import { FIXTURE_FILES } from "./fixtures";
@@ -149,6 +151,8 @@ export interface MockTransportOptions {
 	onStreamError?: StreamErrorHandler;
 	/** Where the registry and the services report bugs, as main's log does (default: the console). */
 	log?: Log;
+	/** The feature services' clock (default: the real one). Tests pass a FakeClock to run steps and ticks at once. */
+	clock?: Clock;
 }
 
 /** The mock's transport and the services behind it, for tests that emit events or watch jobs and sessions. */
@@ -233,6 +237,8 @@ export function createMockBackend(
 	const projectFs = new FakeProjectFs(MOCK_PROJECT_ROOT, FIXTURE_FILES);
 	const watcher = new FakeWatcher();
 	registerFeatureServices(collected, {
+		app: { version: MOCK_VERSION, platform: "browser" },
+		clock: options.clock ?? systemClock,
 		commandRunner,
 		projectFs,
 		watcher,

@@ -191,7 +191,7 @@ describe("the schema walk (self-test)", () => {
 // ---- The rules ----
 
 const allOperations = Object.values(operations) as ShapedOperation[];
-// Typed views of the kind maps (both empty in P1b; Task 14 adds the first entries).
+// Typed views of the kind maps (the About slice's demo job and ticker are their first entries).
 const allJobKinds = Object.entries(jobKinds as JobKindMap);
 const allSessionKinds = Object.entries(sessionKinds as SessionKindMap);
 

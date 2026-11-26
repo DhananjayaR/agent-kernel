@@ -7,6 +7,14 @@
 // in P1b (pre-flight ruling 7); the job, session and event operations are in jobs.ts, sessions.ts and events.ts.
 import "./zodConfig";
 import { z } from "zod";
+import {
+	aboutDemoJob,
+	aboutInfo,
+	aboutNote,
+	aboutSetNote,
+	aboutTicker,
+} from "./about";
+import { platformSchema } from "./domain";
 import { ERROR_CODES, isStudioFailure, type StudioError } from "./errors";
 import { eventsStream, streamRead } from "./events";
 import {
@@ -36,9 +44,6 @@ import type { StreamMessage } from "./transport";
 
 export const themePreferenceSchema = z.enum(["system", "dark", "light"]);
 export type ThemePreference = z.infer<typeof themePreferenceSchema>;
-
-export const platformSchema = z.enum(["linux", "darwin", "win32", "browser"]);
-export type Platform = z.infer<typeof platformSchema>;
 
 // Inputs are strict objects: an unknown key is `bridge.invalidInput`, not silently dropped (P0 D12, strict
 // validation). Outputs are plain objects, so undeclared fields are stripped before they cross the bridge.
@@ -148,6 +153,10 @@ export const windowState = defineStream({
 
 /** Every request operation, keyed by name (a test checks each key equals its operation's name). */
 export const operations = {
+	"about.demoJob": aboutDemoJob,
+	"about.info": aboutInfo,
+	"about.note": aboutNote,
+	"about.setNote": aboutSetNote,
 	"app.info": appInfo,
 	"app.setLayout": appSetLayout,
 	"app.setTheme": appSetTheme,
@@ -174,9 +183,11 @@ export const streams = {
 
 /**
  * Every session kind, keyed by kind: what `session.start` may start (SessionService refuses any other with
- * `session.unknownKind`). Empty until a feature declares one with `defineSessionKind`.
+ * `session.unknownKind`). A feature declares each with `defineSessionKind` and adds it here by hand.
  */
-export const sessionKinds = {} as const satisfies SessionKindMap;
+export const sessionKinds = {
+	"about.ticker": aboutTicker,
+} as const satisfies SessionKindMap;
 
 export const contract = { operations, streams } as const satisfies Contract;
 

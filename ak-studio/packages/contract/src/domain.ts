@@ -1,4 +1,4 @@
-// The domain types the services and the renderer share: ids, file revisions, jobs and their user requests,
+// The domain types the services and the renderer share: the platform, ids, file revisions, jobs and their user requests,
 // sessions, stream chunks, recorded commands and the event union the `events` stream carries. One zod schema
 // each, so the main process, the mock and the renderer's types all come from the same declaration. The Job,
 // UserRequest and Session fields are those in architecture.md (Jobs, Sessions), with `projectId` and `seq` added
@@ -7,6 +7,12 @@
 import "./zodConfig";
 import { z } from "zod";
 import { studioErrorSchema } from "./errors";
+
+// ---- The app ----
+
+/** The platform the app runs on: "browser" under the mock transport. */
+export const platformSchema = z.enum(["linux", "darwin", "win32", "browser"]);
+export type Platform = z.infer<typeof platformSchema>;
 
 // ---- Ids and revisions (each a schema and a type of the same name) ----
 

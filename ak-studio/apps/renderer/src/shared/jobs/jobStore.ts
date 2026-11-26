@@ -2,7 +2,8 @@
 // by `job.updated` events and, after a reload or a reconnect, by `jobs.list` (events/reattach.ts). For each job
 // it keeps the newest state by the job's `seq`, so a late list or an early event never rolls a job back. A view
 // reads one job with `useJob`, which re-renders only when that job changes. Jobs are started with `useStartJob`
-// and answered or cancelled with `respondToJob` and `cancelJob`; what they change comes back as events.
+// (`startJob` outside React) and answered or cancelled with `respondToJob` and `cancelJob`; what they change comes
+// back as events.
 import type {
 	InputOf,
 	Job,
@@ -50,18 +51,25 @@ export interface StartJob<N extends JobKindName> {
 	start(input: InputOf<N>): Promise<JobId>;
 }
 
+/**
+ * Starts a job of the kind `name` and answers its id at once. Outside React (an app command's `run`); a view uses
+ * `useStartJob`. Rejects only with a StudioFailure.
+ */
+export async function startJob<N extends JobKindName>(
+	name: N,
+	input: InputOf<N>,
+): Promise<JobId> {
+	// Every job operation answers `{ jobId }` (shapes.ts, `job()`); TypeScript cannot see that through N.
+	const output = (await requestStudio(name, input)) as OutputOf<N> & {
+		jobId: JobId;
+	};
+	return output.jobId;
+}
+
 /** Starts jobs of the kind `name` (a job operation in the contract). Rejects only with a StudioFailure. */
 export function useStartJob<N extends JobKindName>(name: N): StartJob<N> {
 	return useMemo(
-		() => ({
-			async start(input: InputOf<N>): Promise<JobId> {
-				// Every job operation answers `{ jobId }` (shapes.ts, `job()`); TypeScript cannot see that through N.
-				const output = (await requestStudio(name, input)) as OutputOf<N> & {
-					jobId: JobId;
-				};
-				return output.jobId;
-			},
-		}),
+		() => ({ start: (input: InputOf<N>) => startJob(name, input) }),
 		[name],
 	);
 }

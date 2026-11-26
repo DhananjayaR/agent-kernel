@@ -3,6 +3,7 @@
 // First: configures zod before any schema is built (see zodConfig.ts).
 import "./zodConfig";
 
+export * from "./about";
 export * from "./domain";
 export * from "./errors";
 export * from "./events";
