@@ -4,22 +4,31 @@
 
 import { studioError } from "@ak-studio/contract";
 import type { CapabilityCatalog } from "@ak-studio/kernel-catalog";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { StudioFailure } from "../bridge/client";
 import { useCapabilityScope } from "../capability/capability";
 import { defineCommand } from "../commands/command";
 import { getCommands, setCommands } from "../commands/runCommand";
+import {
+	bindCommandFailureReporter,
+	runReported,
+} from "../commands/runReported";
 import { errorStrings } from "../errors/strings";
 import {
 	bindFailureNotice,
 	commandFailureNotice,
 	reportCommandFailure,
-	runReported,
 } from "./failureNotice";
 
 const appCommands = getCommands();
+// As the Shell does: failures of commands run with runReported go to the notice.
+let unbindReporter = () => {};
+beforeEach(() => {
+	unbindReporter = bindCommandFailureReporter(reportCommandFailure);
+});
 const initialScope = useCapabilityScope.getState();
 afterEach(() => {
+	unbindReporter();
 	setCommands(appCommands);
 	useCapabilityScope.setState(initialScope, true);
 	vi.restoreAllMocks();
@@ -102,6 +111,26 @@ describe("reporting", () => {
 		expect(notify).toHaveBeenCalledTimes(2);
 		expect(log).toHaveBeenLastCalledWith(
 			"[studio] command a.rejects failed: again",
+		);
+	});
+});
+
+describe("runReported with no reporter bound", () => {
+	it("only logs", async () => {
+		unbindReporter();
+		const log = vi.spyOn(console, "error").mockImplementation(() => {});
+		setCommands([
+			defineCommand({
+				id: "a.rejects",
+				title: "Rejects",
+				run: () => Promise.reject(new Error("disk full")),
+			}),
+		]);
+		runReported("a.rejects");
+		await vi.waitFor(() =>
+			expect(log).toHaveBeenCalledWith(
+				"[studio] command a.rejects failed: disk full",
+			),
 		);
 	});
 });

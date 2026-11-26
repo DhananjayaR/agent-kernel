@@ -14,8 +14,8 @@
 import { type CommandPaletteItem, CommandPaletteView } from "@ak-studio/ui";
 import type { AppCommand } from "../commands/command";
 import { commandGate } from "../commands/runCommand";
+import { runReported } from "../commands/runReported";
 import { describeShortcut, type ShortcutPlatform } from "../commands/shortcuts";
-import { runReported } from "./failureNotice";
 
 /** One app command and the title of the feature that declares it. */
 export interface PaletteCommand {

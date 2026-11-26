@@ -9,11 +9,11 @@
 // - focus is not in a text field, unless the command opts in (`whileTyping`);
 // - the command's `when` is true.
 // Then the press is claimed (preventDefault) and the command runs through runCommand; a failure, or a version-gated
-// command's refusal, is reported (patterns/failureNotice.ts: logged, and the Shell shows it in a toast).
+// command's refusal, is reported (runReported.ts: logged, and the Shell shows it in a toast).
 import { isModalOpen } from "@ak-studio/ui";
 import { useEffect, useMemo } from "react";
-import { runReported } from "../patterns/failureNotice";
 import type { AppCommand } from "./command";
+import { runReported } from "./runReported";
 import {
 	buildShortcutMap,
 	eventShortcut,

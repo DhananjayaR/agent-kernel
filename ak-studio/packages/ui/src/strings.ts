@@ -114,6 +114,9 @@ export const uiStrings = {
 		placeholder: "Type a command",
 		commands: "Commands",
 		noMatches: "No matching commands",
+		/** Said once typing pauses: how many commands match. `{count}` is the number. */
+		matches: "{count} commands",
+		matchesOne: "1 command",
 	},
 	// The desktop shell (Task 10). The app areas are fixed; their empty states are the app's own copy.
 	shell: {

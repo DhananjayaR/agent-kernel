@@ -123,13 +123,17 @@ function Arriving({
 	start = 40,
 	limit,
 	clearable = false,
+	resizable = false,
 }: {
 	start?: number;
 	/** Keep only the newest `limit` lines, as the store's bounded buffer does. */
 	limit?: number;
 	clearable?: boolean;
+	/** A story-only button that makes the list taller, as a resized panel does. */
+	resizable?: boolean;
 }) {
 	const [lines, setLines] = useState(() => ticks(start));
+	const [tall, setTall] = useState(false);
 	const next = useRef(start + 1);
 	const add = () => {
 		const from = next.current;
@@ -146,8 +150,17 @@ function Arriving({
 				lines={lines}
 				onCopy={() => undefined}
 				onClear={clearable ? () => setLines([]) : undefined}
-				className="h-64 max-w-dialog-l"
+				className={tall ? "h-96 max-w-dialog-l" : "h-64 max-w-dialog-l"}
 			/>
+			{resizable ? (
+				<Button
+					variant="outline"
+					className="self-start"
+					onPress={() => setTall(true)}
+				>
+					Make the list taller
+				</Button>
+			) : null}
 			<Button variant="outline" className="self-start" onPress={add}>
 				Add 10 lines
 			</Button>
@@ -337,6 +350,16 @@ export const LongLines: Story = {
 		const row = rows.querySelector("[data-slot=stream-row]") as HTMLElement;
 		await expect(row.getBoundingClientRect().height).toBe(STREAM_ROW_HEIGHT);
 		await expect(rows.scrollWidth).toBeGreaterThan(rows.clientWidth);
+		// Nothing to scroll up to: an upward wheel or ArrowUp does not stop following (no "Jump to latest").
+		rows.dispatchEvent(new WheelEvent("wheel", { deltaY: -40, bubbles: true }));
+		rows.dispatchEvent(
+			new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }),
+		);
+		// Long enough for a "Jump to latest" to have rendered, had either stopped following.
+		await new Promise((done) => setTimeout(done, 300));
+		await expect(
+			within(canvasElement).queryByRole("button", { name: "Jump to latest" }),
+		).toBeNull();
 		await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
 			window.innerWidth,
 		);
@@ -374,6 +397,34 @@ export const StreamFailed: Story = {
 		await expect(within(canvasElement).getByRole("alert")).toHaveTextContent(
 			"The output stopped",
 		);
+	},
+};
+
+/** Following, the box grows (a panel made taller): the browser moves the position up to fit, which is not the person scrolling, so it goes on following. */
+export const FollowsWhenResized: Story = {
+	render: () => <Arriving resizable />,
+	play: async ({ canvasElement }) => {
+		const rows = tickerRows(canvasElement);
+		await waitFor(() => expect(atEnd(rows)).toBe(true));
+		const before = rows.clientHeight;
+		await userEvent.click(
+			within(canvasElement).getByRole("button", {
+				name: "Make the list taller",
+			}),
+		);
+		await waitFor(() => expect(rows.clientHeight).toBeGreaterThan(before));
+		// Let the clamped position's scroll event arrive, and anything it would render.
+		await new Promise((done) => setTimeout(done, 300));
+		await expect(
+			within(canvasElement).queryByRole("button", { name: "Jump to latest" }),
+		).toBeNull();
+		await userEvent.click(
+			within(canvasElement).getByRole("button", { name: "Add 10 lines" }),
+		);
+		await waitFor(() =>
+			expect(within(rows).getByText("Tick 50")).toBeVisible(),
+		);
+		await expect(atEnd(rows)).toBe(true);
 	},
 };
 

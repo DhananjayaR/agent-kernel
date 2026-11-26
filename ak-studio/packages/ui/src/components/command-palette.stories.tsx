@@ -154,6 +154,12 @@ export const Filtered: Story = {
 				"About: Run the demo job",
 			]),
 		);
+		// Once typing pauses, how many match is said.
+		const count = (await palette()).querySelector(
+			"[data-slot=palette-count]",
+		) as HTMLElement;
+		await waitFor(() => expect(count).toHaveTextContent("1 command"));
+		await expect(search()).toHaveAttribute("aria-expanded", "true");
 		await expectMarked(rows()[0]);
 	},
 };
@@ -165,6 +171,11 @@ export const NoMatches: Story = {
 		const dialog = await open(canvasElement);
 		await expect(rows()).toHaveLength(0);
 		await expect(dialog).toHaveTextContent("No matching commands");
+		// Nothing to expand: the field says so.
+		await expect(search()).toHaveAttribute("aria-expanded", "false");
+		await expect(search()).not.toHaveAttribute("aria-activedescendant");
+		await userEvent.click(within(dialog).getByText("No matching commands"));
+		await expect(search()).toHaveFocus();
 	},
 };
 
@@ -183,12 +194,20 @@ export const VersionGated: Story = {
 		await userEvent.keyboard("{Enter}");
 		await expect(args.onRun).not.toHaveBeenCalled();
 		await expect(await palette()).toBeVisible();
-		// The refusal is said again, politely, so pressing Enter is never met with silence.
-		await expect(within(await palette()).getByRole("status")).toHaveTextContent(
-			"Needs OAK 0.12.0",
-		);
+		// The refusal is said, politely, so pressing Enter is never met with silence; pressed again, it is said again
+		// (a new node in the live region).
+		const refusal = (await palette()).querySelector(
+			"[data-slot=palette-refusal]",
+		) as HTMLElement;
+		await expect(refusal).toHaveTextContent("Needs OAK 0.12.0");
+		const said = refusal.firstElementChild;
+		await userEvent.keyboard("{Enter}");
+		await expect(refusal).toHaveTextContent("Needs OAK 0.12.0");
+		await expect(refusal.firstElementChild).not.toBe(said);
+		// A click on the row (or anywhere below the field) does not take focus from the field.
 		await userEvent.click(gated);
 		await expect(args.onRun).not.toHaveBeenCalled();
+		await expect(search()).toHaveFocus();
 	},
 };
 
@@ -284,6 +303,9 @@ export const Keyboard: Story = {
 		await userEvent.keyboard("{ArrowDown}");
 		await expectMarked(rows()[1]);
 		await expect(rows()[0]).toHaveAttribute("aria-selected", "false");
+		// With a modifier the arrows are the field's own: the mark stays.
+		await userEvent.keyboard("{Shift>}{ArrowUp}{/Shift}");
+		await expectMarked(rows()[1]);
 		await userEvent.keyboard("{Enter}");
 		await expect(args.onRun).toHaveBeenCalledWith("about.runDemoJob");
 		await waitFor(() => expect(body().queryByRole("dialog")).toBeNull());

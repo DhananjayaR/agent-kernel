@@ -42,7 +42,10 @@ import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { getTransport, isStudioFailure } from "../../shared/bridge/client";
 import { bindNavigate } from "../../shared/commands/navigation";
-import { runCommand } from "../../shared/commands/runCommand";
+import {
+	bindCommandFailureReporter,
+	runReported,
+} from "../../shared/commands/runReported";
 import {
 	describeShortcut,
 	shortcutPlatform,
@@ -50,7 +53,10 @@ import {
 import { useAppShortcuts } from "../../shared/commands/useAppShortcuts";
 import { useBackgroundJobNotice } from "../../shared/patterns/BackgroundJobNotice";
 import { CommandPalette } from "../../shared/patterns/CommandPalette";
-import { bindFailureNotice } from "../../shared/patterns/failureNotice";
+import {
+	bindFailureNotice,
+	reportCommandFailure,
+} from "../../shared/patterns/failureNotice";
 import {
 	cacheStoredLayout,
 	cacheStoredTheme,
@@ -83,9 +89,8 @@ function featureAt(pathname: string): string | undefined {
 function showCommand(featureId: string): (() => void) | undefined {
 	const id = registry.showCommand(featureId);
 	if (id === undefined) return undefined;
-	return () => {
-		void runCommand(id);
-	};
+	// A failure is reported (a toast), as from the palette.
+	return () => runReported(id);
 }
 
 /** The bottom panel's show/hide shortcut, as the registry has it; a command renamed or left without a shortcut throws. */
@@ -177,17 +182,20 @@ function LoadedShell({
 		[navigate],
 	);
 	// A command that fails from the palette or a shortcut, or a refused Copy: no view shows it, so a toast does.
-	useEffect(
-		() =>
-			bindFailureNotice(({ title, description }) => {
-				notifyBackgroundResult(toasts, {
-					tone: "danger",
-					title,
-					...(description === undefined ? {} : { description }),
-				});
-			}),
-		[toasts],
-	);
+	useEffect(() => {
+		const unbindNotice = bindFailureNotice(({ title, description }) => {
+			notifyBackgroundResult(toasts, {
+				tone: "danger",
+				title,
+				...(description === undefined ? {} : { description }),
+			});
+		});
+		const unbindReporter = bindCommandFailureReporter(reportCommandFailure);
+		return () => {
+			unbindReporter();
+			unbindNotice();
+		};
+	}, [toasts]);
 	const onScreen = useMemo(() => featureAt(pathname), [pathname]);
 	const tabBadges = useBackgroundJobNotice({
 		toasts,

@@ -163,12 +163,17 @@ describe("CommandPalette", () => {
 		});
 		expect(gated.textContent).toContain("Needs OAK 0.12.0");
 		expect(gated.getAttribute("aria-disabled")).toBe("true");
+		within(dialog).getByRole("combobox", { name: "Search commands" }).focus();
 		await user.click(gated);
 		expect(deploy).not.toHaveBeenCalled();
 		expect(onOpenChange).not.toHaveBeenCalled();
 		// The refusal is said, politely.
-		expect(within(dialog).getByRole("status").textContent).toBe(
-			"Needs OAK 0.12.0",
+		expect(
+			dialog.querySelector("[data-slot=palette-refusal]")?.textContent,
+		).toBe("Needs OAK 0.12.0");
+		// The click left focus in the search field.
+		expect(document.activeElement).toBe(
+			within(dialog).getByRole("combobox", { name: "Search commands" }),
 		);
 		await user.click(
 			within(dialog).getByRole("option", {
@@ -200,6 +205,62 @@ describe("CommandPalette", () => {
 		await user.keyboard("{Enter}");
 		expect(toggle).toHaveBeenCalledOnce();
 		expect(deploy).not.toHaveBeenCalled();
+	});
+
+	it("keeps the mark on the same command when the parent re-renders with new item arrays, and names it by its id", async () => {
+		const { commands } = fixture();
+		const onOpenChange = vi.fn();
+		const user = userEvent.setup();
+		const view = render(
+			<CommandPalette
+				isOpen
+				onOpenChange={onOpenChange}
+				commands={commands}
+				platform="other"
+			/>,
+		);
+		const search = screen.getByRole("combobox", { name: "Search commands" });
+		search.focus();
+		await user.keyboard("{ArrowDown}");
+		const marked = () =>
+			document.getElementById(
+				search.getAttribute("aria-activedescendant") ?? "",
+			)?.dataset.key;
+		expect(marked()).toBe("shell.open");
+		// The Shell re-renders: a new array of the same commands. The mark stays.
+		view.rerender(
+			<CommandPalette
+				isOpen
+				onOpenChange={onOpenChange}
+				commands={[...commands]}
+				platform="other"
+			/>,
+		);
+		expect(marked()).toBe("shell.open");
+		// A command now listed before it: the mark (and the id the field names) follows the command, not the index.
+		const extra: PaletteCommand = {
+			featureTitle: "About",
+			command: defineCommand({
+				id: "about.first",
+				title: "First",
+				run: () => {},
+			}),
+		};
+		view.rerender(
+			<CommandPalette
+				isOpen
+				onOpenChange={onOpenChange}
+				commands={[extra, ...commands]}
+				platform="other"
+			/>,
+		);
+		expect(marked()).toBe("shell.open");
+		expect(search.getAttribute("aria-activedescendant")).toMatch(
+			/shell_2e_open$/,
+		);
+		// Typing drops the choice: the first runnable match is marked again.
+		await user.keyboard("o");
+		expect(marked()).toBe("about.first");
 	});
 
 	it("reports a command that fails (logged; the Shell shows it in a toast)", async () => {

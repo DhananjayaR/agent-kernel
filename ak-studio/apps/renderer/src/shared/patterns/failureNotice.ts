@@ -7,12 +7,9 @@
 //
 // What the toast says: a version-gated command (CommandUnavailableError) says the command is not available and the
 // version gate's reason ("Needs OAK 0.12.0"); any other failure says the error catalogue's title for its code (what
-// happened) and the error's own message (what to do), as presentError does.
-import {
-	CommandUnavailableError,
-	findCommand,
-	runCommand,
-} from "../commands/runCommand";
+// happened) and the error's own message (what to do), as presentError does. Commands are run with
+// shared/commands/runReported.ts, whose reporter the Shell binds to reportCommandFailure.
+import { CommandUnavailableError, findCommand } from "../commands/runCommand";
 import { failureOf, presentError } from "./presentError";
 import { patternStrings } from "./strings";
 
@@ -68,15 +65,4 @@ export function reportCommandFailure(commandId: string, error: unknown): void {
 		commandFailureNotice(commandId, error),
 		`command ${commandId} failed: ${describe(error)}`,
 	);
-}
-
-/** Runs an app command where no view will show its failure (the palette, a shortcut): a failure is reported. */
-export function runReported(commandId: string): void {
-	try {
-		runCommand(commandId).catch((error: unknown) =>
-			reportCommandFailure(commandId, error),
-		);
-	} catch (error) {
-		reportCommandFailure(commandId, error);
-	}
 }

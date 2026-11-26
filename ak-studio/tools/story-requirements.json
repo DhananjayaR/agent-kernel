@@ -84,6 +84,7 @@
 				"Clear",
 				"KeepsPlaceWhileEvicting",
 				"ScrollUpDuringBurst",
+				"FollowsWhenResized",
 				"LongLines",
 				"TenThousandLines",
 				"StreamFailed",

@@ -95,6 +95,17 @@ export function CommandPaletteView({
 	);
 }
 
+/** How long the text must stay unchanged before the number of matches is said. */
+const COUNT_SAID_AFTER_MS = 500;
+
+/** A command id as part of an element id: anything but letters, digits and "-" escaped, so two ids never meet. */
+function domIdPart(id: string): string {
+	return id.replace(
+		/[^A-Za-z0-9-]/g,
+		(char) => `_${char.charCodeAt(0).toString(16)}_`,
+	);
+}
+
 function PaletteBody({
 	items,
 	onRun,
@@ -113,46 +124,83 @@ function PaletteBody({
 		() => items.filter((item) => contains(item.title, query.trim())),
 		[items, query, contains],
 	);
-	// The marked row: the first runnable match whenever the matches change, else the first match.
-	const firstMark = useMemo(() => {
-		const runnable = matches.findIndex(
-			(item) => item.unavailable === undefined,
-		);
-		return matches.length === 0 ? -1 : Math.max(0, runnable);
-	}, [matches]);
-	const [mark, setMark] = useState(firstMark);
-	const [markFor, setMarkFor] = useState(matches);
-	if (markFor !== matches) {
-		setMarkFor(matches);
-		setMark(firstMark);
-	}
+	// The mark is kept by command id. What the person moved to (arrows, pointer) holds for the text it was chosen
+	// under, while that command is still listed: a new item list (the parent re-rendering) keeps it, a change to the
+	// text drops it. Otherwise the first runnable match is marked, else the first match.
+	const [chosen, setChosen] = useState<{ query: string; id: string }>();
+	const chosenIndex =
+		chosen && chosen.query === query
+			? matches.findIndex((item) => item.id === chosen.id)
+			: -1;
+	const mark =
+		chosenIndex >= 0
+			? chosenIndex
+			: matches.length === 0
+				? -1
+				: Math.max(
+						0,
+						matches.findIndex((item) => item.unavailable === undefined),
+					);
 	const marked = matches[mark];
-	// Said (politely) when Enter or a click lands on a gated row: it cannot run, and why.
-	const [refused, setRefused] = useState("");
-	const optionId = (index: number) => `${listId}-${index}`;
+	const moveMark = (index: number) => {
+		const item = matches[index];
+		if (item) setChosen({ query, id: item.id });
+	};
+	// Said (politely) when Enter or a click lands on a gated row: it cannot run, and why. `n` gives each refusal a
+	// node of its own, so pressing Enter again on the same row is said again; moving the mark clears it.
+	const [refused, setRefused] = useState<{ text: string; n: number }>();
+	// biome-ignore lint/correctness/useExhaustiveDependencies: a refusal is about the row that was marked
+	useEffect(() => setRefused(undefined), [marked?.id]);
+	const optionId = (item: CommandPaletteItem) =>
+		`${listId}-${domIdPart(item.id)}`;
+
+	// How many commands match, said politely a moment after the text stops changing (not on opening).
+	const [countSaid, setCountSaid] = useState("");
+	const typed = useRef(false);
+	const count = matches.length;
+	const said =
+		count === 0
+			? text.noMatches
+			: count === 1
+				? text.matchesOne
+				: text.matches.replace("{count}", String(count));
+	// biome-ignore lint/correctness/useExhaustiveDependencies: said again after each change to the text
+	useEffect(() => {
+		if (!typed.current) return;
+		const timer = setTimeout(() => setCountSaid(said), COUNT_SAID_AFTER_MS);
+		return () => clearTimeout(timer);
+	}, [query, said]);
 
 	const listRef = useRef<HTMLDivElement>(null);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: the marked row may have moved when the matches changed
 	useEffect(() => {
-		if (mark < 0) return;
+		if (!marked) return;
 		listRef.current
-			?.querySelector(`[data-index="${mark}"]`)
+			?.querySelector(`[id="${optionId(marked)}"]`)
 			?.scrollIntoView?.({ block: "nearest" });
-	}, [mark]);
+	}, [marked, matches]);
 
 	const run = (item: CommandPaletteItem | undefined) => {
 		if (!item) return;
 		if (item.unavailable === undefined) onRun(item.id);
-		else setRefused(item.unavailable);
+		else
+			setRefused((last) => ({
+				text: item.unavailable ?? "",
+				n: (last?.n ?? 0) + 1,
+			}));
 	};
 
 	const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
 		if (event.nativeEvent.isComposing) return;
+		// With a modifier the arrows are the field's own (select, move by word, go to the start or end).
+		if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey)
+			return;
 		const count = matches.length;
 		if (event.key === "ArrowDown" || event.key === "ArrowUp") {
 			event.preventDefault();
 			if (count === 0) return;
 			const step = event.key === "ArrowDown" ? 1 : -1;
-			setMark((current) => (current + step + count) % count);
+			moveMark((mark + step + count) % count);
 		} else if (event.key === "Enter") {
 			event.preventDefault();
 			run(marked);
@@ -166,17 +214,18 @@ function PaletteBody({
 				autoFocus
 				value={query}
 				onChange={(value) => {
+					typed.current = true;
 					setQuery(value);
-					setRefused("");
+					setRefused(undefined);
 				}}
 				className="shrink-0"
 			>
 				<Input
 					role="combobox"
-					aria-expanded="true"
+					aria-expanded={matches.length > 0}
 					aria-controls={listId}
 					aria-autocomplete="list"
-					aria-activedescendant={marked ? optionId(mark) : undefined}
+					aria-activedescendant={marked ? optionId(marked) : undefined}
 					autoComplete="off"
 					spellCheck={false}
 					placeholder={text.placeholder}
@@ -193,81 +242,90 @@ function PaletteBody({
 					}
 				/>
 			</TextField>
+			{/* A press anywhere below the field (a row, the padding, the empty text) keeps focus in the field. */}
+			{/* biome-ignore lint/a11y/noStaticElementInteractions: it only stops the press taking focus from the field. */}
 			<div
-				ref={listRef}
-				id={listId}
-				role="listbox"
-				aria-label={text.commands}
-				className={cn(
-					"flex max-h-96 flex-col overflow-y-auto p-popover",
-					matches.length === 0 && "hidden",
-				)}
+				className="flex min-h-0 flex-col"
+				onMouseDown={(event) => event.preventDefault()}
 			>
-				{matches.map((item, index) => {
-					const describedBy =
-						item.unavailable !== undefined || item.shortcut
-							? `${optionId(index)}-note`
-							: undefined;
-					return (
-						// biome-ignore lint/a11y/useFocusableInteractive: an option of the input's list (aria-activedescendant); focus stays in the input.
-						// biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard acts through the input (ArrowUp, ArrowDown, Enter), which owns this list.
-						<div
-							key={item.id}
-							id={optionId(index)}
-							role="option"
-							aria-selected={index === mark}
-							aria-disabled={item.unavailable !== undefined || undefined}
-							aria-labelledby={`${optionId(index)}-title`}
-							aria-describedby={describedBy}
-							data-key={item.id}
-							data-index={index}
-							data-focused={index === mark || undefined}
-							data-unavailable={item.unavailable === undefined ? undefined : ""}
-							onPointerMove={() => {
-								if (index !== mark) setMark(index);
-							}}
-							onClick={() => run(item)}
-							className={cn(
-								"relative flex min-h-row w-full shrink-0 cursor-default items-center gap-4 rounded-control px-edge",
-								"text-ui text-text select-none",
-								"data-focused:bg-fill-hover data-focused:outline-2 data-focused:-outline-offset-2 data-focused:outline-solid data-focused:outline-focus-ring",
-							)}
-						>
-							<span
-								id={`${optionId(index)}-title`}
-								className="min-w-0 flex-1 truncate"
+				<div
+					ref={listRef}
+					id={listId}
+					role="listbox"
+					aria-label={text.commands}
+					className={cn(
+						"flex max-h-96 flex-col overflow-y-auto p-popover",
+						matches.length === 0 && "hidden",
+					)}
+				>
+					{matches.map((item, index) => {
+						const id = optionId(item);
+						const describedBy =
+							item.unavailable !== undefined || item.shortcut
+								? `${id}-note`
+								: undefined;
+						return (
+							// biome-ignore lint/a11y/useFocusableInteractive: an option of the input's list (aria-activedescendant); focus stays in the input.
+							// biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard acts through the input (ArrowUp, ArrowDown, Enter), which owns this list.
+							<div
+								key={item.id}
+								id={id}
+								role="option"
+								aria-selected={index === mark}
+								aria-disabled={item.unavailable !== undefined || undefined}
+								aria-labelledby={`${id}-title`}
+								aria-describedby={describedBy}
+								data-key={item.id}
+								data-focused={index === mark || undefined}
+								data-unavailable={
+									item.unavailable === undefined ? undefined : ""
+								}
+								onPointerMove={() => {
+									if (index !== mark) moveMark(index);
+								}}
+								onClick={() => run(item)}
+								className={cn(
+									"relative flex min-h-row w-full shrink-0 cursor-default items-center gap-4 rounded-control px-edge",
+									"text-ui text-text select-none",
+									"data-focused:bg-fill-hover data-focused:outline-2 data-focused:-outline-offset-2 data-focused:outline-solid data-focused:outline-focus-ring",
+								)}
 							>
-								{item.title}
-							</span>
-							{item.unavailable !== undefined ? (
-								<span
-									id={describedBy}
-									className="shrink-0 text-ui-sm text-text"
-								>
-									{item.unavailable}
+								<span id={`${id}-title`} className="min-w-0 flex-1 truncate">
+									{item.title}
 								</span>
-							) : item.shortcut ? (
-								<kbd
-									id={describedBy}
-									aria-keyshortcuts={item.shortcut.aria}
-									className="shrink-0 font-mono text-ui-sm text-text"
-								>
-									{item.shortcut.label}
-								</kbd>
-							) : null}
-						</div>
-					);
-				})}
-			</div>
-			{matches.length === 0 ? (
-				<div className="p-popover">
-					<p className="flex min-h-row items-center px-edge text-ui text-text">
-						{text.noMatches}
-					</p>
+								{item.unavailable !== undefined ? (
+									<span
+										id={describedBy}
+										className="shrink-0 text-ui-sm text-text"
+									>
+										{item.unavailable}
+									</span>
+								) : item.shortcut ? (
+									<kbd
+										id={describedBy}
+										aria-keyshortcuts={item.shortcut.aria}
+										className="shrink-0 font-mono text-ui-sm text-text"
+									>
+										{item.shortcut.label}
+									</kbd>
+								) : null}
+							</div>
+						);
+					})}
 				</div>
-			) : null}
-			<span role="status" className="sr-only">
-				{refused}
+				{matches.length === 0 ? (
+					<div className="p-popover">
+						<p className="flex min-h-row items-center px-edge text-ui text-text">
+							{text.noMatches}
+						</p>
+					</div>
+				) : null}
+			</div>
+			<span role="status" data-slot="palette-refusal" className="sr-only">
+				{refused ? <span key={refused.n}>{refused.text}</span> : null}
+			</span>
+			<span role="status" data-slot="palette-count" className="sr-only">
+				{countSaid}
 			</span>
 		</div>
 	);

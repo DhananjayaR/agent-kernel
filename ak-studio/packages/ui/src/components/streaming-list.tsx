@@ -10,8 +10,9 @@
 //   The app's own notes (channel `info`) are muted.
 // - **Follows the end** until the person scrolls up; then "Jump to latest" shows at the bottom right. Following is
 //   decided by what the person does, never by the position alone: an upward wheel, ArrowUp, Page Up or Home on the
-//   rows, grabbing the scrollbar, or any scroll of theirs that moved up stops it at once, before the next batch can
-//   snap the list back (a batch can land every frame). It resumes only when they move down to the end (by wheel,
+//   rows, or grabbing the scrollbar stops it at once (when there is anything to scroll), before the next batch can
+//   snap the list back (a batch can land every frame); so does a scroll of theirs that moved up away from the end.
+//   The box growing (the browser moves the position up to fit) is not the person, and changes nothing. It resumes only when they move down to the end (by wheel,
 //   keys or the scrollbar), press End, or press "Jump to latest". The list's own scrolls (following, keeping place)
 //   never change it. While not following, lines evicted from the top of the buffer do not move what is in view.
 // - **Header.** The label, a note when earlier lines were not kept ("120 earlier lines not kept": Copy then copies
@@ -137,6 +138,11 @@ const Row = memo(function Row({
 	);
 });
 
+/** The rows are taller than the box: there is somewhere to scroll up to. */
+function overflows(el: HTMLElement): boolean {
+	return el.scrollHeight > el.clientHeight + 1;
+}
+
 function isAtEnd(el: HTMLElement): boolean {
 	return el.scrollHeight - el.scrollTop - el.clientHeight <= AT_END_SLACK;
 }
@@ -231,28 +237,43 @@ export function StreamingListView({
 		const moved = top - lastTop.current;
 		lastTop.current = top;
 		if (own) return;
-		// The person's scroll: up stops following; down to the end resumes it.
-		if (moved < 0) follow(false);
-		else if (moved > 0 && isAtEnd(el)) follow(true);
+		// The person's scroll: up and away from the end stops following; down to the end resumes it. A move up that
+		// stays at the end is the box growing (the browser clamps the position), not the person: it changes nothing.
+		const atEnd = isAtEnd(el);
+		if (moved < 0 && !atEnd) follow(false);
+		else if (moved > 0 && atEnd) follow(true);
 	};
 
 	// An upward wheel stops following before the browser scrolls, so no batch in between can snap the list back.
 	const onWheel = (event: WheelEvent<HTMLElement>) => {
-		if (event.deltaY < 0 && following.current) follow(false);
+		const el = scrollRef.current;
+		if (event.deltaY < 0 && following.current && el && overflows(el))
+			follow(false);
 	};
 
 	// Grabbing the scrollbar (a press on the rows' own box, not on a row) stops following while it is held; let go
 	// at the end, it follows again.
+	const releaseScrollbar = useRef<(() => void) | undefined>(undefined);
 	const onPointerDown = (event: PointerEvent<HTMLElement>) => {
 		const el = scrollRef.current;
-		if (!el || event.target !== el) return;
+		if (!el || event.target !== el || !overflows(el)) return;
 		follow(false);
+		releaseScrollbar.current?.();
 		const release = () => {
 			window.removeEventListener("pointerup", release);
+			window.removeEventListener("pointercancel", release);
+			releaseScrollbar.current = undefined;
 			if (isAtEnd(el)) follow(true);
 		};
+		releaseScrollbar.current = () => {
+			window.removeEventListener("pointerup", release);
+			window.removeEventListener("pointercancel", release);
+		};
 		window.addEventListener("pointerup", release);
+		window.addEventListener("pointercancel", release);
 	};
+	// Unmounted while the scrollbar is held: stop listening.
+	useEffect(() => () => releaseScrollbar.current?.(), []);
 
 	useEffect(() => {
 		if (!copied) return;
@@ -294,9 +315,12 @@ export function StreamingListView({
 			scrollToEnd();
 		} else if (event.key === "Home") {
 			event.preventDefault();
-			follow(false);
+			if (overflows(el)) follow(false);
 			setTop(el, 0);
-		} else if (event.key === "ArrowUp" || event.key === "PageUp") {
+		} else if (
+			(event.key === "ArrowUp" || event.key === "PageUp") &&
+			overflows(el)
+		) {
 			follow(false);
 		}
 	};
