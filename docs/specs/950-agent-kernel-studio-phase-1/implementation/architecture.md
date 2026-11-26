@@ -1,6 +1,6 @@
 # Studio architecture: the data and feature layer
 
-**Status:** proposed, revised after review on 23 November 2026. Approved and built in
+**Status:** revised after review on 23 November 2026; approved by the owner on 26 November 2026. Built in
 [P1b](P1b-data-layer-and-patterns.md), followed by every later phase. After approval the
 `ak-studio-architecture` skill is the maintained source and this file is the frozen design record.
 

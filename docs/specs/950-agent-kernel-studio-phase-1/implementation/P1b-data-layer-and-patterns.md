@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Not started |
+| Status | Started 26 Nov 2026: approval gate passed. Execution plan: [P1b-plan.md](P1b-plan.md) |
 | Business aspect | None visible to users. Makes every later feature look and behave the same, whoever writes it. |
 | PRD milestone | Before milestone 1 |
 | Depends on | [P1a](P1a-app-foundation.md) |
@@ -38,10 +38,11 @@ coding agents.
 
 Before building:
 
-- [ ] Review [architecture.md](architecture.md). Record the approval, and any change, in the README decision
-      log.
-- [ ] Review [conventions-and-skills.md](conventions-and-skills.md). Same.
-- [ ] Confirm D12 (strict Ajv, precompiled) still holds.
+- [x] Review [architecture.md](architecture.md). Record the approval, and any change, in the README decision
+      log. Approved as written, 26 Nov 2026.
+- [x] Review [conventions-and-skills.md](conventions-and-skills.md). Same. Approved as written, 26 Nov 2026.
+- [x] Confirm D12 (strict Ajv, precompiled) still holds. Confirmed 26 Nov 2026; it governs forms, while the bridge
+      keeps zod (D5).
 
 ## Design gate
 

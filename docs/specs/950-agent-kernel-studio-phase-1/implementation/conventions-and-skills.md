@@ -1,6 +1,6 @@
 # Ground rules, UX patterns and Studio skills
 
-**Status:** proposed, revised after review on 23 November 2026. Approved and written in
+**Status:** revised after review on 23 November 2026; approved by the owner on 26 November 2026. Written in
 [P1b](P1b-data-layer-and-patterns.md); extended by each later phase. After approval the `ak-studio-ui` skill
 is the maintained source for sections 1 and 2, and this file is the frozen design record.
 

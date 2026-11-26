@@ -81,7 +81,7 @@ PRD's milestones.
 |---|---|---|---|---|---|
 | P0 | Technology selection | Before 1 | In review (spikes ran on Linux; record drafted; Windows and macOS deferred by the owner; spike S5 added; no turn has run on a subscription yet) | n/a | [P0](implementation/P0-technology-selection.md) |
 | P1a | App foundation: workspace, shell, bridge, design system | Before 1 | Started 24 Nov 2026: Tasks 1–10 done on Linux; shell layout and component set await sign-off. The 25 Nov branding changes are decided and built (`c3085c7c`) | Palette, fonts, density, theme only | [P1a](implementation/P1a-app-foundation.md), [plan](implementation/P1a-plan.md) |
-| P1b | Data and feature layer, shared patterns, Studio skills | Before 1 | Not started | No | [P1b](implementation/P1b-data-layer-and-patterns.md) |
+| P1b | Data and feature layer, shared patterns, Studio skills | Before 1 | Started 26 Nov 2026: approval gate passed; plan written | No | [P1b](implementation/P1b-data-layer-and-patterns.md) |
 | P2 | Open a project and know its OAK version | 1 | Not started | No | [P2](implementation/P2-project-and-kernel-version.md) |
 | P3 | See the project: read-only Canvas, Code, Config | 1 | Not started | No | [P3](implementation/P3-read-only-builder.md) |
 | P6 | Build with AI | 2 | Not started | No | [outline](implementation/P4-P12.md#p6--build-with-ai) |
@@ -178,7 +178,7 @@ A solid arrow means "needs"; a dotted arrow means "comes after, in the PRD order
 | [architecture.md](implementation/architecture.md) | The data and feature layer: layers, who owns each kind of data, the contract's four shapes (query, command, job, session), safe file writes, jobs, errors, capability gating, feature folders and manifests, what the Studio writes into a project, and the kernel commands it should use instead of hacks | P1, followed by every phase |
 | [conventions-and-skills.md](implementation/conventions-and-skills.md) | Ground rules for UI semantics, the UX pattern catalogue, development techniques, and the `ak-studio-*` skills that teach all of it to coding agents | P1, extended by every phase |
 
-Both are proposals until approved at the start of [P1b](implementation/P1b-data-layer-and-patterns.md). Both were revised
+Both were approved on 26 November 2026, at the start of [P1b](implementation/P1b-data-layer-and-patterns.md). Both were revised
 after a review on 23 November 2026 (sessions, safe writes, domain-event invalidation, working copies, secret
 handling, fewer skills written later, skills scoped to `ak-studio/`).
 
@@ -239,6 +239,7 @@ Detail: [P2](implementation/P2-project-and-kernel-version.md).
 | 25 Nov 2026 | Windows and macOS stay deferred, with a re-entry point: the three-system CI runs green before the first build leaves the team, and before P6 at the latest | [Order](#order-and-dependencies) |
 | 25 Nov 2026 | The licence is decided before any build leaves the team, not at P12 (open decision 9) | [Open decisions](#open-decisions) |
 | 25 Nov 2026 | **One folder.** The implementation plan moves into the team's folder, `docs/specs/950-agent-kernel-studio-phase-1/`: the implementation docs into `implementation/` (`later-phases.md` renamed `P4-P12.md`, so it does not clash with the team's `later-phases/`), the technology research into `research/technology/`, and the two READMEs into this one. `PHASE-1-PLAN.md` maps the PRD milestones to the implementation phases. Ruled at the owner's request, so the team and the implementation refer to one plan | This file, [PHASE-1-PLAN.md](PHASE-1-PLAN.md) |
+| 26 Nov 2026 | P1b approval gate passed. The architecture and the ground rules are approved as written. D12 still holds: config forms use React Hook Form with strict, precompiled Ajv; the bridge keeps zod (D5). Approved by Dhananjaya Rajasinghe. Closes open decision 6a | [architecture](implementation/architecture.md), [conventions](implementation/conventions-and-skills.md), [P1b](implementation/P1b-data-layer-and-patterns.md#approval-gate) |
 
 ### Open decisions
 
@@ -261,7 +262,7 @@ Electron, and the code is real files in the working directory."
 | 4 | Supported floor version | P2 | |
 | 5 | Introspection by import or by static parsing | P3 | |
 | 6 | Kernel-side commands (`ak inspect`, `ak config schema`, `ak config resolve`, `ak features`) in `ak-py` | Design in P3 | Proposed in [architecture.md](implementation/architecture.md); each goes through the repo's spec process |
-| 6a | Approve the architecture and the ground rules | Start of P1b | [architecture.md](implementation/architecture.md), [conventions-and-skills.md](implementation/conventions-and-skills.md) |
+| 6a | Approve the architecture and the ground rules. **Closed 26 Nov 2026:** approved as written | Closed | [architecture.md](implementation/architecture.md), [conventions-and-skills.md](implementation/conventions-and-skills.md) |
 | 6b | Mark secret fields in `AKConfig` (they are plain `str` today), so resolved config can be masked without a hand-kept list | Design in P3 | [architecture.md](implementation/architecture.md) |
 | 6c | Move the project templates into `ak-py` as files that both the `ak-init` skill and the Studio read | Before P4 | Until then, reviewed reference projects |
 | 7 (T10) | Anthropic's rules for the coding agent: no collecting or storing of Claude.ai credentials, no login screen of our own, the Claude Code executable unmodified, no routing of requests through plan credentials "on behalf of their users". Running Claude Code in a product "requires agreeing to our Commercial Terms of Service": an owner action. Running the user's own signed-in Claude Code is our reading of the rules, not a stated permission: confirm with Anthropic. The Studio's feature is "Claude Agent"; the Studio never calls itself "Claude Code": Anthropic's Agent SDK branding rule permits "Claude Agent" or "Powered by Claude" and not "Claude Code" (a primary source). Put in the same conversation with Anthropic: the two unconfirmed reports in 1e, and the model for the later hosted Studio (API keys or commercial terms), as the PRD asks | Before P6 | Checked against the documentation on 24 Nov 2026; see [architecture](implementation/architecture.md#the-coding-agent-and-the-users-claude-code). **Team item 10, Claude Code terms:** "Confirm with Anthropic that the app may launch the user's own signed-in Claude Code, and settle the hosted-Studio model (API keys or commercial terms) in the same conversation." Open, the same question |
