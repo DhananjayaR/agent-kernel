@@ -3,6 +3,7 @@
 // capability catalog the app uses; every command id is unique and in its feature's namespace; every
 // `runCommand("…")` id in the renderer's source is an app command, found by a source scan), and the shortcut clash
 // test, platform by platform, with Mod+K and the native menu's accelerators kept.
+import { jobKinds } from "@ak-studio/contract";
 import type { CapabilityCatalog } from "@ak-studio/kernel-catalog";
 import { describe, expect, it } from "vitest";
 import { APP_CATALOG } from "../shared/capability/capability";
@@ -193,6 +194,60 @@ describe("the manifests", () => {
 				capabilities: [],
 			}),
 		).toThrow(/\/a/);
+	});
+});
+
+describe("Job ownership and show commands", () => {
+	it("give every job kind in the contract exactly one owning feature", () => {
+		const owners = new Map<string, string[]>();
+		for (const feature of features)
+			for (const kind of feature.jobs ?? [])
+				owners.set(kind, [...(owners.get(kind) ?? []), feature.id]);
+		const kinds = Object.keys(jobKinds);
+		expect(kinds.length).toBeGreaterThan(0);
+		for (const kind of kinds) {
+			expect(owners.get(kind), `owners of ${kind}`).toHaveLength(1);
+			expect(registry.ownerOfJob(kind)).toBe(owners.get(kind)?.[0]);
+		}
+		// And no manifest owns a kind the contract does not have.
+		expect([...owners.keys()].filter((kind) => !kinds.includes(kind))).toEqual(
+			[],
+		);
+	});
+
+	it("map a kind to its declared owner and a feature to its declared show command, never by naming", () => {
+		expect(registry.ownerOfJob("about.demoJob")).toBe("about");
+		expect(registry.ownerOfJob("about.somethingElse")).toBeUndefined();
+		expect(registry.showCommand("about")).toBe("about.show");
+		expect(registry.showCommand("canvas")).toBeUndefined();
+	});
+
+	it("are refused when two features own one kind, or a show command is not the feature's", () => {
+		const show = defineCommand({
+			id: "a.show",
+			title: "Show A",
+			run: () => {},
+		});
+		const feature = (id: string, extra: object = {}) =>
+			defineFeature({ id, commands: [], capabilities: [], ...extra });
+		expect(() =>
+			buildRegistry([
+				feature("a", { jobs: ["x.run"] }),
+				feature("b", { jobs: ["x.run"] }),
+			]),
+		).toThrow(/features a and b both own job kind x\.run/);
+		expect(() => feature("a", { jobs: ["x.run", "x.run"] })).toThrow(
+			/listed twice/,
+		);
+		expect(() => feature("a", { show: "a.show" })).toThrow(
+			/a\.show is not one of its commands/,
+		);
+		expect(() => feature("b", { show: "a.show", commands: [] })).toThrow(
+			/not one of its commands/,
+		);
+		expect(feature("a", { show: "a.show", commands: [show] }).show).toBe(
+			"a.show",
+		);
 	});
 });
 

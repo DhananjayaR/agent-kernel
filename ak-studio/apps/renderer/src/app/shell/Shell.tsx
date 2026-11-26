@@ -39,7 +39,7 @@ import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { getTransport, isStudioFailure } from "../../shared/bridge/client";
 import { bindNavigate } from "../../shared/commands/navigation";
-import { findCommand, runCommand } from "../../shared/commands/runCommand";
+import { runCommand } from "../../shared/commands/runCommand";
 import {
 	describeShortcut,
 	shortcutPlatform,
@@ -73,10 +73,10 @@ function featureAt(pathname: string): string | undefined {
 	return registry.routes.find((route) => route.path === pathname)?.featureId;
 }
 
-/** "Show" on a background job notice: the owning feature's `<feature>.show` command, if it declares one. */
+/** "Show" on a background job notice: the owning feature's declared `show` command, if it has one. */
 function showCommand(featureId: string): (() => void) | undefined {
-	const id = `${featureId}.show`;
-	if (!findCommand(id)) return undefined;
+	const id = registry.showCommand(featureId);
+	if (id === undefined) return undefined;
 	return () => {
 		void runCommand(id);
 	};
@@ -173,6 +173,7 @@ function LoadedShell({
 		toasts,
 		onScreen,
 		tabs: TAB_FEATURES,
+		ownerOf: registry.ownerOfJob,
 		showCommand,
 	});
 	const platform = shortcutPlatform(info?.platform);

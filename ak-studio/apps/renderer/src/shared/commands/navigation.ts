@@ -1,5 +1,5 @@
-// Moving to a feature's screen from an app command (the background job notice's "Show" runs the owning feature's
-// `<feature>.show` command). The router lives in app/, which features and shared/ cannot import, so the mounted
+// Moving to a feature's screen from an app command (the background job notice's "Show" runs the command the owning
+// feature's manifest names as `show`, such as `about.show`). The router lives in app/, which features and shared/ cannot import, so the mounted
 // Shell binds its navigate here while it is mounted, as it binds its shell actions (app/shell/shellActions.ts).
 // Unbound (no shell), `canNavigate` is false: a command that navigates sets it as its `when`, so it is hidden and
 // does nothing.

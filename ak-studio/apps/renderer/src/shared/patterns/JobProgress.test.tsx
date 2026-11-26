@@ -51,6 +51,11 @@ async function showDemo(
 describe("JobProgress", () => {
 	it("shows the step, the elapsed time from one second on, and Stop while the job runs", async () => {
 		const { region, wait } = await showDemo();
+		// One live region, the card's description, says each step as it comes (never the ticking time).
+		const said = region.querySelector(
+			`[id="${region.getAttribute("aria-describedby")}"]`,
+		);
+		expect(said?.getAttribute("role")).toBe("status");
 		await waitFor(() =>
 			expect(region.textContent).toContain("Step 1 of 3 · Checking the app"),
 		);
@@ -65,6 +70,8 @@ describe("JobProgress", () => {
 			expect(region.textContent).toContain("Step 2 of 3 · Preparing the demo"),
 		);
 		expect(region.textContent).toContain("Elapsed time 1 s");
+		expect(said?.isConnected).toBe(true);
+		expect(said?.textContent).toBe("Step 2 of 3 · Preparing the demo");
 	});
 
 	it("asks the job's question as an approval card whose buttons say what happens; approving runs the last step", async () => {
@@ -77,16 +84,24 @@ describe("JobProgress", () => {
 			name: "Run the last step?",
 		});
 		expect(region.textContent).toContain("Waiting for you");
+		// The card's live region is there, empty, before the answer; the outcome is written into it.
+		const said = within(card).getByRole("status");
+		expect(said.textContent).toBe("");
 		await userEvent.click(
 			within(card).getByRole("button", { name: "Run the last step" }),
 		);
-		await waitFor(() =>
-			expect(within(region).getByText("Approved by you")).toBeTruthy(),
+		await waitFor(() => expect(said.textContent).toBe("Approved by you"));
+		expect(said.isConnected).toBe(true);
+		// The job's own live region is the same element from start to end, and says how it ended.
+		const jobSaid = region.querySelector(
+			`[id="${region.getAttribute("aria-describedby")}"]`,
 		);
 		await wait(1);
 		await waitFor(() => expect(region.dataset.state).toBe("succeeded"));
+		expect(jobSaid?.isConnected).toBe(true);
+		expect(jobSaid?.textContent).toBe("Done. Ran 3 steps.");
 		expect(region.textContent).toContain("Ran 3 steps.");
-		expect(region.textContent).toContain("Approved by you");
+		expect(said.textContent).toBe("Approved by you");
 		expect(within(region).queryByRole("button", { name: "Stop" })).toBeNull();
 	});
 
@@ -99,11 +114,18 @@ describe("JobProgress", () => {
 		within(card).getByRole("button", { name: "Run the last step" }).focus();
 		await userEvent.keyboard("{Enter}");
 		await waitFor(() =>
-			expect(within(region).getByText("Approved by you")).toBeTruthy(),
+			expect(within(card).getByRole("status").textContent).toBe(
+				"Approved by you",
+			),
 		);
 		expect(card.isConnected).toBe(true);
-		expect(card.contains(document.activeElement)).toBe(true);
 		expect(document.activeElement).toBe(card);
+		// Focused, the card now says the outcome, not the open question.
+		expect(
+			within(region).getByRole("region", {
+				name: "Approved by you: Run the last step?",
+			}),
+		).toBe(card);
 	});
 
 	it("denying ends the job stopped, with the outcome in place", async () => {
@@ -116,7 +138,8 @@ describe("JobProgress", () => {
 			within(card).getByRole("button", { name: "Stop the job" }),
 		);
 		await waitFor(() => expect(region.dataset.state).toBe("cancelled"));
-		expect(region.textContent).toContain("Denied");
+		expect(within(card).getByRole("status").textContent).toBe("Denied");
+		expect(card.getAttribute("aria-label")).toBe("Denied: Run the last step?");
 		expect(region.textContent).toContain("Stopped before it finished.");
 	});
 

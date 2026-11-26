@@ -43,6 +43,8 @@ export const uiStrings = {
 		deny: "Deny",
 		approved: "Approved by you",
 		denied: "Denied",
+		/** The answered card's accessible name: `{outcome}` is approved or denied, `{title}` the question. */
+		outcomeName: "{outcome}: {title}",
 	},
 	// The job progress pattern (job-progress.tsx). `{step}`, `{steps}` and `{label}` fill the step line.
 	jobProgress: {
@@ -57,6 +59,8 @@ export const uiStrings = {
 		stop: "Stop",
 		showCommands: "Show commands",
 		cancelledResult: "Stopped before it finished.",
+		/** Announced when a job succeeds with a one-line result. */
+		succeededWith: "Done. {result}",
 	},
 	// The background job notice (background-job-notice.tsx): the tab icon's names and the one toast template.
 	// `{job}` is the job's title ("Apply").

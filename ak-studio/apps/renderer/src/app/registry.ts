@@ -1,9 +1,10 @@
 // The app registry: everything the shell and the router need from the feature manifests (features.ts), built once.
 // The tabs (by their `order`), the routes, the command list (handed to runCommand, shared/commands/runCommand.ts,
 // so any feature can run any command without importing it), the capabilities the manifests name, and the shortcut
-// map per platform. The shell and the router import this module, never a feature. A manifest list it cannot accept
-// (two features with one id, two commands with one id, a command outside its feature's namespace, two routes at one
-// path) throws as the app loads.
+// map per platform, and which feature owns each job kind and which command shows it (the background job notice).
+// The shell and the router import this module, never a feature. A manifest list it cannot accept (two features with
+// one id, two commands with one id, a command outside its feature's namespace, two routes at one path, two owners
+// of one job kind) throws as the app loads.
 import type { AppCommand } from "../shared/commands/command";
 import type { FeatureManifest, FeatureRoute } from "../shared/commands/feature";
 import { setCommands } from "../shared/commands/runCommand";
@@ -38,6 +39,10 @@ export interface AppRegistry {
 	command(id: string): AppCommand;
 	/** Every capability a manifest or one of its commands names, once each. */
 	capabilities: readonly string[];
+	/** The feature that owns the job kind `kind` (its manifest's `jobs`), if any. */
+	ownerOfJob(kind: string): string | undefined;
+	/** The command that brings feature `featureId` on screen (its manifest's `show`), if it declares one. */
+	showCommand(featureId: string): string | undefined;
 	/** Each resolved shortcut on `platform` ("Control+J") and its command: what the app's keydown listener looks up. */
 	shortcutMap(platform: ShortcutPlatform): ReadonlyMap<string, AppCommand>;
 }
@@ -57,6 +62,8 @@ export function buildRegistry(
 	const tabs: AppTab[] = [];
 	const commands: AppCommand[] = [];
 	const capabilities = new Set<string>();
+	const jobOwners = new Map<string, string>();
+	const shows = new Map<string, string>();
 	for (const manifest of manifests) {
 		if (featureIds.has(manifest.id))
 			throw new Error(`feature ${manifest.id} is listed twice`);
@@ -85,6 +92,15 @@ export function buildRegistry(
 		}
 		for (const capability of manifest.capabilities)
 			capabilities.add(capability);
+		for (const kind of manifest.jobs ?? []) {
+			const owner = jobOwners.get(kind);
+			if (owner !== undefined)
+				throw new Error(
+					`features ${owner} and ${manifest.id} both own job kind ${kind}`,
+				);
+			jobOwners.set(kind, manifest.id);
+		}
+		if (manifest.show !== undefined) shows.set(manifest.id, manifest.show);
 	}
 	tabs.sort((a, b) => a.order - b.order);
 	const defaultTab = tabs[0];
@@ -100,6 +116,8 @@ export function buildRegistry(
 			return found;
 		},
 		capabilities: [...capabilities],
+		ownerOfJob: (kind) => jobOwners.get(kind),
+		showCommand: (featureId) => shows.get(featureId),
 		shortcutMap: (platform) => buildShortcutMap(commands, platform),
 	};
 }

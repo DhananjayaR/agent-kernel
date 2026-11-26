@@ -122,6 +122,8 @@ describe("Approval as a card", () => {
 		show(confirm);
 		const card = screen.getByRole("region", { name: "Run the last step?" });
 		expect(within(card).queryByRole("button", { name: "Cancel" })).toBeNull();
+		const said = within(card).getByRole("status");
+		expect(said.textContent).toBe("");
 		await userEvent.click(
 			within(card).getByRole("button", { name: "Run the last step" }),
 		);
@@ -136,10 +138,27 @@ describe("Approval as a card", () => {
 			},
 		]);
 		answered(confirm);
+		await waitFor(() => expect(said.textContent).toBe("Approved by you"));
+		expect(
+			screen.getByRole("region", {
+				name: "Approved by you: Run the last step?",
+			}),
+		).toBe(card);
+	});
+
+	it("sends one answer however often it is pressed while one is on its way", async () => {
+		show(confirm);
+		let settle: (value: unknown) => void = () => {};
+		reply = () => new Promise((resolve) => (settle = resolve));
+		const approve = screen.getByRole("button", { name: "Run the last step" });
+		await userEvent.click(approve);
+		await userEvent.click(approve);
+		await userEvent.click(screen.getByRole("button", { name: "Stop the job" }));
+		expect(requests).toHaveLength(1);
+		settle({});
+		answered(confirm);
 		await waitFor(() =>
-			expect(screen.getByRole("status").textContent).toContain(
-				"Approved by you",
-			),
+			expect(screen.getByRole("status").textContent).toBe("Approved by you"),
 		);
 	});
 
@@ -211,6 +230,26 @@ describe("Approval as a modal (confirm-by-name)", () => {
 		expect(requests.map((r) => r.input)).toEqual([
 			{ jobId: "job-2", requestId: "req-2", answer: { optionId: "deny" } },
 		]);
+	});
+
+	it("ignores Escape while an approve is on its way: one answer", async () => {
+		show(byName);
+		let settle: (value: unknown) => void = () => {};
+		reply = () => new Promise((resolve) => (settle = resolve));
+		const dialog = await screen.findByRole("alertdialog");
+		await userEvent.type(within(dialog).getByRole("textbox"), "support-triage");
+		await userEvent.click(
+			within(dialog).getByRole("button", { name: "Destroy deployment" }),
+		);
+		await userEvent.keyboard("{Escape}");
+		expect(requests.map((r) => r.input)).toEqual([
+			{
+				jobId: "job-2",
+				requestId: "req-2",
+				answer: { optionId: "approve", name: "support-triage" },
+			},
+		]);
+		settle({});
 	});
 
 	it("denies on Escape (the safe direction)", async () => {

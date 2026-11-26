@@ -5,7 +5,8 @@
 // (they say what happens); approve is the option `approve` (CONFIRM_OPTION_IDS), deny the option `deny`. A request
 // with other options takes its first as approve and its last as deny (the choice and permission kinds settle their
 // own layout when first used: P6, P8). For confirm-by-name, approve sends the typed name and enables only on an exact
-// match; deny never sends it (job.respond accepts deny without the name).
+// match; deny never sends it (job.respond accepts deny without the name). A destructive approve always comes with
+// a name to type: the runtime refuses `destructive` without `expectedName` (JobContext.confirm).
 //
 // Answering: the pressed button shows pending after 300 ms (the shared timing); a refused answer is shown inline in
 // the frame (the modal stays open), by the error catalogue's title. Once answered, the card shows the outcome in

@@ -944,6 +944,23 @@ describe("JobService: confirm and a runner's own cancel", () => {
 		expect(s.log).not.toHaveBeenCalled();
 	});
 
+	it("refuses a destructive confirm with no name to type: it never asks", async () => {
+		const s = setup();
+		let refused: unknown;
+		s.jobs.define("t.demo", async (_input, ctx) => {
+			refused = await ctx
+				.confirm({ title: "Delete?", summary: "Gone", destructive: true })
+				.catch((err: unknown) => err);
+			return { total: 1 } as never;
+		});
+		serve(s);
+		const jobId = await start(s, "t.demo");
+		await settle();
+		expect(refused).toBeInstanceOf(TypeError);
+		expect(String(refused)).toMatch(/expectedName/);
+		expect(states(s, jobId)).not.toContain("waiting-for-user");
+	});
+
 	it("rejects a confirm when the job is cancelled while it waits", async () => {
 		const s = setup();
 		const { runner, reached } = confirming({

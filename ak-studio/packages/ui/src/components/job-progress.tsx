@@ -3,7 +3,8 @@
 // shared/patterns) fills it from the job store. Several jobs in one view stack, newest first (JobProgressStack).
 //
 // A card with the job's title (its accessible name), a StatusChip for its state, the current step ("Step 2 of 3 ·
-// Preparing the demo") as a polite live region, and the elapsed time in monospace figures ("1 min 12 s"), shown
+// Preparing the demo") announced through one polite live region that lives as long as the card (it also says the
+// end: "Done", "Stopped before it finished.", and is the card's description), and the elapsed time in monospace figures ("1 min 12 s"), shown
 // from one second on and only while the job runs or waits (the parent passes it from a clock it can freeze). While
 // it runs: "Stop" (secondary; "Stop", as drawn, because it stops a process; "Cancel" stays for dialogs), with the
 // job's own caution line where stopping is unsafe, and "Show commands" when the job ran commands (it opens the
@@ -110,6 +111,26 @@ export function JobProgressView({
 		elapsedMs !== undefined &&
 		elapsedMs >= ELAPSED_SHOWN_FROM_MS;
 	const canStop = active && onStop !== undefined;
+	const statusId = useId();
+	const stepText = step
+		? fillString(text.step, {
+				step: step.step,
+				steps: step.steps,
+				label: step.label,
+			})
+		: undefined;
+	// What the live region says: the step while it runs, the state otherwise. One region for the card's whole life,
+	// so each change is announced (a region inserted already filled often is not); not the ticking time.
+	const announcement =
+		state === "running" || state === "queued"
+			? (stepText ?? text[state])
+			: state === "succeeded"
+				? typeof result === "string"
+					? fillString(text.succeededWith, { result })
+					: text.succeeded
+				: state === "cancelled"
+					? text.cancelledResult
+					: text[state];
 	return (
 		<section
 			ref={ref}
@@ -117,11 +138,15 @@ export function JobProgressView({
 			data-slot="job-progress"
 			data-state={state}
 			aria-labelledby={titleId}
+			aria-describedby={statusId}
 			className={cn(
 				"flex flex-col gap-3 rounded-card border border-border-default bg-surface-raised p-4 text-ui text-text outline-none focus-visible:focus-outline",
 				className,
 			)}
 		>
+			<p id={statusId} role="status" className="sr-only">
+				{announcement}
+			</p>
 			<div className="flex flex-wrap items-center gap-x-3 gap-y-2">
 				<h3
 					id={titleId}
@@ -133,14 +158,9 @@ export function JobProgressView({
 			</div>
 			{active && (step || showElapsed) ? (
 				<div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-					<p role="status" className="min-w-0 flex-1">
-						{step
-							? fillString(text.step, {
-									step: step.step,
-									steps: step.steps,
-									label: step.label,
-								})
-							: null}
+					{/* The live region says the step; this is its visible copy. */}
+					<p aria-hidden="true" className="min-w-0 flex-1">
+						{stepText}
 					</p>
 					{showElapsed ? (
 						<span className="mono-figures text-ui-sm text-text-muted">
@@ -179,9 +199,9 @@ export function JobProgressView({
 					{stopError.description}
 				</InlineBanner>
 			) : null}
-			{state === "succeeded" && result ? <p role="status">{result}</p> : null}
+			{state === "succeeded" && result ? <div>{result}</div> : null}
 			{state === "cancelled" ? (
-				<p role="status" className="text-text-muted">
+				<p aria-hidden="true" className="text-text-muted">
 					{text.cancelledResult}
 				</p>
 			) : null}

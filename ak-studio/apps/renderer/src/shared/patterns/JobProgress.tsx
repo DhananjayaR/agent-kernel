@@ -62,7 +62,8 @@ export function JobProgress({
 }: JobProgressProps) {
 	const job = useJob(jobId);
 	const active = job !== undefined && ACTIVE.has(job.state);
-	const now = useNow(active);
+	// Ticks only while a time can show: running or waiting, with a start time (not while queued).
+	const now = useNow(active && job?.startedAt !== undefined);
 	const [stopping, setStopping] = useState(false);
 	const [stopError, setStopError] = useState<InlineError>();
 	const stopLate = usePendingAfter(stopping, jobId);

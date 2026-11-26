@@ -9,13 +9,14 @@
 // required", never colour alone). Approve is the primary action (`danger` for a destructive one, which names the
 // thing); deny is secondary. With `confirmName`, approve stays disabled until the typed name matches exactly (an
 // empty name never matches); Enter in the field never approves, and denying never needs the name. Once answered,
-// the card shows the outcome in place ("Approved by you", "Denied") as a polite live region, and focus that was on
-// its buttons moves to the card. While an answer is on its way the pressed button is pending and the other is
+// the card shows the outcome in place ("Approved by you", "Denied"), written into a polite live region that was
+// mounted empty while it asked (so it is announced), and focus that was on its buttons moves to the card, whose
+// name then says the outcome ("Approved by you: Run the last step?"). While an answer is on its way the pressed button is pending and the other is
 // disabled; a refused answer shows inline under the actions.
 import { type ReactNode, useId, useState } from "react";
 import { useKeepFocus } from "../lib/focus";
 import { cn } from "../lib/utils";
-import { type ApprovalStrings, uiStrings } from "../strings";
+import { type ApprovalStrings, fillString, uiStrings } from "../strings";
 import { Button } from "./button";
 import { InlineBanner } from "./inline-banner";
 import { Input } from "./input";
@@ -172,6 +173,19 @@ export function ApprovalCard({
 	const ref = useKeepFocus<HTMLElement>(outcome);
 	const byName = confirmName !== undefined;
 	const canApprove = !byName || nameMatches(typed, confirmName);
+	const outcomeText =
+		outcome === "approved"
+			? text.approved
+			: outcome === "denied"
+				? text.denied
+				: "";
+	// One polite live region for the card's whole life, mounted empty while it asks, so the outcome written into it
+	// is announced (a region inserted already filled often is not). The same element in both branches.
+	const announcer = (
+		<p role="status" className="sr-only">
+			{outcomeText}
+		</p>
+	);
 
 	if (outcome) {
 		return (
@@ -180,10 +194,16 @@ export function ApprovalCard({
 				tabIndex={-1}
 				data-slot="approval-card"
 				data-outcome={outcome}
-				aria-labelledby={titleId}
+				// Focus lands here after answering: the name says the outcome, not the open question.
+				aria-label={fillString(text.outcomeName, {
+					outcome: outcomeText,
+					title,
+				})}
 				className={cn("flex flex-col gap-2", cardFrame, className)}
 			>
-				<div role="status" className="flex flex-col items-start gap-2">
+				{announcer}
+				{/* What the name and the live region already say, shown: hidden from assistive technology once. */}
+				<div aria-hidden="true" className="flex flex-col items-start gap-2">
 					{outcome === "approved" ? (
 						<StatusChip status="passed" label={text.approved} />
 					) : (
@@ -213,6 +233,7 @@ export function ApprovalCard({
 				className,
 			)}
 		>
+			{announcer}
 			<div className="flex flex-col items-start gap-2">
 				<StatusChip status="waiting" label={text.required} />
 				<h3

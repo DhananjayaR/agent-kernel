@@ -37,6 +37,8 @@ export const Default: Story = {
 	play: async ({ canvasElement, args }) => {
 		const el = card(canvasElement);
 		await expect(el).toHaveAccessibleDescription(/two of its three steps/);
+		// The live region is there, empty, while it asks: the outcome written into it later is announced.
+		await expect(within(el).getByRole("status")).toHaveTextContent("");
 		await expect(within(el).getByText("Approval required")).toBeVisible();
 		const approve = within(el).getByRole("button", {
 			name: "Run the last step",
@@ -171,7 +173,10 @@ export const Refused: Story = {
 export const Approved: Story = {
 	args: { outcome: "approved" },
 	play: async ({ canvasElement }) => {
-		const el = card(canvasElement);
+		// Its name says the outcome; the live region (mounted empty while it asked) holds it.
+		const el = within(canvasElement).getByRole("region", {
+			name: "Approved by you: Run the last step?",
+		});
 		await expect(within(el).getByRole("status")).toHaveTextContent(
 			"Approved by you",
 		);
@@ -186,7 +191,9 @@ export const Denied: Story = {
 		outcomeDetail: "The job stopped before its last step.",
 	},
 	play: async ({ canvasElement }) => {
-		const el = card(canvasElement);
+		const el = within(canvasElement).getByRole("region", {
+			name: "Denied: Run the last step?",
+		});
 		await expect(within(el).getByRole("status")).toHaveTextContent("Denied");
 		await expect(el).toHaveTextContent("The job stopped before its last step.");
 	},
@@ -250,5 +257,6 @@ export const Keyboard: Story = {
 			expect(within(el).getByRole("status")).toHaveTextContent("Denied"),
 		);
 		await waitFor(() => expect(el).toHaveFocus());
+		await expect(el).toHaveAccessibleName("Denied: Run the last step?");
 	},
 };

@@ -367,6 +367,12 @@ describe("the generators, run in a copy of the workspace", () => {
 			"utf8",
 		);
 		expect(hook).toContain('releaseNotesKeys.detail(projectId, "readHistory")');
+		// A job's kind is owned by its feature: listed in the manifest's `jobs`, a second appended to the first.
+		expect(
+			readFileSync(join(copy, FEATURE_DIR, "manifest.ts"), "utf8"),
+		).toMatch(
+			/^\tjobs: \["release-notes\.publishNotes", "release-notes\.rebuildIndex"\],$/m,
+		);
 		// A job's runner takes its input and its context, and is registered so.
 		const service = readFileSync(
 			join(copy, "packages/runtime/src/release-notes/ReleaseNotesService.ts"),

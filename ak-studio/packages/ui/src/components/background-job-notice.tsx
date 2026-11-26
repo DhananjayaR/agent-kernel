@@ -8,8 +8,8 @@
 //   question is answered; a finished or failed one goes when the person opens the tab.
 // - backgroundJobNotice: the one toast template, filled from the job's title: "{Job} finished" (success), "{Job}
 //   failed" (danger), "{Job} is waiting for you" (info), each with "Show", which takes the person to the job.
-//   A toast with an action stays until dismissed. A job that waits is never only a toast: the tab icon and the
-//   approval stay.
+//   A toast with an action stays until dismissed, and so does the waiting one even without "Show". A job that waits
+//   is never only a toast: the tab icon and the approval stay.
 //
 // No list of running jobs until P6 (design gate row (a), "Where a list of running jobs lives": C for now).
 import { type BackgroundJobStrings, fillString, uiStrings } from "../strings";
@@ -77,5 +77,7 @@ export function backgroundJobNotice({
 		title: fillString(text[event], { job: jobTitle }),
 		...(description ? { description } : {}),
 		...(onShow ? { action: { label: text.show, onAction: onShow } } : {}),
+		// A job that waits is answered or dismissed, never timed out (with or without "Show").
+		...(event === "waiting" ? { persistent: true } : {}),
 	};
 }

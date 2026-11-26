@@ -95,7 +95,7 @@ export interface JobConfirmRequest {
 	summary: string;
 	/** What it touches: a cloud account, files, resources. */
 	affects?: string[];
-	/** Marks the approve option as destructive. */
+	/** Marks the approve option as destructive. Needs `expectedName`: destructive always asks for the name. */
 	destructive?: boolean;
 	/** The name the user types to approve (`confirm-by-name`). Denying never needs it. */
 	expectedName?: string;
@@ -758,6 +758,11 @@ function snapshot(job: Job): Job {
 
 /** The UserRequest (without its id) a `confirm` asks: the shared approve and deny options, labelled from strings. */
 function confirmRequest(request: JobConfirmRequest): JobRequest {
+	// The approval pattern's rule: a destructive action always asks for the thing's name (a modal with a typed name).
+	if (request.destructive && !request.expectedName)
+		throw new TypeError(
+			"a destructive confirm needs expectedName: the person types the thing's name",
+		);
 	const approve: NonNullable<UserRequest["options"]>[number] = {
 		id: CONFIRM_OPTION_IDS.approve,
 		label: request.approveLabel ?? strings.confirmApprove,

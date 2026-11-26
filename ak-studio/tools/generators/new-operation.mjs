@@ -13,6 +13,8 @@
 //                                           desktop app and the mock transport both register (P1b-plan ruling 9)
 //   apps/renderer/src/features/<feature>/api/use<Feature><Name>.ts (+ .test.tsx)
 //                                           the hook: useStudioQuery, useStudioMutation or useStartJob
+//   apps/renderer/src/features/<feature>/manifest.ts
+//                                           a job only: its kind joins the manifest's `jobs` (the feature owns it)
 //
 // With --project, the input is `{ projectId }`, the operation lists `project.notOpen`, the handler requires the
 // project's scope (`scopes.require(projectId)`; JobService does it for a job) and a query's hook keys by
@@ -395,10 +397,33 @@ export function planOperation(plan, featureName, operationName, options) {
 	if (options.desktop)
 		plan.edit(DESKTOP_FIXTURES, (text) => addFixture(text, t.fixture(x)));
 
+	// A job kind is owned by its feature: the manifest's `jobs` lists it (its background job notices go there).
+	if (shape === "job")
+		plan.edit(`${featureDir}/manifest.ts`, (text) => addJobKind(text, op));
+
 	// The hook and its test.
 	plan.create(`${featureDir}/api/${hookName}.ts`, t.hook(x));
 	plan.create(`${featureDir}/api/${hookName}.test.tsx`, t.hookTest(x));
 	return { op, ident, hookName, service };
+}
+
+/** Lists the job kind `op` in a feature manifest's `jobs`, adding the field after the id when there is none. */
+export function addJobKind(text, op) {
+	const list = text.match(/^(\tjobs: \[)([^\]]*)\],$/m);
+	if (list) {
+		const kinds =
+			list[2].trim() === "" ? [] : list[2].split(",").map((k) => k.trim());
+		return text.replace(
+			list[0],
+			`${list[1]}${[...kinds, `"${op}"`].join(", ")}],`,
+		);
+	}
+	const id = text.match(/^\tid: "[^"]+",$/m);
+	if (!id)
+		throw new GeneratorError(
+			"the feature's manifest.ts has no `id` line to add `jobs` after. Add the job kind to its `jobs` by hand.",
+		);
+	return text.replace(id[0], `${id[0]}\n\tjobs: ["${op}"],`);
 }
 
 function main(argv) {

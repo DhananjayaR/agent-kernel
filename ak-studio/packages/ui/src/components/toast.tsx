@@ -49,6 +49,8 @@ export type BackgroundResult = {
 	description?: string;
 	/** Takes the person to the result ("Show"). */
 	action?: { label: string; onAction: () => void };
+	/** Stays until dismissed even with no action (a job waiting for an answer). */
+	persistent?: boolean;
 };
 
 export type ToastQueue = AriaToastQueue<BackgroundResult>;
@@ -62,14 +64,18 @@ export function createToastQueue(): ToastQueue {
 }
 
 /**
- * Shows a background notice: a job that finished, or one that needs an answer (`info` with a "Show" action, which
- * never times out; the owning tab's badge carries it too). Returns the toast's key (for `queue.close`).
+ * Shows a background notice: a job that finished, or one that needs an answer (`info`, which never times out,
+ * `persistent` whether or not it has "Show"; the owning tab's icon carries it too). Returns the toast's key (for
+ * `queue.close`).
  */
 export function notifyBackgroundResult(
 	queue: ToastQueue,
 	result: BackgroundResult,
 ): string {
-	return queue.add(result, result.action ? {} : { timeout: TOAST_TIMEOUT_MS });
+	return queue.add(
+		result,
+		result.action || result.persistent ? {} : { timeout: TOAST_TIMEOUT_MS },
+	);
 }
 
 const TONES = {
