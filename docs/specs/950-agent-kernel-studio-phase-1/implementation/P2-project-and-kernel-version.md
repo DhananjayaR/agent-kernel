@@ -52,9 +52,9 @@ Options and recommendations, with the review of each artboard:
 
 | Screen | Options explored | Decision | Approved by | Date |
 |---|---|---|---|---|
-| Welcome | | | | |
-| Status bar and Commands panel | | | | |
-| Version-unavailable pattern | | | | |
+| Welcome | 2–3 per question ([options](../research/technology/p2-design-gate-options.md), row a) | As recommended: first launch and missing tools in one view, a banner naming only missing required tools; "Open folder" primary, the two other entry points with a not-yet caption, "Toolchain settings" left out until P4; tools in three tiers, red only for Python and `uv`; each recent project's OAK version as text in its row; "Show commands" opens the Commands view in a dialog | Dhananjaya Rajasinghe | 26 Nov 2026 |
+| Status bar and Commands panel | 2–3 per question ([options](../research/technology/p2-design-gate-options.md), row b) | As recommended: the version in the built slot, pressable, with a popover (source, Python, frameworks, extras); below the floor a warning banner under the top bar with the upgrade command; newer than known a notice in the item and popover only; a drop order at narrow widths; commands as master and detail with one streaming list, "Stop" in the output header, a `source` field on each record for the coding agent's rows from P6 | Dhananjaya Rajasinghe | 26 Nov 2026 |
+| Version-unavailable pattern | 2–3 per question ([options](../research/technology/p2-design-gate-options.md), row c) | As recommended: tab and form section as P1b approved; a palette tile stays in place with a "Needs {since}" tag, does not drag, and opens a popover with the version, the upgrade command and the docs link (the precedent for one control); the upgrade command built from the project's own dependency line, shown and never run | Dhananjaya Rajasinghe | 26 Nov 2026 |
 
 ## Work packages
 
@@ -134,7 +134,9 @@ feature F?**
 - [ ] One renderer hook and one component for the version-unavailable pattern from the design gate.
 - [ ] **Supported floor.** Studio declares the oldest OAK version it opens with full support.
       Decided 26 Nov 2026: **0.10** (the current minor; `ak-py` is 0.10.2). Below the floor the project opens
-      read-only with a banner. The floor is recorded in the README decision log.
+      read-only with a banner. **Read-only** (decided 26 Nov 2026) means the Studio writes nothing to the project:
+      no config edits, canvas additions, templates, coding-agent changes or Terraform files. Viewing, running
+      locally and running tests still work. The floor is recorded in the README decision log.
 - [ ] **Seed entries**, enough to prove the mechanism in this phase:
   - The eight frameworks under `ak-py/src/agentkernel/framework/`.
   - The Terraform targets under `ak-deployment/`, with Azure Functions as the worked example of a removal
