@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { cruise } from "../cruise-lib.mjs";
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
-const EXPECTED_MODULES = 33;
+const EXPECTED_MODULES = 43;
 const expected = [
 	["renderer-ui-no-electron", "apps/renderer/src/violation.ts"], // resolves via fixture node_modules
 	["renderer-ui-no-electron", "apps/renderer/src/required.ts"], // require()
@@ -35,6 +35,16 @@ const expected = [
 	["renderer-shared-is-a-leaf", "apps/renderer/src/shared/usesFeature.ts"],
 	["renderer-shared-is-a-leaf", "apps/renderer/src/shared/usesApp.ts"],
 	["renderer-features-not-app", "apps/renderer/src/features/a/usesApp.ts"],
+	["electron-only-in-entry-points", "apps/desktop/src/main/quit.ts"], // value import outside index/preload
+	["electron-only-in-entry-points", "packages/runtime/src/electron.ts"],
+	[
+		"renderer-runtime-only-in-bridge",
+		"apps/renderer/src/features/a/usesRuntime.ts",
+	],
+	[
+		"renderer-runtime-only-in-bridge",
+		"apps/renderer/src/shared/streams/store.ts",
+	],
 ];
 // Must NOT be reported: a contract test importing vitest, zod and contract files is allowed, and the
 // test-only rule (not contract-only-zod) is the one that judges contract tests.
@@ -46,6 +56,11 @@ const unexpected = [
 	["*", "apps/renderer/src/features/a/index.ts"], // a feature's own files
 	["renderer-feature-isolation", "apps/renderer/src/features/a/usesApp.ts"], // judged by the app rule only
 	["*", "apps/renderer/src/app/app.ts"], // app/ composes features
+	["*", "apps/desktop/src/main/index.ts"], // the main entry imports Electron values
+	["*", "apps/desktop/src/preload/index.ts"], // so does the preload script
+	["*", "apps/desktop/src/main/window.ts"], // a type-only Electron import
+	["*", "apps/renderer/src/shared/bridge/mock.ts"], // the mock transport runs the runtime
+	["*", "apps/renderer/src/shared/streams/store.test.ts"], // a test reads runtime constants
 ];
 
 const { summary, parserMissing, stderr } = cruise({

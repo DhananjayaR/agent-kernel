@@ -1,0 +1,18 @@
+{
+	"required": [
+		{ "pattern": "packages/ui/src/components/gauge.tsx", "stories": ["Default", "Empty", "Error"] },
+		{ "pattern": "apps/renderer/src/features/*/screens/*.tsx", "stories": ["Empty"] },
+		{ "pattern": "packages/ui/src/components/nothing-*.tsx", "stories": ["Default"] }
+	],
+	"coveredBy": {
+		"packages/ui/src/components/chip.tsx": "packages/ui/src/components/group.stories.tsx",
+		"packages/ui/src/components/pill.tsx": "packages/ui/src/components/group.stories.tsx",
+		"packages/ui/src/components/tile.tsx": "packages/ui/src/components/group.stories.tsx",
+		"packages/ui/src/components/badge.tsx": "packages/ui/src/components/group.stories.tsx"
+	},
+	"exempt": {
+		"packages/ui/src/components/parts.tsx": "Internal parts, shown through their owners' stories.",
+		"packages/ui/src/components/frame.tsx": "",
+		"packages/ui/src/components/gone.tsx": "Removed long ago."
+	}
+}

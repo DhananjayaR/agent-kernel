@@ -1,7 +1,7 @@
 // Storybook story for SchemaForm, PROVISIONAL until the P3 design gate signs off the schema form pattern. It shows
 // the session slice fixture with one field set and one Optional section on, and the override map swapping `type`
 // for a picker of the built-in backends. Written as type-free CSF because the renderer does not depend on
-// Storybook; its stories are not indexed until P1b Task 12 (ruling 16), so `pnpm test:storybook` does not run it.
+// Storybook; packages/ui's Storybook indexes it (ruling 16), so `pnpm test:storybook` runs its axe check.
 import { Select, SelectItem } from "@ak-studio/ui";
 import session from "./fixtures/session.schema.json";
 import validateSession from "./fixtures/session.validate.js";

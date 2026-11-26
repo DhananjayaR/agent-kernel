@@ -38,6 +38,8 @@ test("the fixture's files match the brief's tree", () => {
 	const found = readdirSync(ROOT, { recursive: true, withFileTypes: true })
 		.filter((e) => e.isFile())
 		.map((e) => relative(ROOT, join(e.parentPath, e.name)))
+		// Python's bytecode cache (git-ignored) is not part of the fixture.
+		.filter((path) => !path.split(/[\\/]/).includes("__pycache__"))
 		.sort();
 	expect(found).toEqual([...EXPECTED].sort());
 });

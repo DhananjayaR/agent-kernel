@@ -72,9 +72,9 @@ jobs:
       - name: Install Playwright's Chromium (Storybook accessibility run and browser e2e)
         run: pnpm exec playwright install --with-deps chromium
 
-      # Biome (warnings fail), check-palette, the boundary rules (depcruise) and their self-test (the check must
-      # be able to fail).
-      - name: Lint (Biome, check-palette, boundary rules and self-test)
+      # Biome (warnings fail), check-palette, the arbitrary-value and story-coverage checks, the boundary rules
+      # (depcruise), and a self-test for each (the check must be able to fail).
+      - name: Lint (Biome, palette, classes, stories, boundary rules and their self-tests)
         run: pnpm lint
 
       - name: Type-check
@@ -96,6 +96,14 @@ jobs:
 
       - name: Storybook accessibility run (dark and light)
         run: pnpm test:storybook
+
+      # Visual regression: a screenshot of every story, dark and light, compared with the baselines committed under
+      # ak-studio/tests/visual/__screenshots__/linux/. Linux only: fonts render differently on each operating system.
+      # Not yet run on a runner: the first run may need the baselines refreshed from ubuntu-latest
+      # (`pnpm test:visual --update-snapshots`).
+      - name: Visual regression (Linux)
+        if: runner.os == 'Linux'
+        run: pnpm test:visual
 
       # P0 found Ubuntu runners may block the unprivileged user namespaces Electron's sandbox uses. Not yet
       # verified on a runner: remove this step if the e2e tests pass without it.

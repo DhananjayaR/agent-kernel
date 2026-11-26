@@ -9,11 +9,14 @@
 // Like Tailwind's own scanner this reads every source file as text; class checks include comments.
 // Colour literals are allowed only where the tokens are defined (packages/ui/src/theme.css) and in unit tests
 // (*.test.*), which feed colours to functions rather than render them; comment lines are skipped for them.
-// Known limits (see README): class names built at run time and the `utility-(--var)` shorthand.
+// Known limits (see README): class names built at run time. The `utility-(--var)` shorthand is judged by
+// check-classes. Generated validators (*.validate.js, *.validate.d.ts) are not read: Ajv's output, whose
+// embedded `default`, `enum` and `pattern` strings are data, not styling (Biome skips them too).
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ARBITRARY_VALUE_PATTERNS } from "./check-classes.mjs";
 
 const STUDIO = fileURLToPath(new URL("../", import.meta.url));
 export const DEFAULT_ROOTS = ["apps/renderer", "packages/ui"];
@@ -25,6 +28,7 @@ const SKIP_DIRS = new Set([
 	".git",
 ]);
 const EXTENSIONS = /\.(ts|tsx|js|jsx|mjs|cjs|css|html|mdx)$/;
+export const GENERATED = /\.validate\.(?:js|d\.ts)$/;
 const SHADES = "50|100|200|300|400|500|600|700|800|900|950";
 // Utilities that take a colour, for the shade-less black and white.
 const COLOUR_UTILITIES =
@@ -91,17 +95,8 @@ export function findViolations(text, families) {
 				"g",
 			),
 		],
-		[
-			"arbitrary value",
-			// utility-[value]. A bracket followed by ':' (or by '/name:' for a named group or peer) is an
-			// arbitrary variant such as data-[state=open]: or group-data-[open]/menu:, not a value.
-			/(?<![\w-])-?[a-z][a-z0-9-]*-\[[^\]\s]+\](?!:|\/[\w-]+:)/g,
-		],
-		[
-			"arbitrary value",
-			// [property:value] arbitrary property.
-			/(?<![\w-])\[[a-z-]+:[^\]\s]+\](?!:|\/[\w-]+:)/g,
-		],
+		// utility-[value] and [property:value], shared with check-classes (which owns the rule for TS and TSX).
+		...ARBITRARY_VALUE_PATTERNS.map((re) => ["arbitrary value", re]),
 	];
 	const found = [];
 	const lines = text.split("\n");
@@ -119,7 +114,11 @@ function* sourceFiles(dir) {
 	for (const entry of readdirSync(dir, { withFileTypes: true })) {
 		if (entry.isDirectory()) {
 			if (!SKIP_DIRS.has(entry.name)) yield* sourceFiles(join(dir, entry.name));
-		} else if (entry.isFile() && EXTENSIONS.test(entry.name)) {
+		} else if (
+			entry.isFile() &&
+			EXTENSIONS.test(entry.name) &&
+			!GENERATED.test(entry.name)
+		) {
 			yield join(dir, entry.name);
 		}
 	}

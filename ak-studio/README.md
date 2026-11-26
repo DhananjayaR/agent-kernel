@@ -27,15 +27,20 @@ packaged). The icon is a full-bleed square; the macOS rounded-square template is
 ```bash
 cd ak-studio
 pnpm install --frozen-lockfile   # also fetches the Electron binary (apps/desktop postinstall)
-pnpm lint        # Biome (warnings fail), check-palette, depcruise and its self-test
+pnpm lint        # Biome (warnings fail) and its self-test, check-palette, check-classes, check-stories (each with its
+                 # self-test), compile-schemas --check, depcruise and its self-test
 pnpm typecheck   # tsc -b over all members
 pnpm test        # every member's unit tests (Vitest), then check-palette's own test
 pnpm check-palette        # no default-palette class, arbitrary value or colour literal in apps/renderer, packages/ui
+pnpm check-classes        # no arbitrary value (p-[13px], gap-(--x)) or inline colour style in their .ts/.tsx
+pnpm check-stories        # every component and screen has a stories file with its required stories
+pnpm check-fixture        # the support-triage fixture against agentkernel (ak-py/.venv when present)
 pnpm make-app-icon        # render apps/desktop/build/icon.png from branding/logo-mark/oak-mark-orange.svg
 pnpm third-party-notices  # rewrite the bundled-code licences in apps/desktop/resources/THIRD-PARTY-NOTICES.txt
 pnpm storybook            # Storybook dev server for packages/ui on 127.0.0.1:6006
 pnpm build-storybook      # static Storybook into packages/ui/storybook-static/
-pnpm test:storybook       # every story, dark and light, in headless Chromium with axe (fails on a violation)
+pnpm test:storybook       # every story (packages/ui and the renderer), dark and light, in headless Chromium with axe
+pnpm test:visual          # build Storybook, then screenshot every story, dark and light, against the Linux baselines
 pnpm depcruise   # boundary rules (dependency-cruiser, swc parser)
 pnpm depcruise:selftest  # proves the rules can fail and the parser finds modules
 pnpm build       # check-palette, then electron-vite (production): main, preload and renderer into apps/desktop/out/
@@ -49,7 +54,7 @@ pnpm test:packaged  # start and check the packaged app in release/ (run pnpm pac
 
 Members: `apps/desktop`, `apps/renderer`, `packages/contract`, `packages/runtime`, `packages/ui`, `packages/kernel-catalog`.
 
-`test:storybook` and `test:e2e` need Playwright's Chromium (`pnpm exec playwright install chromium` once; on a
+`test:storybook`, `test:visual` and `test:e2e` need Playwright's Chromium (`pnpm exec playwright install chromium` once; on a
 fresh Linux machine `pnpm exec playwright install --with-deps chromium`).
 
 **Desktop app.** `apps/desktop` holds the Electron main process and preload, and the electron-vite config,
@@ -218,12 +223,32 @@ the theme; the status bar shows the Studio's version (the project's OAK version 
 fills). A failed layout save is a background toast.
 
 **check-palette: known limits.** It reads source as text, so it cannot see class names built at run time
-(template strings such as `` `bg-${tone}-500` ``, or concatenation such as `"bg-" + tone`), and it does not flag
-Tailwind's CSS-variable shorthand (`bg-(--x)`, `w-(--trigger-width)`). Colour literals (hex, `rgb()`, `hsl()`,
+(template strings such as `` `bg-${tone}-500` ``, or concatenation such as `"bg-" + tone`), and it leaves
+Tailwind's CSS-variable shorthand (`bg-(--x)`) to check-classes, which allows only `--trigger-width`. Generated
+validators (`*.validate.js`) are not read. Colour literals (hex, `rgb()`, `hsl()`,
 `oklch()`, `color()` ...) are allowed only in `packages/ui/src/theme.css` and in unit tests (`*.test.*`); hex
 counts only in a value position, and comment lines are not checked for literals. Tailwind's default palette,
 shadow, inset/drop/text shadow, radius, text-size and font-family scales are removed in `theme.css`, so such a
 class compiles to nothing even where the check cannot see it. Its scope is `apps/renderer` and `packages/ui`.
+
+**check-classes and check-stories.** `check-classes` reads the `.ts` and `.tsx` under `apps/renderer/src` and
+`packages/ui/src` (not generated validators or the fixture project): an arbitrary value or property, the variable
+shorthand for any variable but React Aria's `--trigger-width`, or an inline colour style (a colour property in
+`style={{ ... }}` or a `CSSProperties` object, on `.style` or through `setProperty`, or a literal `fill`, `stroke`
+or `color` attribute other than `currentColor` or `none`) fails; only the token reference page
+(`tokens.stories.tsx`) may paint colours inline. `check-stories` needs a `<name>.stories.tsx` beside each file in
+`packages/ui/src/components/` and in a feature's `components/` or `screens/`; `tools/story-requirements.json`
+lists the stories a pattern of components must have, components shown in another stories file (`coveredBy`) and
+exemptions with their reason. Both are scripts with planted-file self-tests (`tools/check-*-fixture/`, ignored by
+Biome). `pnpm biome:selftest` copies `tools/biome-selftest/fixture/` to a temporary folder whose `biome.json`
+extends the real one, and expects each planted electron, Node built-in and `window`/`document` use to be reported.
+
+**Visual regression** (`playwright.visual.config.ts`, `tests/visual/`). `pnpm test:visual` builds Storybook, serves
+`packages/ui/storybook-static` and photographs every story in its index, dark and light, once Storybook reports
+the story finished (play function and checks done) and the fonts have loaded, at the story's own viewport if it
+names one, else 1280 x 800; animations are stopped and the caret hidden. Baselines are in
+`tests/visual/__screenshots__/linux/` and the run refuses other systems (fonts render differently). After an
+intended change: `pnpm test:visual --update-snapshots`, on Linux, and review the changed images.
 
 **End-to-end tests** (`playwright.config.ts`, `tests/e2e/`). `pnpm test:e2e` builds (`build:e2e`, which keeps the
 test hooks), then runs two Playwright

@@ -31,6 +31,12 @@ describe("check-palette", () => {
 		]);
 	});
 
+	it("skips the generated validators (*.validate.js, *.validate.d.ts) and reads the rest", () => {
+		const { files, violations } = checkPalette(["generated"], fixture);
+		expect(files).toBe(1);
+		expect(violations).toEqual([]);
+	});
+
 	it("exits non-zero on the planted fixture", () => {
 		const r = run("bad");
 		expect(r.status).toBe(1);

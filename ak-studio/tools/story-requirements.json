@@ -1,0 +1,11 @@
+{
+	"$comment": "Read by tools/check-stories.mjs (pnpm lint). required: for a glob of component files, the story export names each stories file must have (the design gate's states; Tasks 15 to 17 add them with their patterns). coveredBy: a component shown inside another stories file. exempt: a component file with no stories, and why.",
+	"required": [],
+	"coveredBy": {
+		"packages/ui/src/components/bottom-panel.tsx": "packages/ui/src/components/desktop-shell.stories.tsx",
+		"packages/ui/src/components/project-switcher.tsx": "packages/ui/src/components/top-bar-controls.stories.tsx"
+	},
+	"exempt": {
+		"packages/ui/src/components/field.tsx": "Internal parts (label, help and error text) of Input, Textarea, Select and Combobox, not exported from the package; shown through those components' stories."
+	}
+}

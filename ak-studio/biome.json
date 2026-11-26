@@ -9,7 +9,10 @@
 			"!**/fixtures/support-triage",
 			"!**/packages/ui/src/assets/oak-mark-*.svg",
 			"!**/*.validate.js",
-			"!**/*.validate.d.ts"
+			"!**/*.validate.d.ts",
+			"!**/tools/check-classes-fixture",
+			"!**/tools/check-stories-fixture",
+			"!**/tools/biome-selftest/fixture"
 		]
 	},
 	"formatter": { "enabled": true, "indentStyle": "tab", "lineEnding": "lf" },
@@ -34,5 +37,49 @@
 	"assist": {
 		"enabled": true,
 		"actions": { "source": { "organizeImports": "on" } }
-	}
+	},
+	"overrides": [
+		{
+			"includes": ["apps/renderer/**", "packages/ui/**", "packages/runtime/**"],
+			"linter": {
+				"rules": {
+					"correctness": { "noNodejsModules": "error" },
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"paths": {
+									"lucide-react": "Interface icons are Tabler outline icons: import them from @tabler/icons-react (branding/README.md)."
+								},
+								"patterns": [
+									{
+										"group": ["electron", "electron/**"],
+										"message": "The renderer, packages/ui and packages/runtime run in a browser: no electron import (architecture.md, Layers). Electron stays in apps/desktop."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["packages/runtime/src/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedGlobals": {
+							"level": "error",
+							"options": {
+								"deniedGlobals": {
+									"window": "packages/runtime also runs in Electron's main process, which has no window: take what you need as a parameter.",
+									"document": "packages/runtime also runs in Electron's main process, which has no document: take what you need as a parameter."
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	]
 }

@@ -135,6 +135,37 @@ module.exports = {
 			to: { path: RENDERER_APP },
 		},
 		{
+			name: "electron-only-in-entry-points",
+			comment:
+				"Electron's values are imported only by the main process entry (apps/desktop/src/main/index.ts) and the preload script, so everything else in main (quit rule, menu, window options, services) is tested without Electron. A type-only import carries no Electron code and is allowed.",
+			severity: "error",
+			from: {
+				pathNot: [
+					"^apps/desktop/src/main/index\\.ts$",
+					"^apps/desktop/src/preload/index\\.ts$",
+				],
+			},
+			to: {
+				path: "(^|/)node_modules/electron/|^electron($|/)",
+				dependencyTypesNot: ["type-only"],
+			},
+		},
+		{
+			name: "renderer-runtime-only-in-bridge",
+			comment:
+				"The renderer reaches @ak-studio/runtime only in shared/bridge/ (the mock transport serves a real ServiceRegistry from it); everything else goes through the bridge client. Unit tests may read runtime's constants to test against the mock (architecture.md, Layers).",
+			severity: "error",
+			from: {
+				path: "^apps/renderer/",
+				pathNot: [
+					"^apps/renderer/src/shared/bridge/",
+					"\\.test\\.tsx?$",
+					NOT_INSTALLED_OR_BUILT,
+				],
+			},
+			to: { path: ["^packages/runtime/", "^@ak-studio/runtime($|/)"] },
+		},
+		{
 			name: "desktop-is-private",
 			comment: "Nothing imports apps/desktop except apps/desktop itself.",
 			severity: "error",

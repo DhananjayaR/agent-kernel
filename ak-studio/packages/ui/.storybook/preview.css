@@ -1,4 +1,6 @@
-/* Storybook's stylesheet: the design-system tokens, plus this folder as a Tailwind class source. */
+/* Storybook's stylesheet: the design-system tokens, plus this folder and the renderer's source (its stories are
+   indexed too, P1b-plan ruling 16) as Tailwind class sources. */
 @import "../src/theme.css";
 
 @source "./";
+@source "../../../apps/renderer/src";
