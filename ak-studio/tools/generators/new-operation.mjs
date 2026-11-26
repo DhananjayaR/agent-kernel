@@ -63,15 +63,20 @@ function contractExports(plan) {
 	return names;
 }
 
-/** Adds a method before `register` and its lines at the end of `register` (the last member of the class). */
+/**
+ * Adds a method before `register` and its lines at the end of `register`, which must be the class's last member
+ * (code after the class is fine).
+ */
 function addToService(text, path, method, lines) {
 	const m = find(
 		text,
-		/\n(\tregister\(registry: [^)]*\): void \{\n)([\s\S]*?)(\t\}\n\}\n?)$/,
+		/\n(\tregister\(registry: [^)]*\): void \{\n)((?:[^\n]*\n)*?)(\t\}\n\}\n)/,
 		path,
 		"the service's `register` method as the last member of the class",
 	);
-	return `${text.slice(0, m.index)}${method}\n${m[1]}${m[2]}${lines}${m[3]}`;
+	const at = m.index;
+	const end = m.index + m[0].length;
+	return `${text.slice(0, at)}${method}\n${m[1]}${m[2]}${lines}${m[3]}${text.slice(end)}`;
 }
 
 /** Adds a test case at the end of the file's last `describe`. */
@@ -104,7 +109,7 @@ function addToOperationsMap(text, op, ident) {
 		`\t"${op}": ${ident},`,
 	];
 	lines.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
-	return text.replace(m[0], `${m[1]}${lines.join("\n")}${m[3]}`);
+	return text.replace(m[0], () => `${m[1]}${lines.join("\n")}${m[3]}`);
 }
 
 /** Adds a class to the FEATURE_SERVICES list in packages/runtime/src/features.ts. */
@@ -120,7 +125,7 @@ function addFeatureService(text, className) {
 		.map((s) => s.trim())
 		.filter(Boolean);
 	const all = [...new Set([...names, className])].sort();
-	return text.replace(m[0], `${m[1]}${all.join(", ")}${m[3]}`);
+	return text.replace(m[0], () => `${m[1]}${all.join(", ")}${m[3]}`);
 }
 
 export function planOperation(plan, featureName, operationName, options) {
@@ -264,7 +269,7 @@ export function planOperation(plan, featureName, operationName, options) {
 			);
 			return text.replace(
 				m[0],
-				`${m[1]}${m[2].trimEnd()}\n\t"${op}": () => ({}),\n};\n`,
+				() => `${m[1]}${m[2].trimEnd()}\n\t"${op}": () => ({}),\n};\n`,
 			);
 		});
 

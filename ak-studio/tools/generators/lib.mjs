@@ -200,7 +200,11 @@ export function addImport(text, line, path) {
 	return `${text.slice(0, at)}${line}\n${text.slice(at)}`;
 }
 
-/** Adds `names` to the named import from `source` (`import { a } from "x"` or `import type { a } from "x"`). */
+/**
+ * Adds `names` to the named import from `source`. With `typeOnly`, into `import type { a } from "x"`, or as `type a`
+ * specifiers into a mixed `import { b, type c } from "x"`; otherwise into `import { a } from "x"`. A new import line
+ * when there is none. Names already imported are skipped.
+ */
 export function addNamedImport(
 	text,
 	source,
@@ -208,28 +212,45 @@ export function addNamedImport(
 	{ typeOnly = false, path },
 ) {
 	const escaped = source.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-	const re = new RegExp(
-		`^import ${typeOnly ? "type " : ""}\\{([^}]*)\\} from "${escaped}";`,
+	const typeRe = new RegExp(
+		`^import type \\{([^}]*)\\} from "${escaped}";`,
 		"m",
 	);
-	const m = re.exec(text);
-	if (!m) {
-		const list = [...names].sort().join(", ");
-		return addImport(
-			text,
-			`import ${typeOnly ? "type " : ""}{ ${list} } from "${source}";`,
-			path,
+	const valueRe = new RegExp(`^import \\{([^}]*)\\} from "${escaped}";`, "m");
+	const merge = (re, m, prefix, wanted) => {
+		const have = m[1]
+			.split(",")
+			.map((s) => s.trim())
+			.filter(Boolean);
+		const known = new Set(have.map((s) => s.replace(/^type\s+/, "")));
+		const added = wanted.filter((w) => !known.has(w.replace(/^type\s+/, "")));
+		if (added.length === 0) return text;
+		const list = [...have, ...added].join(", ");
+		return text.replace(
+			re,
+			() => `import ${prefix}{ ${list} } from "${source}";`,
 		);
+	};
+	if (typeOnly) {
+		const own = typeRe.exec(text);
+		if (own) return merge(typeRe, own, "type ", names);
+		const mixed = valueRe.exec(text);
+		if (mixed)
+			return merge(
+				valueRe,
+				mixed,
+				"",
+				names.map((name) => `type ${name}`),
+			);
+	} else {
+		const own = valueRe.exec(text);
+		if (own) return merge(valueRe, own, "", names);
 	}
-	const have = m[1]
-		.split(",")
-		.map((s) => s.trim())
-		.filter(Boolean);
-	const all = [...new Set([...have, ...names])].sort();
-	if (all.length === have.length) return text;
-	return text.replace(
-		re,
-		`import ${typeOnly ? "type " : ""}{ ${all.join(", ")} } from "${source}";`,
+	const list = [...names].sort().join(", ");
+	return addImport(
+		text,
+		`import ${typeOnly ? "type " : ""}{ ${list} } from "${source}";`,
+		path,
 	);
 }
 

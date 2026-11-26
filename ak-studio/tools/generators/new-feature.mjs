@@ -102,7 +102,7 @@ export function planFeature(plan, name) {
 		);
 		const items = list[2].trimEnd().replace(/,$/, "");
 		const listed = `${list[1]}${items}${items.trim() ? "," : ""}\n\t${n.camel}Feature,\n${list[3]}`;
-		const withEntry = text.replace(list[0], listed);
+		const withEntry = text.replace(list[0], () => listed);
 		return addImport(
 			withEntry,
 			`import { ${n.camel}Feature } from "../features/${name}/manifest";`,

@@ -22,6 +22,7 @@ import {
 	realpathSync,
 	rmSync,
 	symlinkSync,
+	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative } from "node:path";
@@ -327,6 +328,54 @@ describe("the generators, run in a copy of the workspace", () => {
 		);
 		refused(/already exists/, "new-component", "status-line");
 		expect(snapshot(copy)).toEqual(before);
+	}, 60_000);
+
+	it("add to services and tests that were edited by hand: a value import beside the types, code after the class", () => {
+		const services = [
+			"packages/runtime/src/release-notes/ReleaseNotesService.ts",
+			"apps/desktop/src/main/services/ReleaseNotesService.ts",
+		];
+		for (const path of services) {
+			const file = join(copy, path);
+			const text = readFileSync(file, "utf8").replace(
+				/import type \{([^}]*)\} from "@ak-studio\/contract";/,
+				(_, names) =>
+					`import { ERROR_CODES, ${names
+						.split(",")
+						.map((n) => n.trim())
+						.filter(Boolean)
+						.map((n) => `type ${n}`)
+						.join(", ")} } from "@ak-studio/contract";`,
+			);
+			expect(text).toContain("ERROR_CODES");
+			writeFileSync(
+				file,
+				`${text}\n/** The code this feature's errors use. */\nexport const RELEASE_NOTES_ERROR = ERROR_CODES.internal;\n`,
+			);
+		}
+		generated("new-operation", FEATURE, "archive-notes", "--shape", "job");
+		generated("new-operation", FEATURE, "read-word-count", "--shape", "query");
+		generated(
+			"new-operation",
+			FEATURE,
+			"write-disk-note",
+			"--shape",
+			"command",
+			"--desktop",
+		);
+		for (const path of services) {
+			const text = readFileSync(join(copy, path), "utf8");
+			expect(text.match(/from "@ak-studio\/contract";/g), path).toHaveLength(1);
+			expect(text, path).toMatch(
+				/RELEASE_NOTES_ERROR = ERROR_CODES\.internal;\n$/,
+			);
+		}
+		const fixtures = readFileSync(
+			join(copy, "apps/renderer/src/shared/bridge/desktopFixtures.ts"),
+			"utf8",
+		);
+		expect(fixtures).toContain('"release-notes.readDiskUsage"');
+		expect(fixtures).toContain('"release-notes.writeDiskNote"');
 	}, 60_000);
 
 	it("write no placeholder copy", () => {
