@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { ServiceRegistry } from "../bridge/registry";
+import { PendingP1bService } from "./PendingP1bService";
 import { type ControlledWindow, WindowService } from "./WindowService";
 
 type Listener = () => void;
@@ -94,7 +95,10 @@ describe("WindowService", () => {
 	it("registers its three requests and its stream with the registry", async () => {
 		const { win } = fakeWindow();
 		const registry = new ServiceRegistry();
-		registry.register(new WindowService(() => win));
+		// TEMPORARY (P1b Task 3): PendingP1bService serves the job, session and event operations until Task 6.
+		registry
+			.register(new WindowService(() => win))
+			.register(new PendingP1bService());
 		expect(registry.missingHandlers()).toEqual([
 			"app.info",
 			"app.setLayout",

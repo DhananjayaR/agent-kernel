@@ -143,6 +143,30 @@ describe("mockTransport", () => {
 		expect(error.code).toBe(ERROR_CODES.unknownOperation);
 	});
 
+	// TEMPORARY (P1b Task 3): replaced in Task 7, when the mock runs the runtime's job, session and event services.
+	it("answers bridge.unavailable for the job, session and event operations until their services exist", async () => {
+		const transport = createMockTransport({ onStreamError: vi.fn() });
+		for (const call of [
+			transport.request("jobs.list", {}),
+			transport.request("job.cancel", { jobId: "j1" }),
+			transport.request("sessions.list", {}),
+		]) {
+			expect((await errorOf(call)).code).toBe(ERROR_CODES.unavailable);
+		}
+		const onStreamError = vi.fn();
+		const failing = createMockTransport({ onStreamError });
+		const onEvent = vi.fn();
+		failing.subscribe("events", {}, onEvent)();
+		failing.subscribe("stream.read", { streamId: "s1" }, onEvent)();
+		expect(onEvent).not.toHaveBeenCalled();
+		expect(
+			onStreamError.mock.calls.map(([name, error]) => [name, error.code]),
+		).toEqual([
+			["events", ERROR_CODES.unavailable],
+			["stream.read", ERROR_CODES.unavailable],
+		]);
+	});
+
 	it("waits latencyMs before answering", async () => {
 		vi.useFakeTimers();
 		try {

@@ -10,10 +10,25 @@ export const studioErrorSchema = z.object({
 	message: z.string(),
 	/** Raw detail for the collapsed part of an error view. */
 	detail: z.string().optional(),
+	/** The file the error is about, relative to the project folder. */
+	file: z.string().optional(),
+	/** The line in `file` the error is about. */
+	line: z.int().nonnegative().optional(),
+	/** An app command the user can run next, e.g. "Reload" after a file changed on disk. */
+	action: z
+		.object({
+			label: z.string(),
+			commandId: z.string(),
+			args: z.unknown().optional(),
+		})
+		.optional(),
 });
 export type StudioError = z.infer<typeof studioErrorSchema>;
 
-/** The error catalog. P1a holds the bridge's own codes and AppService's; features add theirs in later phases. */
+/**
+ * The error catalog. P1a holds the bridge's own codes and AppService's; P1b adds the project, file, kernel, job
+ * and session codes; features add theirs in later phases. Every code an operation lists must be here (a test).
+ */
 export const ERROR_CODES = {
 	/** The operation name is not in the contract (or is not of the kind that was called). */
 	unknownOperation: "bridge.unknownOperation",
@@ -29,8 +44,39 @@ export const ERROR_CODES = {
 	internal: "internal.unexpected",
 	/** AppService could not write the preferences file in the app's data folder. */
 	preferencesNotSaved: "app.preferencesNotSaved",
+	/** The operation names a project that has no open scope in this window. */
+	projectNotOpen: "project.notOpen",
+	/** A write's `baseRevision` is not the file's current revision; the error carries the new content. */
+	fileChangedOnDisk: "file.changedOnDisk",
+	/** A path resolves outside the project folder. */
+	fileOutsideProject: "file.outsideProject",
+	/** The project's OAK version lacks the capability the operation needs. */
+	capabilityUnavailable: "kernel.capabilityUnavailable",
+	/** No job has this id (it never existed, or its record was dismissed). */
+	jobNotFound: "job.notFound",
+	/** An answer arrived for a job that is not waiting for the user. */
+	jobNotWaiting: "job.notWaiting",
+	/** An answer names a request that is not the job's open request. */
+	jobRequestMismatch: "job.requestMismatch",
+	/** A cancel arrived for a job that cannot be cancelled. */
+	jobNotCancellable: "job.notCancellable",
+	/** No session has this id. */
+	sessionNotFound: "session.notFound",
+	/** `session.start` names a kind that is not in `sessionKinds`. */
+	sessionUnknownKind: "session.unknownKind",
+	/** A session of this kind is already running for this project (one per kind per project). */
+	sessionAlreadyRunning: "session.alreadyRunning",
+	/** The session could not start, or stopped by itself. */
+	sessionFailed: "session.failed",
 } as const;
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
+
+const errorCodes: ReadonlySet<string> = new Set(Object.values(ERROR_CODES));
+
+/** Whether `code` is in the error catalog. */
+export function isErrorCode(code: string): code is ErrorCode {
+	return errorCodes.has(code);
+}
 
 export function studioError(
 	code: string,

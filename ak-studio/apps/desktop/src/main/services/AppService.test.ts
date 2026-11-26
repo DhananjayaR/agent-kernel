@@ -16,6 +16,7 @@ import {
 	readPreferences,
 	toPlatform,
 } from "./AppService";
+import { PendingP1bService } from "./PendingP1bService";
 import { WindowService } from "./WindowService";
 
 let dir: string;
@@ -28,9 +29,11 @@ afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
 function serve(service: AppService) {
 	// The window service serves the window operations, so the registry (which needs every handler) can start.
+	// TEMPORARY (P1b Task 3): PendingP1bService serves the job, session and event operations until Task 6.
 	const registry = new ServiceRegistry()
 		.register(service)
-		.register(new WindowService(() => null));
+		.register(new WindowService(() => null))
+		.register(new PendingP1bService());
 	registry.start();
 	return registry;
 }

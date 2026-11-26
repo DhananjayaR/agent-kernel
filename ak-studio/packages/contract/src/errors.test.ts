@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	ERROR_CODES,
+	isErrorCode,
 	isStudioError,
 	isStudioFailure,
 	StudioFailure,
@@ -26,6 +27,25 @@ describe("StudioError", () => {
 		expect(isStudioError(new Error("x"))).toBe(false);
 	});
 
+	it("takes an optional file, line and next action", () => {
+		const full = {
+			code: ERROR_CODES.fileChangedOnDisk,
+			message: "The file changed on disk.",
+			detail: "raw",
+			file: "agent.yaml",
+			line: 12,
+			action: {
+				label: "Reload",
+				commandId: "file.reload",
+				args: { path: "agent.yaml" },
+			},
+		};
+		expect(isStudioError(full)).toBe(true);
+		expect(isStudioError({ ...full, action: { label: "Reload" } })).toBe(false);
+		expect(isStudioError({ ...full, line: 1.5 })).toBe(false);
+		expect(isStudioError({ ...full, line: "12" })).toBe(false);
+	});
+
 	it("wraps a StudioError as a StudioFailure for one side of the bridge", () => {
 		const error = studioError(ERROR_CODES.forbidden, "Not allowed.");
 		const failure = new StudioFailure(error);
@@ -34,6 +54,31 @@ describe("StudioError", () => {
 		expect(failure.error).toBe(error);
 		expect(isStudioFailure(failure)).toBe(true);
 		expect(isStudioFailure(new Error("x"))).toBe(false);
+	});
+
+	it("holds the P1b codes", () => {
+		const p1b = [
+			"project.notOpen",
+			"file.changedOnDisk",
+			"file.outsideProject",
+			"kernel.capabilityUnavailable",
+			"job.notFound",
+			"job.notWaiting",
+			"job.requestMismatch",
+			"job.notCancellable",
+			"session.notFound",
+			"session.unknownKind",
+			"session.alreadyRunning",
+			"session.failed",
+		];
+		const codes: string[] = Object.values(ERROR_CODES);
+		for (const code of p1b) {
+			expect(codes).toContain(code);
+			expect(isErrorCode(code)).toBe(true);
+		}
+		expect(isErrorCode("bridge.invalidInput")).toBe(true);
+		expect(isErrorCode("nope.nothing")).toBe(false);
+		expect(new Set(codes).size).toBe(codes.length);
 	});
 
 	it("keeps every catalog code namespaced", () => {

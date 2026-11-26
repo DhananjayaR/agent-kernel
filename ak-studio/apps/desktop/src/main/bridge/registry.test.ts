@@ -11,6 +11,10 @@ import {
 } from "@ak-studio/contract";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import {
+	PENDING_REQUESTS,
+	PENDING_STREAMS,
+} from "../services/PendingP1bService";
 import { registerServices } from "../services/registerServices";
 import { ServiceRegistry } from "./registry";
 
@@ -101,6 +105,54 @@ describe("ServiceRegistry start-up", () => {
 		expect(Object.keys(contract.operations)).toContain(appSetTheme.name);
 		expect(services.window).toBeDefined();
 	});
+
+	// TEMPORARY (P1b Task 3): PendingP1bService answers bridge.unavailable for the operations whose services come
+	// in Tasks 4 and 5. Task 6 deletes it and this test, and turns the todos below into real tests.
+	it("answers bridge.unavailable for the job, session and event operations until their services exist", async () => {
+		const registry = new ServiceRegistry();
+		registerServices(registry, {
+			window: () => null,
+			app: {
+				version: "1.0.0",
+				platform: "linux",
+				preferencesFile: "/nonexistent/preferences.json",
+			},
+		});
+		registry.start();
+		// A valid input for each, so the handler (not input parsing) answers.
+		const inputs: Record<(typeof PENDING_REQUESTS)[number], unknown> = {
+			"job.cancel": { jobId: "j1" },
+			"job.respond": { jobId: "j1", requestId: "r1", answer: {} },
+			"jobs.dismissInterrupted": { jobId: "j1" },
+			"jobs.interrupted": {},
+			"jobs.list": {},
+			"session.start": { kind: "t.kind", args: {} },
+			"session.stop": { sessionId: "s1" },
+			"sessions.list": {},
+		};
+		for (const name of PENDING_REQUESTS) {
+			expect(await registry.request(name, inputs[name]), name).toMatchObject({
+				ok: false,
+				error: { code: ERROR_CODES.unavailable },
+			});
+		}
+		for (const name of PENDING_STREAMS) {
+			const input = name === "stream.read" ? { streamId: "s1" } : {};
+			const send = vi.fn();
+			expect(registry.subscribe(name, input, send), name).toMatchObject({
+				ok: false,
+				error: { code: ERROR_CODES.unavailable },
+			});
+			expect(send).not.toHaveBeenCalled();
+		}
+	});
+
+	it.todo(
+		"serves events and stream.read from EventBus and StreamHub (P1b Task 4; wired in registerServices by Task 6)",
+	);
+	it.todo(
+		"serves the job and session operations from JobService and SessionService (P1b Task 5; wired in registerServices by Task 6)",
+	);
 });
 
 describe("ServiceRegistry.request", () => {

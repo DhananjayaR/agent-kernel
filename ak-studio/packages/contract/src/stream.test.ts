@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { ERROR_CODES } from "./errors";
-import { defineStream, startStream } from "./operations";
+import { startStream } from "./operations";
+import { defineStream } from "./shapes";
 import type { StreamMessage } from "./transport";
 
 const ticks = defineStream({

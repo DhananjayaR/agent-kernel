@@ -1,78 +1,36 @@
-// Every operation the renderer can call, declared once with zod schemas for its input and output. The main
-// process validates every input and output against these; the renderer gets its types from them.
+// Every operation and stream the renderer can call, collected once: the `operations`, `streams`, `jobKinds` and
+// `sessionKinds` maps the main process serves and the renderer gets its types from. The main process validates
+// every input and output against these schemas. Also the helpers that run one request or stream against its
+// schemas, shared by the main-process registry and the mock transport.
 //
-// P1a ships two primitives: a request (one answer) and a stream (events until cancelled). The operation shapes
-// (query, command, job, session) are built on them in P1b. P1a declares one stream, `window.state`.
+// The primitives and the four shapes are in shapes.ts. P1a's requests are declared here, reclassified into shapes
+// in P1b (pre-flight ruling 7); the job, session and event operations are in jobs.ts, sessions.ts and events.ts.
 import "./zodConfig";
 import { z } from "zod";
 import { ERROR_CODES, isStudioFailure, type StudioError } from "./errors";
+import { eventsStream, streamRead } from "./events";
+import {
+	jobCancel,
+	jobRespond,
+	jobsDismissInterrupted,
+	jobsInterrupted,
+	jobsList,
+} from "./jobs";
+import { sessionStart, sessionStop, sessionsList } from "./sessions";
+import {
+	type Contract,
+	command,
+	defineStream,
+	type JobOperation,
+	type Operation,
+	query,
+	type SessionKind,
+	type SessionKindMap,
+	type ShapedOperationMap,
+	type Stream,
+	type StreamMap,
+} from "./shapes";
 import type { StreamMessage } from "./transport";
-
-/** A request: one input, one answer. */
-export interface Operation<
-	Name extends string = string,
-	Input extends z.ZodType = z.ZodType,
-	Output extends z.ZodType = z.ZodType,
-> {
-	readonly kind: "request";
-	readonly name: Name;
-	readonly input: Input;
-	readonly output: Output;
-}
-
-/** A stream: one input, then events until the subscriber cancels. Every event is parsed against `event`. */
-export interface Stream<
-	Name extends string = string,
-	Input extends z.ZodType = z.ZodType,
-	Event extends z.ZodType = z.ZodType,
-> {
-	readonly kind: "stream";
-	readonly name: Name;
-	readonly input: Input;
-	readonly event: Event;
-}
-
-export function defineOperation<
-	const Name extends string,
-	Input extends z.ZodType,
-	Output extends z.ZodType,
->(def: {
-	name: Name;
-	input: Input;
-	output: Output;
-}): Operation<Name, Input, Output> {
-	return Object.freeze({
-		kind: "request",
-		name: def.name,
-		input: def.input,
-		output: def.output,
-	});
-}
-
-export function defineStream<
-	const Name extends string,
-	Input extends z.ZodType,
-	Event extends z.ZodType,
->(def: { name: Name; input: Input; event: Event }): Stream<Name, Input, Event> {
-	return Object.freeze({
-		kind: "stream",
-		name: def.name,
-		input: def.input,
-		event: def.event,
-	});
-}
-
-export type OperationMap = Readonly<Record<string, Operation>>;
-export type StreamMap = Readonly<Record<string, Stream>>;
-
-/** A whole contract: what a ServiceRegistry serves and a transport calls. */
-export interface Contract<
-	Ops extends OperationMap = OperationMap,
-	Streams extends StreamMap = StreamMap,
-> {
-	readonly operations: Ops;
-	readonly streams: Streams;
-}
 
 // ---- The P1a operations ----
 
@@ -119,7 +77,7 @@ export const DEFAULT_SHELL_LAYOUT: ShellLayout = Object.freeze({
 });
 
 /** App version, platform ("browser" under the mock transport), the stored theme preference and shell layout. */
-export const appInfo = defineOperation({
+export const appInfo = query({
 	name: "app.info",
 	input: z.strictObject({}),
 	output: z.object({
@@ -131,35 +89,37 @@ export const appInfo = defineOperation({
 });
 
 /** Stores the theme preference in the app's data folder and answers with the stored value. */
-export const appSetTheme = defineOperation({
+export const appSetTheme = command({
 	name: "app.setTheme",
 	input: z.strictObject({ theme: themePreferenceSchema }),
 	output: z.object({ theme: themePreferenceSchema }),
+	errors: [ERROR_CODES.preferencesNotSaved],
 });
 
 /** Stores the shell layout (the bottom panel's open state and height) and answers with the stored value. */
-export const appSetLayout = defineOperation({
+export const appSetLayout = command({
 	name: "app.setLayout",
 	input: z.strictObject({ layout: shellLayoutSchema }),
 	output: z.object({ layout: shellLayoutOutputSchema }),
+	errors: [ERROR_CODES.preferencesNotSaved],
 });
 
 /** Minimises the window. Answers once it is asked; a missing window is not an error. */
-export const windowMinimize = defineOperation({
+export const windowMinimize = command({
 	name: "window.minimize",
 	input: z.strictObject({}),
 	output: z.object({}),
 });
 
 /** Maximises the window, or restores it when it is maximised; answers with the state it asked for. */
-export const windowToggleMaximize = defineOperation({
+export const windowToggleMaximize = command({
 	name: "window.toggleMaximize",
 	input: z.strictObject({}),
 	output: z.object({ maximized: z.boolean() }),
 });
 
 /** Closes the window (the app quits with its last window, except on macOS). */
-export const windowClose = defineOperation({
+export const windowClose = command({
 	name: "window.close",
 	input: z.strictObject({}),
 	output: z.object({}),
@@ -180,22 +140,71 @@ export const operations = {
 	"app.info": appInfo,
 	"app.setLayout": appSetLayout,
 	"app.setTheme": appSetTheme,
+	"job.cancel": jobCancel,
+	"job.respond": jobRespond,
+	"jobs.dismissInterrupted": jobsDismissInterrupted,
+	"jobs.interrupted": jobsInterrupted,
+	"jobs.list": jobsList,
+	"session.start": sessionStart,
+	"session.stop": sessionStop,
+	"sessions.list": sessionsList,
 	"window.close": windowClose,
 	"window.minimize": windowMinimize,
 	"window.toggleMaximize": windowToggleMaximize,
-} as const satisfies OperationMap;
+} as const satisfies ShapedOperationMap;
 
 /** Every stream, keyed by name. */
 export const streams = {
+	events: eventsStream,
+	"stream.read": streamRead,
 	"window.state": windowState,
 } as const satisfies StreamMap;
+
+/**
+ * Every session kind, keyed by kind: what `session.start` may start (SessionService refuses any other with
+ * `session.unknownKind`). Empty until a feature declares one with `defineSessionKind`.
+ */
+export const sessionKinds = {} as const satisfies SessionKindMap;
 
 export const contract = { operations, streams } as const satisfies Contract;
 
 export type Operations = typeof operations;
 export type Streams = typeof streams;
+export type SessionKinds = typeof sessionKinds;
 export type OperationName = keyof Operations & string;
 export type StreamName = keyof Streams & string;
+export type SessionKindName = keyof SessionKinds & string;
+
+/** The names of the job operations in `operations`. */
+export type JobKindName = {
+	[N in OperationName]: Operations[N] extends { readonly shape: "job" }
+		? N
+		: never;
+}[OperationName];
+export type JobKinds = { readonly [N in JobKindName]: Operations[N] };
+
+/** Every job operation, keyed by name: the kinds JobService runs. Derived from `operations`, so a job is declared once. */
+export const jobKinds: JobKinds = Object.freeze(
+	Object.fromEntries(
+		Object.entries(operations as ShapedOperationMap).filter(
+			([, op]) => op.shape === "job",
+		),
+	),
+) as JobKinds;
+
+/** A job kind's result, once it succeeds (`Job.result`). */
+export type JobResultOf<N extends JobKindName> =
+	JobKinds[N] extends JobOperation<string, z.ZodType, infer R>
+		? z.output<R>
+		: never;
+/** What `session.start` takes as `args` for a kind (before parsing). */
+export type SessionArgsOf<K extends SessionKindName> =
+	SessionKinds[K] extends SessionKind<string, infer A> ? z.input<A> : never;
+/** A session kind's `Session.info`. */
+export type SessionInfoOf<K extends SessionKindName> =
+	SessionKinds[K] extends SessionKind<string, z.ZodType, infer I>
+		? z.output<I>
+		: never;
 
 /** What a caller passes (before parsing). */
 export type InputOf<N extends OperationName> = z.input<Operations[N]["input"]>;

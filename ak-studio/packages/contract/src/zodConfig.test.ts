@@ -24,6 +24,9 @@ import {
 	appSetTheme,
 	bridgeResultSchema,
 	DEFAULT_SHELL_LAYOUT,
+	jobSchema,
+	streamRead,
+	studioEventSchema,
 } from "./index";
 
 describe("zod configuration", () => {
@@ -43,6 +46,22 @@ describe("zod configuration", () => {
 		appSetTheme.input.parse({ theme: "light" });
 		appSetLayout.input.parse({ layout: DEFAULT_SHELL_LAYOUT });
 		bridgeResultSchema.parse({ ok: true, value: 1 });
+		const job = {
+			id: "j1",
+			kind: "t.job",
+			title: "A job",
+			state: "running",
+			commandIds: [],
+			cancellable: true,
+			survivesQuit: false,
+		};
+		jobSchema.parse(job);
+		studioEventSchema.parse({ type: "job.updated", job });
+		streamRead.event.parse({
+			chunks: [{ seq: 0, at: 1, channel: "stdout", text: "a" }],
+			dropped: 0,
+			ended: false,
+		});
 		z.object({ a: z.string(), b: z.object({ c: z.number() }) }).parse({
 			a: "x",
 			b: { c: 1 },

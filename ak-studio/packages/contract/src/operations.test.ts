@@ -8,7 +8,6 @@ import {
 	BOTTOM_PANEL_HEIGHT,
 	contract,
 	DEFAULT_SHELL_LAYOUT,
-	defineOperation,
 	lookup,
 	operations,
 	platformSchema,
@@ -22,6 +21,7 @@ import {
 	windowState,
 	windowToggleMaximize,
 } from "./operations";
+import { defineOperation } from "./shapes";
 import {
 	bridgeResultSchema,
 	streamMessageSchema,
@@ -46,11 +46,23 @@ describe("the operations map", () => {
 			"app.info",
 			"app.setLayout",
 			"app.setTheme",
+			"job.cancel",
+			"job.respond",
+			"jobs.dismissInterrupted",
+			"jobs.interrupted",
+			"jobs.list",
+			"session.start",
+			"session.stop",
+			"sessions.list",
 			"window.close",
 			"window.minimize",
 			"window.toggleMaximize",
 		]);
-		expect(Object.keys(streams)).toEqual(["window.state"]);
+		expect(Object.keys(streams).sort()).toEqual([
+			"events",
+			"stream.read",
+			"window.state",
+		]);
 		for (const [key, stream] of Object.entries(streams)) {
 			expect(stream.name).toBe(key);
 			expect(stream.kind).toBe("stream");

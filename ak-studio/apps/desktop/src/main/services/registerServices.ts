@@ -3,6 +3,7 @@
 // the test and not only the app's start-up. No Electron import: index.ts passes Electron's values in.
 import type { ServiceRegistry } from "../bridge/registry";
 import { AppService, type AppServiceOptions } from "./AppService";
+import { PendingP1bService } from "./PendingP1bService";
 import { type ControlledWindow, WindowService } from "./WindowService";
 
 /** What the services need from the app (Electron's values, the data folder's files). */
@@ -27,5 +28,8 @@ export function registerServices(
 	registry.register(app);
 	const window = new WindowService(deps.window);
 	registry.register(window);
+	// TEMPORARY (P1b Task 3): the job, session and event operations answer bridge.unavailable until their
+	// services exist (Tasks 4 and 5); Task 6 replaces this line with them.
+	registry.register(new PendingP1bService());
 	return { app, window };
 }

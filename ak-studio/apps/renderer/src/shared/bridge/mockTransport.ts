@@ -5,6 +5,7 @@ import {
 	type Contract,
 	contract,
 	DEFAULT_SHELL_LAYOUT,
+	ERROR_CODES,
 	type HandlerInputOf,
 	type HandlerResultOf,
 	type InputOf,
@@ -55,6 +56,18 @@ export function createMockWindow(): MockWindow {
 }
 
 /**
+ * TEMPORARY (P1b Task 3): the job, session and event operations have no fixture until the mock runs the runtime's
+ * services (P1b Task 7, on Tasks 4 and 5). Until then each answers `bridge.unavailable`, as the app does.
+ */
+function notYetServed(name: string): never {
+	throw new StudioFailure({
+		code: ERROR_CODES.unavailable,
+		message: "This part of the app is not available yet.",
+		detail: `${name} has no service until a later P1b task.`,
+	});
+}
+
+/**
  * Fixture answers: `app.info` reports the browser platform; `app.setTheme` and `app.setLayout` keep their values in
  * memory (a reload starts again from the defaults, as on a first run). The window requests act on `mockWindow`
  * (minimise and close do nothing in a browser).
@@ -89,6 +102,15 @@ export function defaultMockHandlers(
 				listener(mockWindow.maximized);
 			return { maximized: mockWindow.maximized };
 		},
+		// TEMPORARY (P1b Task 3), replaced in Task 7.
+		"job.cancel": () => notYetServed("job.cancel"),
+		"job.respond": () => notYetServed("job.respond"),
+		"jobs.dismissInterrupted": () => notYetServed("jobs.dismissInterrupted"),
+		"jobs.interrupted": () => notYetServed("jobs.interrupted"),
+		"jobs.list": () => notYetServed("jobs.list"),
+		"session.start": () => notYetServed("session.start"),
+		"session.stop": () => notYetServed("session.stop"),
+		"sessions.list": () => notYetServed("sessions.list"),
 	};
 }
 
@@ -105,6 +127,9 @@ export function defaultMockStreams(
 				mockWindow.listeners.delete(listener);
 			};
 		},
+		// TEMPORARY (P1b Task 3), replaced in Task 7: fails at once with bridge.unavailable.
+		events: () => notYetServed("events"),
+		"stream.read": () => notYetServed("stream.read"),
 	};
 }
 
