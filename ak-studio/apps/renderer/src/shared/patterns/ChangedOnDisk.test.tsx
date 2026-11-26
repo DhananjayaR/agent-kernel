@@ -2,13 +2,15 @@
 // warning banner, "Take theirs" drops the copy and "Keep mine" writes it on the new revision; "Compare" shows only
 // once its app command exists, and runs it with the file; with no working copy, a re-read file shows the info banner
 // until dismissed, and nothing shows otherwise.
-import type { Revision } from "@ak-studio/contract";
+import { ERROR_CODES, type Revision } from "@ak-studio/contract";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { StudioFailure } from "../bridge/client";
 import { defineCommand } from "../commands/command";
 import { getCommands, setCommands } from "../commands/runCommand";
+import { errorStrings } from "../errors/strings";
 import {
 	useWorkingCopy,
 	type WorkingCopyOptions,
@@ -42,7 +44,11 @@ function Editor(props: {
 }
 
 /** An editor with an edit made on R1, then the file changed on disk to R2. */
-async function conflicted(write = vi.fn(async () => ({ revision: R3 }))) {
+async function conflicted(
+	write: WorkingCopyOptions<string>["write"] = vi.fn(async () => ({
+		revision: R3,
+	})),
+) {
 	const user = userEvent.setup();
 	const view = render(<Editor value="theirs v1" revision={R1} write={write} />);
 	await user.click(screen.getByRole("button", { name: "Edit" }));
@@ -76,7 +82,7 @@ describe("ChangedOnDisk", () => {
 		expect(screen.queryByRole("status")).toBeNull();
 	});
 
-	it("takes the conflict away while a Keep mine save runs, so no choice made then can be reversed by the write", async () => {
+	it("keeps the banner while a Keep mine save runs, with Take theirs disabled, so the write cannot reverse a choice", async () => {
 		let answer: (value: { revision: Revision }) => void = () => {};
 		const write = vi.fn(
 			() =>
@@ -86,11 +92,41 @@ describe("ChangedOnDisk", () => {
 		);
 		const { user } = await conflicted(write);
 		await user.click(screen.getByRole("button", { name: "Keep mine" }));
-		// The working copy clears its conflict as the write starts: the banner (and Take theirs) is gone at once.
-		expect(screen.queryByRole("button", { name: "Take theirs" })).toBeNull();
+		expect(screen.getByRole("button", { name: "Take theirs" })).toHaveProperty(
+			"disabled",
+			true,
+		);
+		// A second press is not a second write.
+		await user.click(screen.getByRole("button", { name: "Keep mine" }));
+		expect(write).toHaveBeenCalledOnce();
 		await act(async () => answer({ revision: R3 }));
 		expect(screen.queryByRole("status")).toBeNull();
 		expect(screen.getByText("Showing: mine")).toBeTruthy();
+	});
+
+	it("shows a Keep mine that fails for another reason, keeps the banner and the copy, and Keep mine tries again", async () => {
+		const write = vi
+			.fn<WorkingCopyOptions<string>["write"]>()
+			.mockRejectedValueOnce(
+				new StudioFailure({
+					code: ERROR_CODES.unavailable,
+					message: "Restart the app, then keep yours again.",
+				}),
+			)
+			.mockResolvedValueOnce({ revision: R3 });
+		const { user } = await conflicted(write);
+		await user.click(screen.getByRole("button", { name: "Keep mine" }));
+		const alert = await screen.findByRole("alert");
+		expect(alert.textContent).toContain(errorStrings.titles.unavailable);
+		expect(alert.textContent).toContain(
+			"Restart the app, then keep yours again.",
+		);
+		expect(screen.getByRole("status").dataset.tone).toBe("warning");
+		expect(screen.getByText("Showing: mine")).toBeTruthy();
+		await user.click(screen.getByRole("button", { name: "Keep mine" }));
+		expect(write).toHaveBeenLastCalledWith("mine", R2);
+		await vi.waitFor(() => expect(screen.queryByRole("status")).toBeNull());
+		expect(screen.queryByRole("alert")).toBeNull();
 	});
 
 	it("offers Compare once its app command exists, and runs it with the file", async () => {

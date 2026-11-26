@@ -159,6 +159,9 @@ export const uiStrings = {
 		projectVersion: "This project uses OAK {version}.",
 		upgrade: "Upgrade OAK in this project to use it.",
 		readOnly: "The fields below are read-only until then.",
+		readOnlyRemoved: "The fields below are read-only.",
+		/** A removed capability with nothing named to replace it: what to do. */
+		removedNext: "Check the OAK release notes for what replaces it.",
 		replacedBy: "Use {replacement} instead.",
 		command: "Upgrade command",
 		commandHint:

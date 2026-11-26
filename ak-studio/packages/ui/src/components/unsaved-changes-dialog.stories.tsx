@@ -52,7 +52,7 @@ const meta = {
 	args: {
 		isOpen: true,
 		what: "config.yaml",
-		file: "src/support/config.yaml",
+		files: ["src/support/config.yaml"],
 		onSave: fn(),
 		onDiscard: fn(),
 		onStay: fn(),
@@ -143,7 +143,7 @@ export const EscapeStays: Story = {
 	},
 };
 
-/** A save on its way: Save is pending (presses ignored), Stay and Discard are disabled. */
+/** A save on its way: Save is pending (presses ignored), Stay and Discard are disabled, and Escape does nothing. */
 export const Saving: Story = {
 	args: { saving: true, pending: true },
 	play: async ({ canvasElement, args }) => {
@@ -158,6 +158,28 @@ export const Saving: Story = {
 		await expect(
 			within(dialog).getByRole("button", { name: "Discard changes" }),
 		).toBeDisabled();
+		// Escape does not leave the save either: its answer decides.
+		await userEvent.keyboard("{Escape}");
+		await expect(args.onStay).not.toHaveBeenCalled();
+		await expect(body().getByRole("alertdialog")).toBeVisible();
+	},
+};
+
+/** Several views unsaved at once: one dialog names them all, with each file; Save, Discard and Stay answer for all. */
+export const SeveralItems: Story = {
+	args: {
+		what: "config.yaml and the session section",
+		files: ["src/support/config.yaml", "src/support/sessions.yaml"],
+	},
+	play: async ({ canvasElement }) => {
+		trigger(canvasElement).focus();
+		await userEvent.keyboard("{Enter}");
+		const dialog = await body().findByRole("alertdialog", {
+			name: "Unsaved changes in config.yaml and the session section",
+		});
+		await expect(dialog.querySelectorAll("[data-slot=path-chip]")).toHaveLength(
+			2,
+		);
 	},
 };
 
@@ -183,7 +205,7 @@ export const SaveFailed: Story = {
 
 /** The keyboard: Tab from the dialog reaches Stay, Discard and Save in order, and wraps inside; Enter presses. */
 export const Keyboard: Story = {
-	args: { file: undefined },
+	args: { files: undefined },
 	play: async ({ canvasElement, args }) => {
 		const dialog = await open(canvasElement);
 		await waitFor(() => expect(dialog).toHaveFocus());

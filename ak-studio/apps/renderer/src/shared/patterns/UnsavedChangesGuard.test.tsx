@@ -12,7 +12,7 @@ import {
 	RouterProvider,
 	useNavigate,
 } from "@tanstack/react-router";
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { StudioFailure, setTransport } from "../bridge/client";
@@ -78,6 +78,116 @@ function renderApp(write: WorkingCopyOptions<string>["write"]) {
 	render(<RouterProvider router={router} />);
 	return router;
 }
+
+/** One of two views on a page, each with its own working copy and guard. */
+function Section({
+	name,
+	file,
+	write,
+}: {
+	name: string;
+	file: string;
+	write: WorkingCopyOptions<string>["write"];
+}) {
+	const copy = useWorkingCopy({ value: `${name} theirs`, revision: R1, write });
+	return (
+		<div>
+			<UnsavedChangesGuard
+				label={`Config: ${name}`}
+				what={name}
+				file={file}
+				workingCopy={copy}
+			/>
+			<p>
+				{name} shows: {copy.draft}
+			</p>
+			<button type="button" onClick={() => copy.setDraft(`${name} mine`)}>
+				Edit {name}
+			</button>
+		</div>
+	);
+}
+
+function TwoSections({
+	writeA,
+	writeB,
+}: {
+	writeA: WorkingCopyOptions<string>["write"];
+	writeB: WorkingCopyOptions<string>["write"];
+}) {
+	const navigate = useNavigate();
+	return (
+		<div>
+			<Section
+				name="config.yaml"
+				file="src/support/config.yaml"
+				write={writeA}
+			/>
+			<Section
+				name="the session section"
+				file="src/support/sessions.yaml"
+				write={writeB}
+			/>
+			<button
+				type="button" // The app registers its own routes; this test router has others.
+				onClick={() => void navigate({ to: "/other" } as never)}
+			>
+				Leave
+			</button>
+		</div>
+	);
+}
+
+/** Two views edited, then leaving: one dialog for both. */
+async function leaveWithTwo(
+	writeA: WorkingCopyOptions<string>["write"],
+	writeB: WorkingCopyOptions<string>["write"],
+) {
+	setTransport(createMockTransport());
+	const user = userEvent.setup();
+	const rootRoute = createRootRoute({ component: Outlet });
+	const routeTree = rootRoute.addChildren([
+		createRoute({
+			getParentRoute: () => rootRoute,
+			path: "/",
+			component: () => <TwoSections writeA={writeA} writeB={writeB} />,
+		}),
+		createRoute({
+			getParentRoute: () => rootRoute,
+			path: "/other",
+			component: () => <p>Other view</p>,
+		}),
+	]);
+	const router = createRouter({
+		routeTree,
+		history: createMemoryHistory({ initialEntries: ["/"] }),
+	});
+	render(<RouterProvider router={router} />);
+	await user.click(
+		await screen.findByRole("button", { name: "Edit config.yaml" }),
+	);
+	await user.click(
+		screen.getByRole("button", { name: "Edit the session section" }),
+	);
+	await user.click(screen.getByRole("button", { name: "Leave" }));
+	const dialog = await screen.findByRole("alertdialog", {
+		name: "Unsaved changes in config.yaml and the session section",
+	});
+	// One dialog names both, with both files.
+	expect(screen.getAllByRole("alertdialog")).toHaveLength(1);
+	expect(dialog.textContent).toContain("src/support/config.yaml");
+	expect(dialog.textContent).toContain("src/support/sessions.yaml");
+	return { user, router, dialog };
+}
+
+const written = async () => ({ revision: R2 });
+const refused = () =>
+	Promise.reject(
+		new StudioFailure({
+			code: ERROR_CODES.forbidden,
+			message: "The file is read-only. Change its permissions, then save.",
+		}),
+	);
 
 /** Edits, then tries to leave: the dialog. */
 async function leaveWithEdits(write: WorkingCopyOptions<string>["write"]) {
@@ -196,5 +306,124 @@ describe("UnsavedChangesGuard", () => {
 		const alert = await within(dialog).findByRole("alert");
 		expect(alert.textContent).toContain("The file is read-only.");
 		expect(router.state.location.pathname).toBe("/");
+	});
+
+	it("ignores Escape while a save runs; a save that then fails keeps the dialog open with its error", async () => {
+		let fail: (reason: unknown) => void = () => {};
+		const write = vi.fn(
+			() =>
+				new Promise<{ revision: Revision }>((_resolve, reject) => {
+					fail = reject;
+				}),
+		);
+		const { user, router, dialog } = await leaveWithEdits(write);
+		await user.click(within(dialog).getByRole("button", { name: "Save" }));
+		await user.keyboard("{Escape}");
+		expect(screen.getByRole("alertdialog")).toBeTruthy();
+		expect(router.state.location.pathname).toBe("/");
+		await act(async () =>
+			fail(
+				new StudioFailure({
+					code: ERROR_CODES.forbidden,
+					message: "The file is read-only. Change its permissions, then save.",
+				}),
+			),
+		);
+		const alert = await within(screen.getByRole("alertdialog")).findByRole(
+			"alert",
+		);
+		expect(alert.textContent).toContain("The file is read-only.");
+		expect(router.state.location.pathname).toBe("/");
+	});
+});
+
+describe("UnsavedChangesGuard with two unsaved views", () => {
+	it("Save saves both, then leaves", async () => {
+		const writeA = vi.fn(written);
+		const writeB = vi.fn(written);
+		const { user, dialog } = await leaveWithTwo(writeA, writeB);
+		await user.click(within(dialog).getByRole("button", { name: "Save" }));
+		expect(await screen.findByText("Other view")).toBeTruthy();
+		expect(writeA).toHaveBeenCalledExactlyOnceWith("config.yaml mine", R1);
+		expect(writeB).toHaveBeenCalledExactlyOnceWith(
+			"the session section mine",
+			R1,
+		);
+	});
+
+	it("Save stops at the first failure: the error shows, the navigation is held, the later view is not written", async () => {
+		const writeA = vi.fn(refused);
+		const writeB = vi.fn(written);
+		const { user, router, dialog } = await leaveWithTwo(writeA, writeB);
+		await user.click(within(dialog).getByRole("button", { name: "Save" }));
+		const alert = await within(dialog).findByRole("alert");
+		expect(alert.textContent).toContain("The file is read-only.");
+		expect(writeB).not.toHaveBeenCalled();
+		expect(router.state.location.pathname).toBe("/");
+		expect(
+			screen.getByText("config.yaml shows: config.yaml mine"),
+		).toBeTruthy();
+		expect(
+			screen.getByText("the session section shows: the session section mine"),
+		).toBeTruthy();
+	});
+
+	it("a view saved before a later failure stays saved and drops out of the dialog", async () => {
+		const writeA = vi.fn(written);
+		const writeB = vi.fn(refused);
+		const { user, router } = await leaveWithTwo(writeA, writeB);
+		await user.click(
+			within(screen.getByRole("alertdialog")).getByRole("button", {
+				name: "Save",
+			}),
+		);
+		const dialog = await screen.findByRole("alertdialog", {
+			name: "Unsaved changes in the session section",
+		});
+		expect(within(dialog).getByRole("alert").textContent).toContain(
+			"The file is read-only.",
+		);
+		expect(router.state.location.pathname).toBe("/");
+	});
+
+	it("Discard drops both and leaves", async () => {
+		const writeA = vi.fn(written);
+		const writeB = vi.fn(written);
+		const { user, dialog } = await leaveWithTwo(writeA, writeB);
+		await user.click(
+			within(dialog).getByRole("button", { name: "Discard changes" }),
+		);
+		expect(await screen.findByText("Other view")).toBeTruthy();
+		expect(writeA).not.toHaveBeenCalled();
+		expect(writeB).not.toHaveBeenCalled();
+		expect(unsavedWork.items()).toEqual([]);
+	});
+
+	it("Stay keeps both, and nothing was dropped", async () => {
+		const { user, router, dialog } = await leaveWithTwo(
+			vi.fn(written),
+			vi.fn(written),
+		);
+		await user.click(within(dialog).getByRole("button", { name: "Stay" }));
+		await vi.waitFor(() =>
+			expect(screen.queryByRole("alertdialog")).toBeNull(),
+		);
+		expect(router.state.location.pathname).toBe("/");
+		expect(
+			screen.getByText("config.yaml shows: config.yaml mine"),
+		).toBeTruthy();
+		expect(
+			screen.getByText("the session section shows: the session section mine"),
+		).toBeTruthy();
+		expect(unsavedWork.items()).toEqual([
+			"Config: config.yaml",
+			"Config: the session section",
+		]);
+		// Leaving again asks again, once, for both.
+		await user.click(screen.getByRole("button", { name: "Leave" }));
+		await screen.findByRole("alertdialog", {
+			name: "Unsaved changes in config.yaml and the session section",
+		});
+		expect(screen.getAllByRole("alertdialog")).toHaveLength(1);
 	});
 });

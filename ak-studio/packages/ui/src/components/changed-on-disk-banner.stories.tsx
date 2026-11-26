@@ -128,6 +128,55 @@ export const Saving: Story = {
 	},
 };
 
+/** A Keep mine that failed for another reason: the banner stays, with what happened and what to do under the choices. */
+export const KeepMineFailed: Story = {
+	args: {
+		conflict: true,
+		onKeepMine: fn(),
+		onTakeTheirs: fn(),
+		onDismiss: undefined,
+		error: {
+			title: "The app's bridge is not available",
+			description: "Restart the app, then keep yours again.",
+		},
+	},
+	play: async ({ canvasElement, args }) => {
+		const el = banner(canvasElement);
+		await expect(el).toHaveAttribute("data-tone", "warning");
+		const alert = within(el).getByRole("alert");
+		await expect(alert).toHaveTextContent(
+			"Restart the app, then keep yours again.",
+		);
+		await userEvent.click(
+			within(el).getByRole("button", { name: "Keep mine" }),
+		);
+		await expect(args.onKeepMine).toHaveBeenCalledOnce();
+	},
+};
+
+/** A conflict over a canvas: floating, with its choices under the words. */
+export const FloatingConflict: Story = {
+	render: () => (
+		<div className="relative h-96 max-w-dialog-l overflow-hidden rounded-card border border-border-default bg-surface-raised">
+			<ChangedOnDiskBanner
+				file="src/support/app.py"
+				conflict
+				placement="floating"
+				onKeepMine={() => {}}
+				onTakeTheirs={() => {}}
+			/>
+		</div>
+	),
+	play: async ({ canvasElement }) => {
+		const el = banner(canvasElement);
+		await expect(el).toHaveAttribute("data-tone", "warning");
+		await expect(getComputedStyle(el).position).toBe("absolute");
+		await expect(
+			within(el).getByRole("button", { name: "Keep mine" }),
+		).toBeVisible();
+	},
+};
+
 /** Over a canvas: floating at the top of the viewport, solid, with the elevated shadow; the canvas stays under it. */
 export const Floating: Story = {
 	render: () => (

@@ -9,7 +9,9 @@
 // - **A conflicting working copy** (`conflict` true): the person's edits are kept and flagged. The banner is
 //   **warning** and carries "Keep mine" (save the copy over the file), "Take theirs" (drop the copy) and "Compare".
 //   It is not dismissable: the conflict stays until one is chosen. While a "Keep mine" save runs the others are
-//   disabled (`saving`), and "Keep mine" shows its pending state once the save has run 300 ms (`pending`).
+//   disabled and a second press does nothing (`saving`), and "Keep mine" shows its pending state once the save has
+//   run 300 ms (`pending`). A "Keep mine" that failed for another reason shows its error under the choices
+//   (`error`), and the banner stays, so the person can try again or take theirs.
 // - **Compare** shows only when the caller gives `onCompare`: the compare view is settled when first used (the
 //   design leans to the Code tab opened on the file's diff), so no view offers it before then.
 //
@@ -21,6 +23,7 @@ import { type ChangedOnDiskStrings, uiStrings } from "../strings";
 import { Button, IconButton } from "./button";
 import { InlineBanner } from "./inline-banner";
 import { PathChip } from "./path-chip";
+import { ErrorBanner, type ErrorSlots } from "./state-message";
 
 type Common = {
 	/** The file that changed, relative to the project. */
@@ -45,6 +48,7 @@ export type ChangedOnDiskBannerProps = Common &
 				onCompare?: undefined;
 				saving?: undefined;
 				pending?: undefined;
+				error?: undefined;
 		  }
 		| {
 				/** The person's working copy and the file on disk differ. */
@@ -62,6 +66,8 @@ export type ChangedOnDiskBannerProps = Common &
 				saving?: boolean;
 				/** The save has run 300 ms (the shared pending timing): "Keep mine" shows its pending state. */
 				pending?: boolean;
+				/** The last "Keep mine" failed (not a conflict): what happened and what to do, under the choices. */
+				error?: ErrorSlots;
 				onDismiss?: undefined;
 		  }
 	);
@@ -92,7 +98,10 @@ export function ChangedOnDiskBanner(props: ChangedOnDiskBannerProps) {
 			<Button
 				variant="secondary"
 				isPending={props.pending}
-				onPress={props.onKeepMine}
+				onPress={() => {
+					// One save at a time, whether or not its pending look shows yet.
+					if (!props.saving) props.onKeepMine();
+				}}
 			>
 				{text.keepMine}
 			</Button>
@@ -124,6 +133,9 @@ export function ChangedOnDiskBanner(props: ChangedOnDiskBannerProps) {
 				<PathChip path={file} />
 				<p>{description ?? (props.conflict ? text.conflict : text.updated)}</p>
 				{choices}
+				{props.conflict && props.error ? (
+					<ErrorBanner error={props.error} className="self-stretch" />
+				) : null}
 			</div>
 		</InlineBanner>
 	);

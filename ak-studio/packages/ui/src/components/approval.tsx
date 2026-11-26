@@ -106,7 +106,7 @@ export function ApprovalNameField({
 			autoFocus={autoFocus}
 			autoComplete="off"
 			isDisabled={isDisabled}
-			className="w-full [&_input]:font-mono"
+			className="w-full [&_input]:mono-literal"
 		/>
 	);
 }

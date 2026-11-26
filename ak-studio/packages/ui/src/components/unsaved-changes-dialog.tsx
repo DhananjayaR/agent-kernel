@@ -3,10 +3,11 @@
 // ask through native dialogs (P1b-plan ruling 11); this one is for in-app navigation only: leaving a tab, closing the
 // project.
 //
-// - **Names what is unsaved** in its title ("Unsaved changes in config.yaml"), and the file as a PathChip when the
-//   view gives one.
+// - **Names what is unsaved** in its title ("Unsaved changes in config.yaml", or every unsaved view: "…in
+//   config.yaml and the session section"), and each file as a PathChip.
 // - **Save** (primary) writes the copy and then leaves; **Discard** drops it and leaves, and names what it drops
-//   ("Discard changes"; a view may name the thing); **Stay** cancels the navigation, and so does Escape. A click on
+//   ("Discard changes"; a view may name the thing); **Stay** cancels the navigation, and so does Escape (not while a
+//   save runs: the save's answer decides). A click on
 //   the scrim does nothing, so a stray click can neither lose work nor leave.
 // - **A save that fails** keeps the dialog open with the error under the body (what happened, what to do), so the
 //   person can try again, discard, or stay. While it runs, Stay and Discard are disabled and a second Save does
@@ -23,10 +24,10 @@ import { ErrorBanner, type ErrorSlots } from "./state-message";
 
 export type UnsavedChangesDialogProps = {
 	isOpen: boolean;
-	/** What is unsaved, as the view words it ("config.yaml", "the session section"). */
+	/** What is unsaved, as the views word it; several are named together ("config.yaml and the session section"). */
 	what: string;
-	/** The file the changes belong to, shown as a PathChip. */
-	file?: string;
+	/** The files the changes belong to, each shown as a PathChip. */
+	files?: readonly string[];
 	/** Saves; the caller leaves once the save is confirmed. */
 	onSave: () => void;
 	/** Drops the changes and leaves. */
@@ -48,7 +49,7 @@ export type UnsavedChangesDialogProps = {
 export function UnsavedChangesDialog({
 	isOpen,
 	what,
-	file,
+	files = [],
 	onSave,
 	onDiscard,
 	onStay,
@@ -62,7 +63,8 @@ export function UnsavedChangesDialog({
 		<Modal
 			isOpen={isOpen}
 			onOpenChange={(open) => {
-				if (!open) onStay();
+				// Escape stays, except while the save runs (as Stay is disabled then): the answer comes from the save.
+				if (!open && !saving) onStay();
 			}}
 			title={fillString(text.title, { what })}
 			role="alertdialog"
@@ -94,9 +96,11 @@ export function UnsavedChangesDialog({
 					elementType="div"
 					className="flex flex-col gap-3"
 				>
-					{file ? (
-						<div>
-							<PathChip path={file} />
+					{files.length > 0 ? (
+						<div className="flex flex-wrap gap-2">
+							{files.map((file) => (
+								<PathChip key={file} path={file} />
+							))}
 						</div>
 					) : null}
 					<p>{text.body}</p>

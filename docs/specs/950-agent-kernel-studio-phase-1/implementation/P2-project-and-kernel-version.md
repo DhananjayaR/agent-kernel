@@ -142,7 +142,9 @@ feature F?**
       section list). P2 mounts `CatalogProvider` with the catalog, the project's version, `upgradeCommand(since)`
       (built from the project's own dependency line, keeping its extras) and `openDocs(url)`. The window opens no
       links itself (`security.ts` denies window-open and navigation), so `openDocs` needs a main-process operation
-      (`shell.openExternal` on an allow-listed docs host); until then the notice shows no docs link.
+      (`shell.openExternal` on an allow-listed docs host); until then the notice shows no docs link. `useCapability`
+      throws in development for a gate with no provider above it, or under a provider with no project version
+      (Welcome): mount `CatalogProvider` above every gate, and keep gates out of no-project screens.
 - [ ] **Supported floor.** Studio declares the oldest OAK version it opens with full support.
       Decided 26 Nov 2026: **0.10** (the current minor; `ak-py` is 0.10.2). Below the floor the project opens
       read-only with a banner. **Read-only** (decided 26 Nov 2026) means the Studio writes nothing to the project:

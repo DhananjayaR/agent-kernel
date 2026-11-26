@@ -49,7 +49,10 @@ export const Tab: Story = {
 		await expect(el).toHaveTextContent(
 			"This project uses OAK 0.10.2. Upgrade OAK in this project to use it.",
 		);
-		await expect(within(el).getByText(COMMAND)).toBeVisible();
+		const code = within(el).getByText(COMMAND);
+		await expect(code).toBeVisible();
+		// Ligatures off: ">=" is drawn as typed, never as one glyph.
+		await expect(getComputedStyle(code).fontVariantLigatures).toBe("none");
 		await expect(el).toHaveTextContent("The Studio does not run it for you.");
 		await userEvent.click(
 			within(el).getByRole("button", { name: "Copy code" }),
@@ -120,6 +123,29 @@ export const Section: Story = {
 			name: "Function app name",
 		});
 		await expect(field).toHaveAttribute("readonly");
+	},
+};
+
+/** A removed section with nothing named to replace it: what to do instead, and its fields read-only. */
+export const SectionRemoved: Story = {
+	args: {
+		size: "section",
+		feature: "Legacy session store",
+		status: "removed",
+		since: undefined,
+		until: "0.14.0",
+		version: "0.14.1",
+	} as Story["args"],
+	play: async ({ canvasElement }) => {
+		const el = notice(canvasElement);
+		await expect(el).toHaveTextContent(
+			"Legacy session store was removed in OAK 0.14.0",
+		);
+		await expect(el).toHaveTextContent(
+			"Check the OAK release notes for what replaces it.",
+		);
+		await expect(el).toHaveTextContent("The fields below are read-only.");
+		await expect(el.querySelector("[data-slot=code-block]")).toBeNull();
 	},
 };
 

@@ -92,7 +92,7 @@ export function CommandRow({
 			{...props}
 		>
 			<StatusChip status={status} label={label} className="shrink-0" />
-			<code className="min-w-0 flex-1 font-mono text-ui-sm wrap-anywhere text-text">
+			<code className="min-w-0 flex-1 mono-literal text-ui-sm wrap-anywhere text-text">
 				{[executable, ...args].map(quoteArg).join(" ")}
 			</code>
 			{durationMs !== undefined ? (

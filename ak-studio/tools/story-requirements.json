@@ -139,7 +139,9 @@
 				"Conflict",
 				"ConflictWithCompare",
 				"Saving",
+				"KeepMineFailed",
 				"Floating",
+				"FloatingConflict",
 				"Keyboard"
 			]
 		},
@@ -151,6 +153,7 @@
 				"Discard",
 				"EscapeStays",
 				"Saving",
+				"SeveralItems",
 				"SaveFailed",
 				"Keyboard"
 			]
@@ -162,6 +165,7 @@
 				"TabWithoutCommand",
 				"TabRemoved",
 				"Section",
+				"SectionRemoved",
 				"SectionTag",
 				"Control",
 				"ControlRemoved",

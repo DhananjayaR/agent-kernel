@@ -78,7 +78,7 @@ export function StatusBar({
 					>
 						<IconGitBranch aria-hidden="true" className="size-4 shrink-0" />
 						<span className="sr-only">{text.gitBranch}</span>
-						<span className="truncate font-mono">{gitBranch}</span>
+						<span className="truncate mono-literal">{gitBranch}</span>
 					</span>
 				) : null}
 			</div>

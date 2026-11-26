@@ -274,7 +274,8 @@
 	 * Families (bundled in fonts.css). `font-ui`: Inter, all UI and body text. `font-heading`: Archivo,
 	 * headings and the primary call to action (the Drive "Agent Kernel - Style Guidelines Quick Reference", May 2026: "Archivo for headlines and CTA buttons"; not in branding/README.md).
 	 * `font-mono`: JetBrains Mono, for code, paths, identifiers, durations, token counts and money; with
-	 * figures, use `mono-figures` (below) for tabular digits. The other button labels stay in Inter
+	 * figures, use `mono-figures` (below) for tabular digits, and for literal text people copy or retype
+	 * (code, commands, paths, identifiers) `mono-literal` (below), which turns ligatures off. The other button labels stay in Inter
 	 * (`font-ui` with weight `font-control`), so every other control in a row (buttons, action buttons,
 	 * fields, menus, tabs) shares one face at 14 px; the one primary action per view is Archivo SemiBold
 	 * (`font-heading font-cta`).
@@ -363,6 +364,16 @@
 		outline: var(--spacing-focus-ring) solid var(--color-border-control);
 		outline-offset: calc(var(--spacing-focus-ring) * -1);
 	}
+}
+
+/*
+ * Literal text in JetBrains Mono that people copy or retype: code, commands, upgrade commands, paths and
+ * identifiers. Ligatures off, so `>=`, `->` and `!=` show as the characters typed (never as `≥`, `→`, `≠`).
+ * Controller ruling, Task 17 fix round 1.
+ */
+@utility mono-literal {
+	font-family: var(--font-mono);
+	font-variant-ligatures: none;
 }
 
 /* Numbers in JetBrains Mono with tabular figures, so columns of durations, counts and money line up. */

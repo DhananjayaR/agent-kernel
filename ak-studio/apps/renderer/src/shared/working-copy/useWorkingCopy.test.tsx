@@ -94,7 +94,7 @@ describe("useWorkingCopy", () => {
 		const write = vi.fn(() => answer.promise);
 		const { result, rerender } = setup(write);
 		act(() => result.current.setDraft("mine"));
-		let saved: Promise<void> = Promise.resolve();
+		let saved: Promise<unknown> = Promise.resolve();
 		act(() => {
 			saved = result.current.save();
 		});
@@ -117,7 +117,7 @@ describe("useWorkingCopy", () => {
 		const write = vi.fn(() => answer.promise);
 		const { result, rerender } = setup(write);
 		act(() => result.current.setDraft("mine"));
-		let saved: Promise<void> = Promise.resolve();
+		let saved: Promise<unknown> = Promise.resolve();
 		act(() => {
 			saved = result.current.save();
 		});
@@ -199,5 +199,42 @@ describe("useWorkingCopy", () => {
 		const { result } = setup(write);
 		await act(() => result.current.save());
 		expect(write).not.toHaveBeenCalled();
+	});
+
+	it("answers how a save ended: clean, a conflict, or an error; a second save waits for the first", async () => {
+		const answer = deferred<{ revision: Revision }>();
+		const write = vi.fn(() => answer.promise);
+		const { result } = setup(write);
+		act(() => result.current.setDraft("mine"));
+		let first: Promise<unknown> = Promise.resolve();
+		let second: Promise<unknown> = Promise.resolve();
+		act(() => {
+			first = result.current.save();
+			second = result.current.save();
+		});
+		expect(write).toHaveBeenCalledOnce();
+		await act(async () => answer.resolve({ revision: R2 }));
+		const clean = { clean: true, conflict: false, error: undefined };
+		expect(await first).toEqual(clean);
+		expect(await second).toEqual(clean);
+
+		const stale = setup(vi.fn(() => Promise.reject(changedOnDisk())));
+		act(() => stale.result.current.setDraft("mine"));
+		let outcome: unknown;
+		await act(async () => {
+			outcome = await stale.result.current.save();
+		});
+		expect(outcome).toMatchObject({ clean: false, conflict: true });
+
+		const failure = new StudioFailure({
+			code: ERROR_CODES.unavailable,
+			message: "Restart the app.",
+		});
+		const broken = setup(vi.fn(() => Promise.reject(failure)));
+		act(() => broken.result.current.setDraft("mine"));
+		await act(async () => {
+			outcome = await broken.result.current.save();
+		});
+		expect(outcome).toEqual({ clean: false, conflict: false, error: failure });
 	});
 });

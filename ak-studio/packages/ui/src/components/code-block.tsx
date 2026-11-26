@@ -90,7 +90,7 @@ export function CodeBlock({
 				tabIndex={0}
 				className="overflow-x-auto rounded-b-control outline-none focus-visible:focus-outline"
 			>
-				<pre className="p-edge font-mono text-ui-sm text-text">
+				<pre className="p-edge mono-literal text-ui-sm text-text">
 					<code>{code}</code>
 				</pre>
 			</section>

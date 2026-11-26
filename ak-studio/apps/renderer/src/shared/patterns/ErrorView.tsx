@@ -20,6 +20,10 @@ import { noticeFailure } from "./failureNotice";
 import { presentError } from "./presentError";
 
 export interface ErrorViewProps {
+	/**
+	 * The error. A toast-placed one is raised once per error by what it says: to raise the same failure again (a retry
+	 * that failed the same way), remount the view or clear the error between attempts.
+	 */
 	error: StudioError;
 	/** Where it shows; the catalogue's placement for its code by default. */
 	placement?: ErrorPlacement;

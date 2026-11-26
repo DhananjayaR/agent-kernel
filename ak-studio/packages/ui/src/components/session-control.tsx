@@ -132,7 +132,7 @@ export function SessionControlView({
 					{facts.map((fact) => (
 						<div key={fact.label} className="flex min-w-0 gap-2">
 							<dt className="shrink-0 text-text-muted">{fact.label}</dt>
-							<dd className="min-w-0 font-mono wrap-anywhere text-text">
+							<dd className="min-w-0 mono-literal wrap-anywhere text-text">
 								{fact.value}
 							</dd>
 						</div>

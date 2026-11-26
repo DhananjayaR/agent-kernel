@@ -102,7 +102,7 @@ export function PathChip({
 			data-slot="path-chip"
 			title={line === undefined ? path : `${path}:${line}`}
 			className={cn(
-				"inline-flex h-control-s max-w-full min-w-0 items-center rounded-control pl-2.5 font-mono text-ui-sm text-text",
+				"inline-flex h-control-s max-w-full min-w-0 items-center rounded-control pl-2.5 mono-literal text-ui-sm text-text",
 				"ring-1 ring-border-default ring-inset",
 				hasActions ? "pr-0" : "pr-2.5",
 				className,

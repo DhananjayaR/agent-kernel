@@ -385,7 +385,7 @@ must not be a quieter way to run its code.
 ```ts
 type StudioError = {
   code: string;            // from the error catalog, e.g. "toolchain.missing", "config.invalid"
-  message: string;         // sentence case, says what happened
+  message: string;         // sentence case, says what to do next (the catalogue's title for `code` says what happened)
   detail?: string;         // raw output, masked, collapsed by default
   file?: string; line?: number;
   action?: { label: string; commandId: string; args?: unknown }; // an app command the user can run next

@@ -1,23 +1,42 @@
 // UnsavedChangesGuard: the unsaved changes guard for leaving a view in the app (P1b design gate row (c): a modal with
 // Save, Discard and Stay; quitting and closing the window ask through native dialogs, P1b-plan ruling 11). Mounted by
-// a view with a working copy: while the copy is dirty, useUnsavedGuard puts the view's label in the window's unsaved
-// list and holds in-app navigation with the router's blocker; while a navigation is held, UnsavedChangesDialog asks.
+// a view with a working copy. While the copy is dirty, its label is in the window's unsaved list (useUnsavedLabel) and
+// its entry in the window's guards (unsavedGuards.ts). One guard holds the router's blocker for all of them, so
+// leaving with several unsaved views asks once, in one UnsavedChangesDialog naming them all:
 //
-// - **Save** saves the working copy; once the save is confirmed (no longer dirty, no conflict, no error) the held
-//   navigation goes on. A save that fails (a conflict: the file changed on disk; or any other error) keeps the dialog
-//   open with what happened and what to do, and the navigation held. While it runs, Stay and Discard are disabled
-//   (a Discard then would be reversed by the write landing after it); Save is pending once it has run 300 ms.
-// - **Discard** drops the copy and goes on. **Stay** (and Escape) cancels the navigation; the copy stays.
+// - **Save** saves every view in turn. When all are clean the held navigation goes on. The first that fails (a
+//   conflict: the file changed on disk; or any other error) stops it: the dialog stays open with what happened and
+//   what to do, the navigation held; the views already saved stay saved and drop out of the dialog. While it runs,
+//   Stay, Discard and Escape do nothing (the save's answer decides; a Discard then would be reversed by the write),
+//   and Save is pending once it has run 300 ms.
+// - **Discard** drops every view's copy, then the navigation goes on. Nothing is dropped unless the person leaves.
+// - **Stay** (and Escape) cancels the navigation; every copy stays.
 //
-// The answer always resolves the blocker explicitly (proceed or reset): once the copy is clean the blocker is no
+// The answer always resolves the blocker explicitly (proceed or reset): once the copies are clean the blocker is no
 // longer registered, but the held navigation still waits for its answer.
 import { ERROR_CODES } from "@ak-studio/contract";
-import { type ErrorSlots, UnsavedChangesDialog } from "@ak-studio/ui";
-import { useEffect, useState } from "react";
-import { useUnsavedGuard } from "../working-copy/useUnsavedGuard";
-import type { WorkingCopy } from "../working-copy/useWorkingCopy";
+import {
+	type ErrorSlots,
+	fillString,
+	UnsavedChangesDialog,
+} from "@ak-studio/ui";
+import {
+	useEffect,
+	useId,
+	useLayoutEffect,
+	useRef,
+	useState,
+	useSyncExternalStore,
+} from "react";
+import { usePendingAfter } from "../query/pending";
+import {
+	useUnsavedBlocker,
+	useUnsavedLabel,
+} from "../working-copy/useUnsavedGuard";
+import type { SaveOutcome, WorkingCopy } from "../working-copy/useWorkingCopy";
 import { failureOf, presentError } from "./presentError";
 import { patternStrings } from "./strings";
+import { type GuardEntry, unsavedGuards } from "./unsavedGuards";
 
 export interface UnsavedChangesGuardProps {
 	/** The view's entry in the window's unsaved list ("Config: session section"); main's quit dialog names it. */
@@ -26,79 +45,132 @@ export interface UnsavedChangesGuardProps {
 	what?: string;
 	/** The file the changes belong to. */
 	file?: string;
-	workingCopy: Pick<
-		WorkingCopy<unknown>,
-		| "dirty"
-		| "saving"
-		| "showPending"
-		| "conflict"
-		| "error"
-		| "save"
-		| "discard"
-	>;
+	/** The Discard button's label when this view is the only one unsaved ("Discard session changes"). */
+	discardLabel?: string;
+	workingCopy: Pick<WorkingCopy<unknown>, "dirty" | "save" | "discard">;
+}
+
+/** "a", "a and b", "a, b and c". */
+function names(list: readonly string[]): string {
+	if (list.length <= 1) return list[0] ?? "";
+	return fillString(patternStrings.unsavedJoin, {
+		first: list.slice(0, -1).join(patternStrings.unsavedJoinComma),
+		last: list[list.length - 1] ?? "",
+	});
+}
+
+/** Why a save did not come out clean, in the error family's slots. */
+function saveFailure(outcome: SaveOutcome): ErrorSlots {
+	if (outcome.conflict)
+		return presentError({
+			code: ERROR_CODES.fileChangedOnDisk,
+			message: patternStrings.saveConflict,
+		});
+	return presentError(
+		outcome.error ? outcome.error.error : failureOf(undefined),
+	);
 }
 
 export function UnsavedChangesGuard({
 	label,
 	what,
 	file,
+	discardLabel,
 	workingCopy,
 }: UnsavedChangesGuardProps) {
-	const guard = useUnsavedGuard(label, workingCopy.dirty);
-	const blocked = guard.status === "blocked";
-	// A save asked for from the dialog, waiting for its answer; and what went wrong with the last one.
-	const [saveAsked, setSaveAsked] = useState(false);
-	const [saveError, setSaveError] = useState<ErrorSlots>();
+	const id = useId();
+	const { dirty } = workingCopy;
+	useUnsavedLabel(label, dirty);
 
+	// This view's entry, while dirty. Its save and discard always reach the latest working copy.
+	const latest = useRef(workingCopy);
+	latest.current = workingCopy;
+	useLayoutEffect(() => {
+		if (!dirty) return;
+		return unsavedGuards.add({
+			id,
+			what: what ?? label,
+			file,
+			discardLabel,
+			save: () => latest.current.save(),
+			discard: () => latest.current.discard(),
+		});
+	}, [id, dirty, what, label, file, discardLabel]);
+
+	const { entries, asking } = useSyncExternalStore(
+		unsavedGuards.subscribe,
+		unsavedGuards.getSnapshot,
+	);
+	const owner = asking ?? entries[0]?.id;
+	const blocker = useUnsavedBlocker(owner === id && entries.length > 0);
+	const blocked = blocker.status === "blocked";
+	useLayoutEffect(() => {
+		if (blocked) {
+			unsavedGuards.setAsking(id);
+			return () => unsavedGuards.setAsking(undefined);
+		}
+	}, [blocked, id]);
+
+	const [saving, setSaving] = useState(false);
+	// Counts the Saves pressed, so each gets its own 300 ms before its pending state shows.
+	const [saves, setSaves] = useState(0);
+	const [saveError, setSaveError] = useState<ErrorSlots>();
+	const pending = usePendingAfter(saving, saves);
 	useEffect(() => {
 		if (!blocked) setSaveError(undefined);
 	}, [blocked]);
 
-	const { saving, dirty, conflict, error } = workingCopy;
-	useEffect(() => {
-		if (!saveAsked || saving) return;
-		setSaveAsked(false);
-		if (guard.status !== "blocked") return;
-		if (!dirty && !conflict && !error) {
-			guard.proceed?.();
-			return;
-		}
-		setSaveError(
-			conflict
-				? presentError({
-						code: ERROR_CODES.fileChangedOnDisk,
-						message: patternStrings.saveConflict,
-					})
-				: error
-					? presentError(error.error)
-					: undefined,
-		);
-	}, [saveAsked, saving, dirty, conflict, error, guard]);
-
 	if (!blocked) return null;
+	const only: GuardEntry | undefined =
+		entries.length === 1 ? entries[0] : undefined;
+	const files = entries
+		.map((entry) => entry.file)
+		.filter((path): path is string => path !== undefined);
+
+	const saveAll = async () => {
+		if (saving) return;
+		setSaving(true);
+		setSaves((n) => n + 1);
+		setSaveError(undefined);
+		try {
+			// The views unsaved when Save was pressed, in turn; the first that is not clean stops it.
+			for (const entry of entries) {
+				const outcome = await entry.save();
+				if (!outcome.clean) {
+					setSaveError(saveFailure(outcome));
+					return;
+				}
+			}
+			blocker.proceed?.();
+		} catch (reason) {
+			setSaveError(presentError(failureOf(reason)));
+		} finally {
+			setSaving(false);
+		}
+	};
+
 	return (
 		<UnsavedChangesDialog
 			isOpen
-			what={what ?? label}
-			{...(file === undefined ? {} : { file })}
-			saving={workingCopy.saving}
-			pending={workingCopy.showPending}
+			what={names(entries.map((entry) => entry.what))}
+			files={files}
+			saving={saving}
+			pending={pending}
 			{...(saveError === undefined ? {} : { error: saveError })}
+			{...(only?.discardLabel === undefined
+				? {}
+				: { strings: { discard: only.discardLabel } })}
 			onSave={() => {
-				setSaveError(undefined);
-				setSaveAsked(true);
-				workingCopy
-					.save()
-					.catch((reason: unknown) =>
-						setSaveError(presentError(failureOf(reason))),
-					);
+				void saveAll();
 			}}
 			onDiscard={() => {
-				workingCopy.discard();
-				guard.proceed?.();
+				if (saving) return;
+				for (const entry of entries) entry.discard();
+				blocker.proceed?.();
 			}}
 			onStay={() => {
-				guard.reset?.();
+				if (saving) return;
+				blocker.reset?.();
 			}}
 		/>
 	);

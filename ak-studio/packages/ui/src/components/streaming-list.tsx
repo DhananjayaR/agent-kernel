@@ -111,7 +111,7 @@ const Row = memo(function Row({
 		<div
 			data-slot="stream-row"
 			className={cn(
-				"absolute top-0 left-0 h-5 w-max min-w-full px-edge font-mono text-ui-sm leading-5 whitespace-pre",
+				"absolute top-0 left-0 h-5 w-max min-w-full px-edge mono-literal text-ui-sm leading-5 whitespace-pre",
 				channel === "info" ? "text-text-muted" : "text-text",
 			)}
 			style={{ transform: `translateY(${start}px)` }}

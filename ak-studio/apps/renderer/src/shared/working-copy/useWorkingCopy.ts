@@ -7,6 +7,7 @@
 import { ERROR_CODES, type Revision } from "@ak-studio/contract";
 import { useLayoutEffect, useReducer, useRef } from "react";
 import { isStudioFailure, StudioFailure } from "../bridge/client";
+import { errorStrings } from "../errors/strings";
 import { usePendingAfter } from "../query/pending";
 
 export interface WorkingCopyOptions<T> {
@@ -23,6 +24,16 @@ export interface WorkingCopyOptions<T> {
 	reread?: () => unknown;
 }
 
+/** How a save ended: written and clean, or kept with a conflict or an error (`save()` and `keepMine()` resolve to it). */
+export interface SaveOutcome {
+	/** Written (or nothing to write): no copy left unsaved, no conflict, no error. */
+	clean: boolean;
+	/** The file changed on disk; the copy is kept. */
+	conflict: boolean;
+	/** The write failed for another reason; the copy is kept. */
+	error: StudioFailure | undefined;
+}
+
 export interface WorkingCopy<T> {
 	/** The copy while there is one, else the server's value. T is a plain value, never a function. */
 	draft: T | undefined;
@@ -37,14 +48,17 @@ export interface WorkingCopy<T> {
 	showPending: boolean;
 	/** The last save's failure, other than a conflict. */
 	error: StudioFailure | undefined;
-	/** Writes the copy with its base revision. Never rejects: a failure is `conflict` or `error`. */
-	save(): Promise<void>;
+	/**
+	 * Writes the copy with its base revision, and resolves to how it ended. Never rejects for a failed write: a
+	 * failure is `conflict` or `error`. Called while a save runs, it waits for that save and answers its outcome.
+	 */
+	save(): Promise<SaveOutcome>;
 	/** Drops the copy. */
 	discard(): void;
 	/** Drops the copy in favour of the server's value, ending the conflict. */
 	takeTheirs(): void;
 	/** Writes the copy again with the latest revision as its base, ending the conflict. */
-	keepMine(): Promise<void>;
+	keepMine(): Promise<SaveOutcome>;
 }
 
 interface Copy<T> {
@@ -63,6 +77,8 @@ interface State<T> {
 	saving: boolean;
 	/** Counts the writes started, so each save gets its own 300 ms before its pending state shows. */
 	saves: number;
+	/** The write running now, so a second save waits for it. */
+	inflight: Promise<SaveOutcome> | undefined;
 	error: StudioFailure | undefined;
 }
 
@@ -76,6 +92,7 @@ export function useWorkingCopy<T>(
 		saving: false,
 		saves: 0,
 		error: undefined,
+		inflight: undefined,
 	});
 	const latest = useRef(options);
 	latest.current = options;
@@ -92,7 +109,27 @@ export function useWorkingCopy<T>(
 		rerender();
 	}, [options.revision]);
 
-	const write = async (copy: Copy<T>): Promise<void> => {
+	const outcome = (): SaveOutcome => {
+		const s = state.current;
+		return {
+			clean:
+				(s.copy === undefined || s.copy.written) && !s.conflict && !s.error,
+			conflict: s.conflict,
+			error: s.error,
+		};
+	};
+
+	const write = (copy: Copy<T>): Promise<SaveOutcome> => {
+		const s = state.current;
+		const running = run(copy).then(outcome);
+		s.inflight = running;
+		void running.finally(() => {
+			if (s.inflight === running) s.inflight = undefined;
+		});
+		return running;
+	};
+
+	const run = async (copy: Copy<T>): Promise<void> => {
 		const s = state.current;
 		const base = copy.base;
 		if (base === undefined)
@@ -127,7 +164,8 @@ export function useWorkingCopy<T>(
 					? err
 					: new StudioFailure({
 							code: ERROR_CODES.internal,
-							message: err instanceof Error ? err.message : String(err),
+							message: errorStrings.unexpectedFailure,
+							detail: err instanceof Error ? err.message : String(err),
 						});
 			}
 		} finally {
@@ -168,8 +206,9 @@ export function useWorkingCopy<T>(
 		},
 		async save() {
 			const st = state.current;
-			if (!st.copy || st.copy.written || st.saving) return;
-			await write(st.copy);
+			if (st.saving && st.inflight) return st.inflight;
+			if (!st.copy || st.copy.written) return outcome();
+			return write(st.copy);
 		},
 		discard() {
 			drop(state.current);
@@ -181,10 +220,11 @@ export function useWorkingCopy<T>(
 		},
 		async keepMine() {
 			const st = state.current;
-			if (!st.copy || st.saving) return;
+			if (st.saving && st.inflight) return st.inflight;
+			if (!st.copy) return outcome();
 			st.copy.base = latest.current.revision;
 			st.copy.written = false;
-			await write(st.copy);
+			return write(st.copy);
 		},
 	};
 }

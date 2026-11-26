@@ -88,9 +88,12 @@ function words(props: Common, text: VersionNoticeStrings, readOnly: boolean) {
 		version ? fillString(text.projectVersion, { version }) : undefined,
 		props.status === "needs-upgrade" ? text.upgrade : undefined,
 		props.status === "needs-upgrade" && readOnly ? text.readOnly : undefined,
-		props.status === "removed" && props.replacedBy
-			? fillString(text.replacedBy, { replacement: props.replacedBy })
+		props.status === "removed"
+			? props.replacedBy
+				? fillString(text.replacedBy, { replacement: props.replacedBy })
+				: text.removedNext
 			: undefined,
+		props.status === "removed" && readOnly ? text.readOnlyRemoved : undefined,
 	].filter((part): part is string => part !== undefined);
 	return { title, description: parts.join(" ") };
 }
