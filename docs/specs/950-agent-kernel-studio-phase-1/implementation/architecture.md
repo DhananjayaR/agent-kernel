@@ -121,8 +121,10 @@ Rules:
 
 - Every read of a file-backed resource returns a `revision` (a content hash).
 - Every command that writes a file carries the `baseRevision` it was edited from.
-- If the file's current revision differs, the command fails with `file.changedOnDisk` and the new content.
-  The UI shows the changed-on-disk pattern and keeps the user's working copy.
+- If the file's current revision differs, the command fails with `file.changedOnDisk`. The error carries no
+  content: the view re-reads the resource to show the new content (with its revision), and keeps the user's
+  working copy, flagged as conflicting, while the UI shows the changed-on-disk pattern. (`ProjectFs`'s own
+  failure carries the file's current content, but only inside the main process.)
 - Writes are atomic (write a temporary file, then rename), keep line endings, and go through `ProjectFs`.
 
 ## The contract

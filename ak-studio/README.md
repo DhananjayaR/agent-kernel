@@ -135,9 +135,9 @@ object); one that is missing or ambiguous is refused, never guessed.
     a real `ServiceRegistry`. The service takes its dependencies in its constructor (`FeatureDeps`: `app`, the
     app's version and platform; `clock`, through which every wait goes, a `FakeClock` in tests; the ports
     `commandRunner`, `projectFs` and `watcher`, optional until P2; and the core services `jobs`, `sessions`,
-    `streams`, `events`, `scopes`, `masker`). A job's method is its runner, given to `JobService` with
-    `jobs.define`. The service is created on the first operation and its factory, `(deps) => new
-    ReleaseNotesService(deps)`, listed in `packages/runtime/src/features.ts`, which `registerServices` (real
+    `streams`, `events`, `scopes`, `masker`). A job's method is its runner, taking `(input, ctx)` (its
+    `JobContext`: `step`, `confirm`, `stream`, `signal`, `cancel()`), given to `JobService` with `jobs.define`.
+    The service is created on the first operation and its factory, `(deps) => new ReleaseNotesService(deps)`, listed in `packages/runtime/src/features.ts`, which `registerServices` (real
     services; the ports from P2) and the mock transport (the ports' fakes) both register, so the browser serves
     what the app serves;
   - its hook, `useReleaseNotesSaveSummary`, in the feature's `api/`, with a test against the mock transport: a

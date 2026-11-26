@@ -292,7 +292,7 @@ describe("AboutService", () => {
 		expect(second.clock.sleeping).toBe(0);
 	});
 
-	it("runs an about.ticker session: a burst at once, then a line a second until stopped", async () => {
+	it("runs an about.ticker session: a line a second, the burst after the first, until stopped", async () => {
 		const { registry, sessions, clock, lines } = serve();
 		const started = await registry.request("session.start", {
 			kind: "about.ticker",
@@ -304,10 +304,10 @@ describe("AboutService", () => {
 		expect(session?.info).toEqual({ startedAt: 1_000 });
 		await clock.advance(2 * ABOUT_STEP_MS);
 		expect(await lines(session?.streamId)).toEqual([
+			"Tick 1",
 			"Burst line 1 of 3",
 			"Burst line 2 of 3",
 			"Burst line 3 of 3",
-			"Tick 1",
 			"Tick 2",
 		]);
 		await registry.request("session.stop", { sessionId: session?.id });
@@ -317,20 +317,24 @@ describe("AboutService", () => {
 		expect(await lines(session?.streamId)).toHaveLength(5);
 	});
 
-	it("writes a 10,000-line burst at once, and refuses a burst that is not a positive count", async () => {
-		const { registry, sessions, read } = serve();
+	it("sends a 10,000-line burst live, in batches, to a reader subscribed from the start, and refuses a burst that is not a positive count", async () => {
+		const { registry, sessions, clock, read } = serve();
 		await registry.request("session.start", {
 			kind: "about.ticker",
 			args: { burst: 10_000 },
 		});
 		await vi.waitFor(() => expect(sessions.list()[0]?.state).toBe("running"));
-		// A late reader gets the stream's newest 5,000 lines, in batches of 500, ending with the burst's last.
+		// Subscribed before anything is written: nothing arrives until the first tick.
 		const reader = read(sessions.list()[0]?.streamId);
+		await clock.advance(ABOUT_STEP_MS / 2);
+		expect(reader.batches).toBe(0);
+		await clock.advance(ABOUT_STEP_MS / 2);
 		await vi.waitFor(() =>
 			expect(reader.texts.at(-1)).toBe("Burst line 10000 of 10000"),
 		);
+		// One write, read in batches of at most 500 lines; the stream keeps its newest 5,000 for a reader behind.
+		expect(reader.batches).toBe(Math.ceil(reader.texts.length / 500));
 		expect(reader.texts).toHaveLength(5_000);
-		expect(reader.batches).toBe(10);
 		expect(
 			await registry.request("session.start", {
 				kind: "about.ticker",

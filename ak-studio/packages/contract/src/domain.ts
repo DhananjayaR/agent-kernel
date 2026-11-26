@@ -78,6 +78,15 @@ export const userRequestSchema = z.object({
 });
 export type UserRequest = z.infer<typeof userRequestSchema>;
 
+/**
+ * The option ids of an approve-or-deny request (JobContext's `confirm`), shared so the approval pattern answers
+ * every job's question the same way.
+ */
+export const CONFIRM_OPTION_IDS = Object.freeze({
+	approve: "approve",
+	deny: "deny",
+} as const);
+
 export const jobProgressSchema = z.object({
 	step: z.int().nonnegative(),
 	steps: z.int().positive(),

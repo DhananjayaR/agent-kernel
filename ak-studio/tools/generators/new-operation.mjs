@@ -352,12 +352,19 @@ export function planOperation(plan, featureName, operationName, options) {
 			throw new GeneratorError(
 				`${service} already has a ${o.camel} method: nothing was written`,
 			);
-		return addNamedImport(
+		const next = addNamedImport(
 			addToService(text, service, t.serviceMethod(x), t.registerLines(x)),
 			"@ak-studio/contract",
 			t.serviceTypes(x),
 			{ typeOnly: true, path: service },
 		);
+		// A job's runner takes its context (a job is never desktop-only, so this is a runtime service).
+		return shape === "job"
+			? addNamedImport(next, "../jobs", ["JobContext"], {
+					typeOnly: true,
+					path: service,
+				})
+			: next;
 	};
 	const withCase = (text) =>
 		addCase(text, serviceTest, `${f.pascal}Service`, t.serviceCase(x));

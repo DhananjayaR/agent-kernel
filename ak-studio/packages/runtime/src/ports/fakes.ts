@@ -231,7 +231,8 @@ interface Sleeper {
 /**
  * A clock that moves only when a test calls `advance`. Each sleep is woken when time reaches it, earliest first;
  * between wakes the woken code runs on (a macrotask), so a sleep it starts then is woken in the same `advance`
- * when it falls inside it. Times are whole milliseconds since the start value.
+ * when it falls inside it. Times are whole milliseconds since the start value. `advance` waits on a real
+ * setTimeout(0) between wakes, so do not combine it with `vi.useFakeTimers()` (it would never resolve).
  */
 export class FakeClock implements Clock {
 	#now: number;

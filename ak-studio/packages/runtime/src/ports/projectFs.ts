@@ -1,7 +1,8 @@
 // The ProjectFs port: the only thing that touches the project's working directory (architecture, "Writing
 // files safely"). Every read answers a revision (a content hash); every write carries the revision it was
-// edited from, and a stale one fails with `file.changedOnDisk` carrying the file's current content. Paths that
-// resolve outside the project folder fail with `file.outsideProject`. The desktop implements it on Node from
+// edited from, and a stale one fails with `file.changedOnDisk`, whose `current` holds the file's content inside the
+// main process only (across the bridge the error carries no content). Paths that resolve outside the project
+// folder fail with `file.outsideProject`. The desktop implements it on Node from
 // P2; tests and the browser's mock use FakeProjectFs.
 import { ERROR_CODES, type Revision, StudioFailure } from "@ak-studio/contract";
 import { strings } from "../strings";

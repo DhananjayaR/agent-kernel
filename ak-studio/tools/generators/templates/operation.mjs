@@ -104,7 +104,7 @@ export class ${f.pascal}Service implements Service {
 
 /** The types the service's import from the contract needs for one operation. */
 export function serviceTypes(x) {
-	if (x.shape === "job") return ["JobResultOf"];
+	if (x.shape === "job") return ["HandlerInputOf", "JobResultOf", "Operations"];
 	return x.project
 		? ["HandlerInputOf", "HandlerResultOf", "Operations"]
 		: ["HandlerResultOf", "Operations"];
@@ -116,9 +116,14 @@ export function serviceMethod(x) {
 	if (shape === "job")
 		return `
 	/**
-	 * Runs one \`${op}\` job; its answer is the job's result.${project ? " JobService starts it only for an open project." : ""}
+	 * Runs one \`${op}\` job; its answer is the job's result.
+	 * \`ctx\` reports steps, asks the user (\`confirm\`), writes output and carries the cancel signal;
+	 * \`ctx.cancel()\` ends the job cancelled.${project ? "\n\t * JobService starts it only for an open project." : ""}
 	 */
-	async ${o.camel}(): Promise<JobResultOf<"${op}">> {
+	async ${o.camel}(
+		_input: HandlerInputOf<Operations["${op}"]>,
+		_ctx: JobContext,
+	): Promise<JobResultOf<"${op}">> {
 		return {};
 	}
 `;
@@ -144,7 +149,7 @@ export function serviceMethod(x) {
 export function registerLines(x) {
 	const { o, op, shape, project } = x;
 	if (shape === "job")
-		return `		this.#deps.jobs.define("${op}", () => this.${o.camel}());
+		return `		this.#deps.jobs.define("${op}", (input, ctx) => this.${o.camel}(input, ctx));
 		registry.handle("${op}", this.#deps.jobs.handler("${op}"));
 `;
 	return project

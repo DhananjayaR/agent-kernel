@@ -53,7 +53,7 @@ export const aboutDemoJob = job({
 
 /**
  * About: the ticker session (a session kind: runs until stopped). Writes a line a second to its stream; with
- * `burst`, first writes that many lines at once.
+ * `burst`, also writes that many lines at once after the first.
  */
 export const aboutTicker = defineSessionKind({
 	kind: "about.ticker",

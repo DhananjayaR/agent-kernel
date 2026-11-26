@@ -24,6 +24,8 @@ export const strings = {
 		"This answer is for a question the job is no longer asking. Answer its current question.",
 	jobNotCancellable:
 		"This job cannot be cancelled safely. Wait for it to finish.",
+	confirmApprove: "Approve",
+	confirmDeny: "Deny",
 	jobAnswerInvalid:
 		"This answer does not fit the question. Choose one of its options, or type the exact name it asks for.",
 	jobInvalidResult:

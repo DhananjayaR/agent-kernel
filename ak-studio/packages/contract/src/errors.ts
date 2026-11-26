@@ -46,7 +46,10 @@ export const ERROR_CODES = {
 	preferencesNotSaved: "app.preferencesNotSaved",
 	/** The operation names a project that has no open scope in this window. */
 	projectNotOpen: "project.notOpen",
-	/** A write's `baseRevision` is not the file's current revision; the error carries the new content. */
+	/**
+	 * A write's `baseRevision` is not the file's current revision. The error carries no content: the caller re-reads
+	 * the resource for the new content, and keeps its working copy as conflicting.
+	 */
 	fileChangedOnDisk: "file.changedOnDisk",
 	/** A path resolves outside the project folder. */
 	fileOutsideProject: "file.outsideProject",

@@ -367,6 +367,18 @@ describe("the generators, run in a copy of the workspace", () => {
 			"utf8",
 		);
 		expect(hook).toContain('releaseNotesKeys.detail(projectId, "readHistory")');
+		// A job's runner takes its input and its context, and is registered so.
+		const service = readFileSync(
+			join(copy, "packages/runtime/src/release-notes/ReleaseNotesService.ts"),
+			"utf8",
+		);
+		expect(service).toMatch(/import type \{ JobContext \} from "\.\.\/jobs";/);
+		expect(service).toMatch(
+			/async publishNotes\(\s*_input: HandlerInputOf<Operations\["release-notes\.publishNotes"\]>,\s*_ctx: JobContext,\s*\)/,
+		);
+		expect(service).toMatch(
+			/jobs\.define\(\s*"release-notes\.publishNotes",\s*\(input, ctx\) =>\s*this\.publishNotes\(input, ctx\),?\s*\)/,
+		);
 	}, 120_000);
 
 	it("refuse to make the same feature, operation or component twice, writing nothing", () => {

@@ -1,7 +1,7 @@
 // useAboutTicker's test: the ticker session started and stopped through the hook against the mock transport (the
 // feature's service behind a real registry, a FakeClock for its ticks), followed as a view follows it: the session
 // from the store over the events subscription, its lines with `useStream`. A 10,000-line burst reaches the view in
-// a few batches, one store update each, never one per line.
+// a few batches after the first tick, one store update each, never one per line.
 import { FakeClock } from "@ak-studio/runtime";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -67,13 +67,20 @@ describe("useAboutTicker", () => {
 		expect(second).toBe("session.alreadyRunning");
 	});
 
-	it("shows a 10,000-line burst that arrives in batches, ending with its last line", async () => {
-		const { result } = renderTicker(new FakeClock());
+	it("shows a 10,000-line burst that arrives live after the first tick, in batches, ending with its last line", async () => {
+		const clock = new FakeClock();
+		const { result } = renderTicker(clock);
+		await act(() => result.current.ticker.start({ burst: 10_000 }));
+		// The view is reading the session's stream before the burst is written.
+		await waitFor(() =>
+			expect(result.current.ticker.session?.state).toBe("running"),
+		);
+		expect(result.current.texts).toEqual([]);
 		let updates = 0;
 		const unsubscribe = useStreamStore.subscribe(() => {
 			updates += 1;
 		});
-		await act(() => result.current.ticker.start({ burst: 10_000 }));
+		await act(() => clock.advance(1_000));
 		await waitFor(() =>
 			expect(result.current.texts.at(-1)).toBe("Burst line 10000 of 10000"),
 		);

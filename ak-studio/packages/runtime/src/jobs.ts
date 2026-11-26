@@ -8,6 +8,7 @@
 // Browser-safe, like the rest of the runtime: the desktop runs it over NodeJobRecordStore, the mock transport
 // over InMemoryJobRecordStore.
 import {
+	CONFIRM_OPTION_IDS,
 	ERROR_CODES,
 	type Job,
 	type JobId,
@@ -67,10 +68,44 @@ export interface JobContext {
 	 * for a request that is not a valid UserRequest.
 	 */
 	ask(request: JobRequest): Promise<JobAnswer>;
+	/**
+	 * Asks the user to approve or deny (the approval pattern): a `confirm` request, or `confirm-by-name` when
+	 * `expectedName` is given, with the shared options `approve` and `deny` (CONFIRM_OPTION_IDS). Resolves true on
+	 * approve, false on deny; rejects as `ask` does.
+	 */
+	confirm(request: JobConfirmRequest): Promise<boolean>;
+	/**
+	 * Ends the job as cancelled, from inside its runner (a denied confirm, say). It aborts the signal and throws, so
+	 * nothing after it runs; JobService ends the job `cancelled` once the runner settles. A runner may always cancel
+	 * itself, whether or not its kind is cancellable by the user.
+	 */
+	cancel(): never;
 	/** The job's output stream (read with `stream.read`); masked by StreamHub. Ignored once the job has ended. */
 	readonly stream: { write(channel: StreamChannel, text: string): void };
 	/** Notes a CommandRunner record behind the job; it is also written to the job's crash record. */
 	addCommand(commandId: string): void;
+}
+
+/** What `confirm` asks: the request's words, and the name to type for a destructive action. */
+export interface JobConfirmRequest {
+	/** Sentence case: the question. */
+	title: string;
+	/** What will happen. */
+	summary: string;
+	/** What it touches: a cloud account, files, resources. */
+	affects?: string[];
+	/** Marks the approve option as destructive. */
+	destructive?: boolean;
+	/** The name the user types to approve (`confirm-by-name`). */
+	expectedName?: string;
+}
+
+/** What `ctx.cancel()` throws: the runner's own cancel, told apart from a failure by #settle. Never leaves the service. */
+class RunnerCancelled extends Error {
+	constructor() {
+		super("the job cancelled itself");
+		this.name = "RunnerCancelled";
+	}
 }
 
 /** Does a job's work. Its result is parsed against the kind's `result` schema; a throw fails the job. */
@@ -372,7 +407,9 @@ export class JobService<Kinds extends JobKindMap = JobKinds> {
 		outcome: { ok: true; value: unknown } | { ok: false; err: unknown },
 	): void {
 		if (entry.ended) return;
-		if (entry.controller.signal.aborted) {
+		const cancelledItself =
+			!outcome.ok && outcome.err instanceof RunnerCancelled;
+		if (entry.controller.signal.aborted || cancelledItself) {
 			this.#end(entry, "cancelled");
 			return;
 		}
@@ -413,6 +450,14 @@ export class JobService<Kinds extends JobKindMap = JobKinds> {
 				this.#emit(entry);
 			},
 			ask: (request) => this.#ask(entry, request),
+			confirm: async (request) => {
+				const answer = await this.#ask(entry, confirmRequest(request));
+				return answer.optionId === CONFIRM_OPTION_IDS.approve;
+			},
+			cancel: () => {
+				this.#cancel(entry);
+				throw new RunnerCancelled();
+			},
 			stream: {
 				write: (channel, text) => {
 					if (entry.ended || job.streamId === undefined) return;
@@ -703,6 +748,28 @@ function snapshot(job: Job): Job {
 		}
 		return plain;
 	}
+}
+
+/** The UserRequest (without its id) a `confirm` asks: the shared approve and deny options, labelled from strings. */
+function confirmRequest(request: JobConfirmRequest): JobRequest {
+	const approve: NonNullable<UserRequest["options"]>[number] = {
+		id: CONFIRM_OPTION_IDS.approve,
+		label: strings.confirmApprove,
+	};
+	if (request.destructive) approve.destructive = true;
+	return {
+		kind: request.expectedName === undefined ? "confirm" : "confirm-by-name",
+		title: request.title,
+		summary: request.summary,
+		affects: [...(request.affects ?? [])],
+		...(request.expectedName === undefined
+			? {}
+			: { expectedName: request.expectedName }),
+		options: [
+			approve,
+			{ id: CONFIRM_OPTION_IDS.deny, label: strings.confirmDeny },
+		],
+	};
 }
 
 /** Why `answer` does not fit `request`, or undefined when it does. */

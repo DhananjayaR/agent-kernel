@@ -86,24 +86,7 @@ export class AboutService implements FeatureService {
 		const { steps, stepLine, confirm } = aboutStrings;
 		for (const [index, label] of steps.entries()) {
 			const step = index + 1;
-			if (step === steps.length) {
-				const answer = await ctx.ask({
-					kind: "confirm",
-					title: confirm.title,
-					summary: confirm.summary,
-					affects: [],
-					options: [
-						{ id: "approve", label: confirm.approve },
-						{ id: "deny", label: confirm.deny },
-					],
-				});
-				if (answer.optionId === "deny") {
-					// A runner ends its job as cancelled through its signal; cancelAll aborts it at once (not awaited:
-					// it resolves only once this runner has returned).
-					void this.#deps.jobs.cancelAll([{ id: ctx.jobId }]);
-					return { steps: index };
-				}
-			}
+			if (step === steps.length && !(await ctx.confirm(confirm))) ctx.cancel();
 			ctx.step(step, steps.length, label);
 			ctx.stream.write("stdout", stepLine(step, steps.length, label));
 			await this.#deps.clock.sleep(ABOUT_STEP_MS, ctx.signal);
@@ -111,19 +94,13 @@ export class AboutService implements FeatureService {
 		return { steps: steps.length };
 	}
 
-	/** Starts an `about.ticker` session: `burst` lines at once if asked, then a line a second until stopped. */
+	/** Starts an `about.ticker` session: a line a second until stopped, and `burst` lines at once after the first. */
 	async startTicker(
 		{ burst }: { burst?: number },
 		ctx: SessionContext,
 	): Promise<SessionHandle<SessionInfoOf<"about.ticker">>> {
 		const { clock } = this.#deps;
 		const stopped = new AbortController();
-		if (burst !== undefined) {
-			const lines = Array.from({ length: burst }, (_, i) =>
-				aboutStrings.burstLine(i + 1, burst),
-			);
-			ctx.stream.write("stdout", lines.join("\n"));
-		}
 		void (async () => {
 			for (let tick = 1; ; tick++) {
 				try {
@@ -132,6 +109,13 @@ export class AboutService implements FeatureService {
 					return; // Stopped.
 				}
 				ctx.stream.write("stdout", aboutStrings.tickLine(tick));
+				// After the first tick, so a view that subscribed when the session started receives the burst live.
+				if (tick === 1 && burst !== undefined) {
+					const lines = Array.from({ length: burst }, (_, i) =>
+						aboutStrings.burstLine(i + 1, burst),
+					);
+					ctx.stream.write("stdout", lines.join("\n"));
+				}
 			}
 		})();
 		return {

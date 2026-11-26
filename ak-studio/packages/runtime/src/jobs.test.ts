@@ -3,6 +3,7 @@
 // disposal, the quit plan, crash records across a restart, masking, and the bounded list of finished jobs.
 // Fake timers drive StreamHub's flushes and settle the services' promises; nothing sleeps.
 import {
+	CONFIRM_OPTION_IDS,
 	ERROR_CODES,
 	eventsStream,
 	type Job,
@@ -36,6 +37,7 @@ import { ServiceRegistry } from "./registry";
 import { ProjectScopes } from "./scope";
 import { SecretMasker } from "./secrets";
 import { StreamHub } from "./streams";
+import { strings } from "./strings";
 
 const demo = job({
 	name: "t.demo",
@@ -739,6 +741,154 @@ describe("JobService: cancel", () => {
 			s.registry.request("job.cancel", { jobId: done }),
 		).resolves.toEqual({ ok: true, value: {} });
 		expect(current(s, done)?.state).toBe("succeeded");
+	});
+});
+
+describe("JobService: confirm and a runner's own cancel", () => {
+	/** A t.demo runner that confirms, then cancels itself on deny; the test reads what it reached. */
+	function confirming(request: Parameters<JobContext["confirm"]>[0]) {
+		const reached: string[] = [];
+		const runner: JobRunner<unknown, never> = async (_input, ctx) => {
+			const approved = await ctx.confirm(request);
+			reached.push(approved ? "approved" : "denied");
+			if (!approved) ctx.cancel();
+			reached.push("after");
+			return { total: 1 } as never;
+		};
+		return { runner, reached };
+	}
+
+	async function answer(
+		s: Setup,
+		jobId: string,
+		optionId?: string,
+		name?: string,
+	) {
+		const request = current(s, jobId)?.request;
+		return s.registry.request("job.respond", {
+			jobId,
+			requestId: request?.id,
+			answer: {
+				...(optionId === undefined ? {} : { optionId }),
+				...(name === undefined ? {} : { name }),
+			},
+		});
+	}
+
+	it("asks a confirm with the shared approve and deny options, and succeeds on approve", async () => {
+		const s = setup();
+		const { runner, reached } = confirming({
+			title: "Apply the plan?",
+			summary: "Creates 3 resources",
+		});
+		s.jobs.define("t.demo", runner);
+		serve(s);
+		const jobId = await start(s, "t.demo");
+		expect(current(s, jobId)?.request).toMatchObject({
+			kind: "confirm",
+			title: "Apply the plan?",
+			summary: "Creates 3 resources",
+			affects: [],
+			options: [
+				{ id: CONFIRM_OPTION_IDS.approve, label: strings.confirmApprove },
+				{ id: CONFIRM_OPTION_IDS.deny, label: strings.confirmDeny },
+			],
+		});
+		expect(
+			current(s, jobId)?.request?.options?.[0]?.destructive,
+		).toBeUndefined();
+		await expect(answer(s, jobId, "approve")).resolves.toEqual({
+			ok: true,
+			value: {},
+		});
+		await settle();
+		expect(reached).toEqual(["approved", "after"]);
+		expect(current(s, jobId)?.state).toBe("succeeded");
+	});
+
+	it("ends the job cancelled when its runner cancels itself on deny: nothing after runs, no error, the lane moves on", async () => {
+		const s = setup();
+		const { runner, reached } = confirming({
+			title: "Go on?",
+			summary: "More steps",
+		});
+		s.jobs.define("t.demo", runner);
+		serve(s);
+		const a = await start(s, "t.demo");
+		const b = await start(s, "t.demo");
+		expect(current(s, b)?.state).toBe("queued");
+		await answer(s, a, "deny");
+		await settle();
+		expect(reached).toEqual(["denied"]);
+		const ended = current(s, a);
+		expect(ended?.state).toBe("cancelled");
+		expect(ended?.error).toBeUndefined();
+		expect(ended?.result).toBeUndefined();
+		expect(states(s, a).filter((state) => state === "cancelled")).toHaveLength(
+			1,
+		);
+		// The next job in the lane starts once, and it is not cancelled with it.
+		expect(current(s, b)?.state).toBe("waiting-for-user");
+		expect(s.log).not.toHaveBeenCalled();
+	});
+
+	it("lets a kind the user cannot cancel cancel itself, and aborts its signal", async () => {
+		const s = setup();
+		let signal: AbortSignal | undefined;
+		s.jobs.define("t.apply", async (_input, ctx) => {
+			signal = ctx.signal;
+			return ctx.cancel();
+		});
+		serve(s);
+		const jobId = await start(s, "t.apply");
+		await settle();
+		expect(signal?.aborted).toBe(true);
+		expect(current(s, jobId)?.state).toBe("cancelled");
+	});
+
+	it("asks confirm-by-name with the name to type, and marks approve destructive when asked", async () => {
+		const s = setup();
+		const { runner, reached } = confirming({
+			title: "Destroy the stack?",
+			summary: "Deletes every resource",
+			affects: ["account 123"],
+			destructive: true,
+			expectedName: "prod",
+		});
+		s.jobs.define("t.demo", runner);
+		serve(s);
+		const jobId = await start(s, "t.demo");
+		expect(current(s, jobId)?.request).toMatchObject({
+			kind: "confirm-by-name",
+			expectedName: "prod",
+			affects: ["account 123"],
+			options: [{ id: "approve", destructive: true }, { id: "deny" }],
+		});
+		// job.respond's checks are unchanged: the typed name must match.
+		await expect(answer(s, jobId, "approve", "staging")).resolves.toMatchObject(
+			{
+				ok: false,
+				error: { code: ERROR_CODES.invalidInput },
+			},
+		);
+		await answer(s, jobId, "approve", "prod");
+		await settle();
+		expect(reached).toEqual(["approved", "after"]);
+	});
+
+	it("rejects a confirm when the job is cancelled while it waits", async () => {
+		const s = setup();
+		const { runner, reached } = confirming({
+			title: "Go on?",
+			summary: "More",
+		});
+		s.jobs.define("t.demo", runner);
+		serve(s);
+		const jobId = await start(s, "t.demo");
+		await s.registry.request("job.cancel", { jobId });
+		await settle();
+		expect(reached).toEqual([]);
+		expect(current(s, jobId)?.state).toBe("cancelled");
 	});
 });
 
