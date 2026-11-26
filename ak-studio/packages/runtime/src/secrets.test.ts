@@ -55,4 +55,38 @@ describe("SecretMasker", () => {
 		masker.remove("never-added");
 		expect(masker.mask("hunter22")).toBe("hunter22");
 	});
+
+	it("masks a StudioError's message, detail, file and action label, and keeps the rest", () => {
+		const masker = new SecretMasker();
+		masker.add("hunter22");
+		const error = {
+			code: "job.notFound",
+			message: "pw hunter22",
+			detail: "raw hunter22",
+			file: "keys/hunter22.txt",
+			line: 3,
+			action: {
+				label: "Rotate hunter22",
+				commandId: "secrets.rotate",
+				args: { n: 1 },
+			},
+		};
+		expect(masker.maskError(error)).toEqual({
+			code: "job.notFound",
+			message: "pw ••••",
+			detail: "raw ••••",
+			file: "keys/••••.txt",
+			line: 3,
+			action: {
+				label: "Rotate ••••",
+				commandId: "secrets.rotate",
+				args: { n: 1 },
+			},
+		});
+		expect(error.message).toBe("pw hunter22"); // a copy, not changed in place
+		expect(masker.maskError({ code: "c", message: "m" })).toEqual({
+			code: "c",
+			message: "m",
+		});
+	});
 });

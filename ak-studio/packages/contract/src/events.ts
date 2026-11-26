@@ -24,7 +24,10 @@ export const streamBatchSchema = z.object({
 });
 export type StreamBatch = z.infer<typeof streamBatchSchema>;
 
-/** Reads one stream: the backlog in the first batch, then at most one batch per flush until it ends. */
+/**
+ * Reads one stream: the backlog first, then new output, at most one batch per flush and a bounded number of
+ * lines per batch (a long backlog spans several batches), until the batch with `ended: true`.
+ */
 export const streamRead = defineStream({
 	name: "stream.read",
 	input: z.strictObject({ streamId: StreamId }),

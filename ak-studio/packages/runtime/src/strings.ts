@@ -16,4 +16,26 @@ export const strings = {
 		"This file is not in the project folder. Check the name, or create the file first.",
 	fileChangedOnDisk:
 		"This file changed on disk since you opened it. Reload it, or keep your version and save again.",
+	jobNotFound:
+		"This job is no longer in the list. Start it again if you still need it.",
+	jobNotWaiting:
+		"This job is not waiting for an answer now. Check where the job is up to.",
+	jobRequestMismatch:
+		"This answer is for a question the job is no longer asking. Answer its current question.",
+	jobNotCancellable:
+		"This job cannot be cancelled safely. Wait for it to finish.",
+	jobAnswerInvalid:
+		"This answer does not fit the question. Choose one of its options, or type the exact name it asks for.",
+	jobInvalidResult:
+		"The job finished, but its result is not what the app expects. Run it again, and report it if it keeps happening.",
+	sessionNotFound:
+		"This session is no longer in the list. Start it again if you still need it.",
+	sessionUnknownKind:
+		"This version of the app cannot start this kind of session. Check the name, or update the app.",
+	sessionAlreadyRunning:
+		"This is already running for this project. Use the one that is running, or stop it first.",
+	sessionFailed:
+		"This session stopped unexpectedly. Check its output, then start it again.",
+	sessionInvalidInfo:
+		"The session started, but reported details the app does not expect. It was stopped; report it if it keeps happening.",
 } as const;

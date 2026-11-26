@@ -1,10 +1,12 @@
 // @ak-studio/runtime: the browser-safe services core shared by the desktop main process and the renderer's mock
 // transport (pre-flight ruling 9): the service registry, project scopes, secret masking, the events and stream
-// services, and the ports (CommandRunner, ProjectFs, Watcher, JobRecordStore) with their in-memory fakes.
+// services, JobService and SessionService, and the ports (CommandRunner, ProjectFs, Watcher, JobRecordStore)
+// with their in-memory fakes.
 // It may import only @ak-studio/contract, zod and itself (no Node built-in, no electron; enforced in
 // .dependency-cruiser.cjs). The Node and Electron implementations of the ports live in apps/desktop.
 export * from "./events";
 export type { Log } from "./host";
+export * from "./jobs";
 export * from "./ports/commandRunner";
 export * from "./ports/fakes";
 export * from "./ports/jobRecordStore";
@@ -13,4 +15,5 @@ export * from "./ports/watcher";
 export * from "./registry";
 export * from "./scope";
 export * from "./secrets";
+export * from "./sessions";
 export * from "./streams";

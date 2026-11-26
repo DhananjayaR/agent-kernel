@@ -590,6 +590,37 @@ describe("ServiceRegistry masking", () => {
 		expect(String(log.mock.calls[0]?.[0])).not.toContain(SECRET);
 	});
 
+	it("masks a returned error's file and action label too", async () => {
+		const failing = defineOperation({
+			name: "t.failing",
+			input: z.object({}),
+			output: z.object({}),
+		});
+		const registry = new ServiceRegistry({
+			contract: { operations: { "t.failing": failing }, streams: {} },
+			log: vi.fn(),
+			masker: masked(),
+		});
+		registry.handle("t.failing", () => {
+			throw new StudioFailure({
+				code: ERROR_CODES.fileNotFound,
+				message: "Missing",
+				file: `keys/${SECRET}.txt`,
+				action: { label: `Use ${SECRET}`, commandId: "t.next" },
+			});
+		});
+		registry.start();
+		const result = await registry.request("t.failing", {});
+		expect(JSON.stringify(result)).not.toContain(SECRET);
+		expect(result).toMatchObject({
+			ok: false,
+			error: {
+				file: "keys/••••.txt",
+				action: { label: "Use ••••", commandId: "t.next" },
+			},
+		});
+	});
+
 	it("exposes its masker, so services mask with the same known secrets", () => {
 		const masker = masked();
 		expect(new ServiceRegistry({ masker }).masker).toBe(masker);

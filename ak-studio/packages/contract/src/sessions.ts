@@ -9,7 +9,8 @@ import { command, query } from "./shapes";
 
 /**
  * Starts a session of `kind`, one per kind per project. `args` is parsed against the kind's `args` schema by
- * SessionService (a mismatch is `bridge.invalidInput`). Answers at once; the session starts in `starting`.
+ * SessionService (a mismatch is `bridge.invalidInput`, implicit like every `bridge.*` code). Answers at once; the
+ * session starts in `starting`, and a starter that fails ends it in `failed` (its error is on the session).
  */
 export const sessionStart = command({
 	name: "session.start",
@@ -20,7 +21,6 @@ export const sessionStart = command({
 	}),
 	output: z.object({ sessionId: SessionId }),
 	errors: [
-		ERROR_CODES.invalidInput,
 		ERROR_CODES.projectNotOpen,
 		ERROR_CODES.sessionUnknownKind,
 		ERROR_CODES.sessionAlreadyRunning,

@@ -288,6 +288,25 @@ describe("StreamHub", () => {
 		expect(() => hub.end("nope")).toThrow(/nope/);
 	});
 
+	it("releases a stream: its backlog is dropped, readers stop, later readers get stream.notFound", () => {
+		const { hub, clock, read } = setup();
+		const id = hub.create();
+		hub.write(id, "stdout", "a");
+		const reader = read(id);
+		expect(clock.pending()).toBe(1);
+		hub.release(id);
+		expect(clock.pending()).toBe(0);
+		clock.tick();
+		expect(reader.messages).toEqual([]);
+		expect(read(id).result).toMatchObject({
+			ok: false,
+			error: { code: ERROR_CODES.streamNotFound },
+		});
+		expect(() => hub.release(id)).not.toThrow(); // idempotent
+		expect(() => hub.release("nope")).not.toThrow();
+		expect(() => hub.write(id, "stdout", "x")).toThrow(/no stream/);
+	});
+
 	it("stops sending once the subscriber cancels, and cancels its pending flush", () => {
 		const { hub, clock, read } = setup();
 		const id = hub.create();

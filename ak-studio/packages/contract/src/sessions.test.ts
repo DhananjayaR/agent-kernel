@@ -35,7 +35,6 @@ describe("session operations", () => {
 			sessionId: "s1",
 		});
 		expect(sessionStart.errors).toEqual([
-			ERROR_CODES.invalidInput,
 			ERROR_CODES.projectNotOpen,
 			ERROR_CODES.sessionUnknownKind,
 			ERROR_CODES.sessionAlreadyRunning,

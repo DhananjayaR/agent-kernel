@@ -35,6 +35,13 @@ describe("FakeProjectFs", () => {
 	const root = "/work/p1";
 	const fs = () => new FakeProjectFs(root, { "notes/a.md": "# A\n" });
 
+	it("refuses a relative root (a bug in the caller)", () => {
+		for (const bad of ["work/p1", "./p1", ""]) {
+			expect(() => new FakeProjectFs(bad), bad).toThrow(/absolute/);
+		}
+		expect(() => new FakeProjectFs("C:\\work\\p1")).not.toThrow();
+	});
+
 	it("reads a file by a relative path or an absolute path inside the root, with its revision", async () => {
 		const files = fs();
 		const read = await files.read("notes/a.md");

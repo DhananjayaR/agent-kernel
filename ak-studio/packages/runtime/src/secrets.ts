@@ -1,7 +1,8 @@
 // SecretMasker: hides known secret values in text before it leaves a service: error messages and details (the
 // registry) and stream output (StreamHub). Values arrive through `add` (from P4 the SecretStore calls it;
 // until then tests and fakes do, ruling 10). Masking is plain text matching: a value split across two writes
-// is not caught.
+// is not caught. `maskError` masks every free-text field of a StudioError, for errors that leave a service.
+import type { StudioError } from "@ak-studio/contract";
 
 /** What a known value becomes. */
 export const MASK = "••••";
@@ -62,5 +63,19 @@ export class SecretMasker {
 			cursor = open[1];
 		}
 		return out + text.slice(cursor);
+	}
+
+	/**
+	 * A copy of `error` with known values masked in every text a user sees or a log keeps: `message`, `detail`,
+	 * `file` and `action.label`. The code, line and action's command are left alone.
+	 */
+	maskError(error: StudioError): StudioError {
+		const masked: StudioError = { ...error, message: this.mask(error.message) };
+		if (error.detail !== undefined) masked.detail = this.mask(error.detail);
+		if (error.file !== undefined) masked.file = this.mask(error.file);
+		if (error.action !== undefined) {
+			masked.action = { ...error.action, label: this.mask(error.action.label) };
+		}
+		return masked;
 	}
 }

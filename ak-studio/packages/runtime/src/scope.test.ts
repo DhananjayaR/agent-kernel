@@ -3,6 +3,7 @@
 import { ERROR_CODES, StudioFailure } from "@ak-studio/contract";
 import { describe, expect, it, vi } from "vitest";
 import { ProjectScopes } from "./scope";
+import { SecretMasker } from "./secrets";
 
 describe("ProjectScopes", () => {
 	it("opens a scope with its project id and root, and finds it again", () => {
@@ -99,6 +100,20 @@ describe("ProjectScopes", () => {
 		await expect(scope.dispose()).resolves.toBeUndefined();
 		expect(ran).toHaveBeenCalledOnce();
 		expect(log).toHaveBeenCalledWith(expect.stringMatching(/p1.*stuck/));
+	});
+
+	it("masks known secrets in the line it logs for a failing disposer", async () => {
+		const log = vi.fn();
+		const masker = new SecretMasker();
+		masker.add("hunter22");
+		const scope = new ProjectScopes({ log, masker }).open("p1", { root: "/r" });
+		scope.onDispose(() => {
+			throw new Error("could not stop hunter22");
+		});
+		await scope.dispose();
+		expect(log).toHaveBeenCalledWith(
+			expect.stringContaining("could not stop ••••"),
+		);
 	});
 
 	it("unregisters a disposer with the function onDispose returns", async () => {

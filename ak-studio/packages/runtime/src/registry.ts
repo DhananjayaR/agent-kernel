@@ -2,8 +2,8 @@
 // `request` and `subscribe` (the desktop's IPC server, and from P1b Task 7 the browser's mock transport). Every
 // input is parsed here, every output is parsed against its schema, and every exception becomes a StudioError
 // value. Nothing here throws across the bridge. Before a handler runs, an operation that names a kernel
-// capability is checked against the project's version; before an error leaves, its message and detail are
-// masked. Moved from apps/desktop in P1b (ruling 9): it is transport-free and browser-safe.
+// capability is checked against the project's version; before an error leaves, its message, detail, file and
+// action label are masked. Moved from apps/desktop in P1b (ruling 9): it is transport-free and browser-safe.
 import {
 	type BridgeResult,
 	type Contract,
@@ -48,6 +48,17 @@ export interface StreamRegistrar<Name extends string, St extends Stream> {
 	handleStream(name: Name, handler: StreamHandler<St>): unknown;
 }
 
+/**
+ * What a service needs to serve some requests: lets it register on any registry whose contract declares them
+ * (the app's, or a test contract that adds kinds of its own).
+ */
+export interface RequestRegistrar<Ops extends OperationMap> {
+	handle<N extends keyof Ops & string>(
+		name: N,
+		handler: RequestHandler<Ops[N]>,
+	): unknown;
+}
+
 /** A service: one class per domain, registering its handlers against the contract. */
 export interface Service<
 	Ops extends OperationMap = Operations,
@@ -78,7 +89,7 @@ export interface ServiceRegistryOptions<
 	 */
 	capabilities?: CapabilityChecker;
 	/**
-	 * Masks known secrets in every error's message and detail. Defaults to a new one that knows none; services
+	 * Masks known secrets in every error's message, detail, file and action label. Defaults to a new one that knows none; services
 	 * that mask (StreamHub) take it from `registry.masker`, so there is one set of known secrets.
 	 */
 	masker?: SecretMasker;
@@ -185,7 +196,7 @@ export class ServiceRegistry<
 	/**
 	 * Answers one request. Never throws or rejects. The input is parsed first; then, if the operation names a
 	 * capability that is not available for the input's `projectId`, it answers `kernel.capabilityUnavailable`
-	 * without calling the handler. An error's message and detail are masked before it is logged or returned.
+	 * without calling the handler. An error's text fields are masked before it is logged or returned.
 	 */
 	async request(name: unknown, input: unknown): Promise<BridgeResult> {
 		if (!this.#started) return fail(notStarted());
@@ -261,10 +272,7 @@ export class ServiceRegistry<
 	}
 
 	#mask(error: StudioError): StudioError {
-		const masked = { ...error, message: this.#masker.mask(error.message) };
-		if (error.detail !== undefined)
-			masked.detail = this.#masker.mask(error.detail);
-		return masked;
+		return this.#masker.maskError(error);
 	}
 
 	// An operation built with a shape builder lists the codes its handler may return. Returning another is a bug

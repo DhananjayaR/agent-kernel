@@ -2,11 +2,14 @@
 // recorded-command and domain change; each subscriber (the renderer's one subscription, Task 7) receives every
 // event emitted while it is subscribed. The registry parses each event against the event union on the way out.
 import type { eventsStream, StudioEvent } from "@ak-studio/contract";
-import { defaultLog, type Log } from "./host";
+import { defaultLog, type Log, maskedLog } from "./host";
 import type { StreamRegistrar } from "./registry";
+import { SecretMasker } from "./secrets";
 
 export interface EventBusOptions {
 	log?: Log;
+	/** Masks the log line for a failing subscriber (pass `registry.masker`). Defaults to one that knows none. */
+	masker?: SecretMasker;
 }
 
 export class EventBus {
@@ -14,7 +17,10 @@ export class EventBus {
 	readonly #log: Log;
 
 	constructor(options: EventBusOptions = {}) {
-		this.#log = options.log ?? defaultLog;
+		this.#log = maskedLog(
+			options.log ?? defaultLog,
+			options.masker ?? new SecretMasker(),
+		);
 	}
 
 	/** Sends `event` to every current subscriber. Never throws: a subscriber that fails is logged and skipped. */

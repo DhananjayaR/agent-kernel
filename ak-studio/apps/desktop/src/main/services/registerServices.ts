@@ -38,7 +38,7 @@ export function registerServices(
 	registry.register(window);
 	// One masker: the registry's (errors) is the hub's (stream output), so a secret added once is hidden in both.
 	const masker = registry.masker;
-	const events = new EventBus();
+	const events = new EventBus({ masker });
 	registry.register(events);
 	const streams = new StreamHub({ masker });
 	registry.register(streams);

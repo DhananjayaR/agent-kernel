@@ -83,6 +83,10 @@ export class FakeProjectFs implements ProjectFs {
 	readonly #files = new Map<string, string>();
 
 	constructor(root: string, files: Readonly<Record<string, string>> = {}) {
+		// A relative root would make every relative path resolve against nothing: a bug in the caller.
+		if (!isAbsolute(root)) {
+			throw new Error(`FakeProjectFs needs an absolute root, not "${root}"`);
+		}
 		this.root = root;
 		for (const [path, content] of Object.entries(files)) {
 			this.setFile(path, content);

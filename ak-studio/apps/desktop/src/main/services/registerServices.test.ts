@@ -41,8 +41,9 @@ describe("registerServices", () => {
 		expect(services.window).toBeDefined();
 	});
 
-	// TEMPORARY (P1b Task 3): PendingP1bService answers bridge.unavailable for the operations whose services come
-	// in Task 5. Task 6 deletes it and this test, and turns the todo below into a real test.
+	// TEMPORARY (P1b Task 3): PendingP1bService answers bridge.unavailable for the job and session operations.
+	// JobService and SessionService serve them from P1b Task 5 (tested over a registry in
+	// packages/runtime/src/services.test.ts); Task 6 wires them in here, deletes PendingP1bService and this test.
 	it("answers bridge.unavailable for the job and session operations until their services exist", async () => {
 		const registry = new ServiceRegistry();
 		registerServices(registry, deps);
@@ -137,8 +138,4 @@ describe("registerServices", () => {
 			},
 		]);
 	});
-
-	it.todo(
-		"serves the job and session operations from JobService and SessionService (P1b Task 5; wired in registerServices by Task 6)",
-	);
 });

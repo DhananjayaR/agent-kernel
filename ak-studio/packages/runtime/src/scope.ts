@@ -7,7 +7,8 @@ import {
 	type ProjectId,
 	StudioFailure,
 } from "@ak-studio/contract";
-import { defaultLog, type Log } from "./host";
+import { defaultLog, type Log, maskedLog } from "./host";
+import { SecretMasker } from "./secrets";
 import { strings } from "./strings";
 
 /** Stops something a project owns. May be async; disposal waits for it. */
@@ -76,6 +77,8 @@ export class ProjectScope {
 
 export interface ProjectScopesOptions {
 	log?: Log;
+	/** Masks the log line for a failing disposer (pass `registry.masker`). Defaults to one that knows none. */
+	masker?: SecretMasker;
 }
 
 export class ProjectScopes {
@@ -83,7 +86,10 @@ export class ProjectScopes {
 	readonly #log: Log;
 
 	constructor(options: ProjectScopesOptions = {}) {
-		this.#log = options.log ?? defaultLog;
+		this.#log = maskedLog(
+			options.log ?? defaultLog,
+			options.masker ?? new SecretMasker(),
+		);
 	}
 
 	/** Opens the project's scope. Throws (a bug in the caller) if the project is already open. */

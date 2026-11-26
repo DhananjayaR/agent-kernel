@@ -166,6 +166,18 @@ export class StreamHub {
 		for (const reader of state.readers) this.#wake(reader);
 	}
 
+	/**
+	 * Forgets the stream: its backlog is dropped, its readers get nothing more, and a later `stream.read` of it
+	 * fails with `stream.notFound`. Call it once nobody can need the output again (JobService and SessionService
+	 * do, for the oldest of the ended jobs and sessions they keep). Unknown or released ids are ignored.
+	 */
+	release(streamId: StreamId): void {
+		const state = this.#streams.get(streamId);
+		if (!state) return;
+		this.#streams.delete(streamId);
+		for (const reader of [...state.readers]) close(reader);
+	}
+
 	/** Serves the `stream.read` stream. An unknown stream id fails with `stream.notFound`. */
 	register(registry: StreamRegistrar<"stream.read", typeof streamRead>): void {
 		registry.handleStream("stream.read", ({ streamId }, send) => {

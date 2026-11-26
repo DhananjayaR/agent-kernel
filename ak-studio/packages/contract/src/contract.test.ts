@@ -253,6 +253,17 @@ describe("error codes and capabilities", () => {
 		}
 	});
 
+	it("lists only domain codes: the bridge's own codes and internal.unexpected are implicit for every operation", () => {
+		const implicit = (code: string) =>
+			code.startsWith("bridge.") || code === ERROR_CODES.internal;
+		for (const op of allOperations) {
+			expect(op.errors.filter(implicit), op.name).toEqual([]);
+		}
+		for (const [name, kind] of allSessionKinds) {
+			expect(kind.errors.filter(implicit), name).toEqual([]);
+		}
+	});
+
 	it("names only capabilities in the catalog (empty until P2, so none)", () => {
 		// The kernel capability catalog is empty in P1b (pre-flight ruling 10).
 		const capabilities: readonly string[] = [];

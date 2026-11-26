@@ -30,7 +30,10 @@ export interface Operation<
 	readonly input: Input;
 	readonly output: Output;
 	readonly shape?: OperationShape;
-	/** The error codes the handler can return (beyond the bridge's own). */
+	/**
+	 * The domain error codes the handler can return. Only domain codes: the bridge's own (`bridge.*`) and
+	 * `internal.unexpected` can come from any operation, so they are implicit and never listed (a test).
+	 */
 	readonly errors?: readonly string[];
 	/** A kernel capability id the project's version must have, or the request is refused. */
 	readonly capability?: string;

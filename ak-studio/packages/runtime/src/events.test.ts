@@ -9,6 +9,7 @@ import {
 import { describe, expect, it, vi } from "vitest";
 import { EventBus } from "./events";
 import { ServiceRegistry } from "./registry";
+import { SecretMasker } from "./secrets";
 
 const changed: StudioEvent = {
 	type: "domain.changed",
@@ -75,5 +76,19 @@ describe("EventBus", () => {
 		bus.emit(changed);
 		expect(ok.sent).toEqual([{ ok: true, event: changed }]);
 		expect(log).toHaveBeenCalledWith(expect.stringMatching(/window gone/));
+	});
+
+	it("masks known secrets in the line it logs for a failing subscriber", () => {
+		const log = vi.fn();
+		const masker = new SecretMasker();
+		masker.add("hunter22");
+		const { bus, registry } = served(new EventBus({ log, masker }));
+		registry.subscribe("events", {}, () => {
+			throw new Error("send failed with hunter22");
+		});
+		bus.emit(changed);
+		expect(log).toHaveBeenCalledWith(
+			expect.stringContaining("send failed with ••••"),
+		);
 	});
 });
