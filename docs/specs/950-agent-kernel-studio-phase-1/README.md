@@ -37,6 +37,7 @@ Read in this order.
 | [implementation/P0-plan.md](implementation/P0-plan.md) | Task-by-task execution plan for the P0 spikes |
 | [implementation/P1a-plan.md](implementation/P1a-plan.md) | Task-by-task execution plan for P1a, with its pre-flight rulings |
 | [research/technology/p1a-design-gate-options.md](research/technology/p1a-design-gate-options.md) | P1a design gate: palette, fonts, density and theme options, with measured contrast |
+| [research/technology/p1b-design-gate-options.md](research/technology/p1b-design-gate-options.md) | P1b design gate: options and recommendations for the eight shared patterns and the command palette |
 | [implementation/P1a-app-foundation.md](implementation/P1a-app-foundation.md) | Workspace, Electron shell, bridge transport, design system |
 | [implementation/P1b-data-layer-and-patterns.md](implementation/P1b-data-layer-and-patterns.md) | Contract shapes, jobs and sessions, shared patterns, generators, enforcement, first skills |
 | [implementation/P2-project-and-kernel-version.md](implementation/P2-project-and-kernel-version.md) | Welcome, toolchain, command runner, versions and the capability catalog |

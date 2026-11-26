@@ -47,7 +47,8 @@ Before building:
 ## Design gate
 
 Follow [design-process.md](design-process.md). The patterns below are reused by every phase, so their look is
-settled once, here.
+settled once, here. Options and recommendations, with the artboards each pattern appears on:
+[research/technology/p1b-design-gate-options.md](../research/technology/p1b-design-gate-options.md).
 
 | Pattern | Requirements | Questions to settle |
 |---|---|---|
@@ -59,13 +60,14 @@ settled once, here.
 | Changed on disk, unsaved changes guard | Non-blocking notice; keep mine, take theirs, compare | Banner placement relative to the view; the compare view. |
 | Version gate | The version that adds the feature, the upgrade command | Sizes: a whole tab, a form section, one control. |
 | Empty state, cannot read, error | Purpose and first action; file and line; what to do next | One layout family for all three. |
+| Command palette | One shortcut; every app command from the manifests; each command's shortcut shown | Placement and size; grouping; how a disabled or version-gated command shows. |
 
 **Sign-off**
 
 | Pattern | Options explored | Decision | Approved by | Date |
 |---|---|---|---|---|
 | Job progress, approval, background notice | | | | |
-| Session control, streaming list | | | | |
+| Session control, streaming list, command palette | | | | |
 | Changed on disk, unsaved guard | | | | |
 | Version gate, empty, cannot read, error | | | | |
 
