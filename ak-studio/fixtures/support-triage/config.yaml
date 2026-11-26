@@ -1,0 +1,29 @@
+execution:
+  mode: rest_sync
+  message_type: delta
+
+session:
+  type: redis
+
+guardrail:
+  enabled: true
+  input:
+    type: openai
+    config:
+      checks: [pii_detection, jailbreak]
+  output:
+    type: walledai
+    config:
+      checks: [safety, pii_redaction]
+
+trace:
+  enabled: true
+  type: langfuse
+
+slack:
+  agent: triage
+  channels: ["#support"]
+whatsapp:
+  agent: triage
+gmail:
+  agent: triage

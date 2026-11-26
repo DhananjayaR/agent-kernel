@@ -10,3 +10,6 @@ playwright-report/
 # The root .gitignore ignores every assets/ folder; source assets here (icons, images) are committed. Build
 # output that holds an assets/ folder (out/, dist/, storybook-static/) stays ignored through its parent.
 !assets/
+
+# Fixture project files that the root .gitignore would drop: the fixture holds placeholders only.
+!fixtures/support-triage/.env

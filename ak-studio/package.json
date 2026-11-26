@@ -10,7 +10,7 @@
 	"scripts": {
 		"dev": "pnpm --filter @ak-studio/desktop dev",
 		"build": "pnpm check-palette && pnpm compile-schemas:check && pnpm --filter @ak-studio/desktop build",
-		"test": "pnpm -r --if-present test && pnpm check-palette:test && pnpm compile-schemas:test",
+		"test": "pnpm -r --if-present test && pnpm check-palette:test && pnpm compile-schemas:test && pnpm fixture-tree:test",
 		"lint": "biome check --error-on-warnings . && pnpm check-palette && pnpm compile-schemas:check && pnpm depcruise && pnpm depcruise:selftest",
 		"typecheck": "tsc -b",
 		"storybook": "pnpm --filter @ak-studio/ui storybook",
@@ -23,6 +23,7 @@
 		"depcruise": "node tools/depcruise.mjs",
 		"depcruise:selftest": "node tools/depcruise-selftest/run.mjs",
 		"check-palette": "node tools/check-palette.mjs",
+		"fixture-tree:test": "vitest run tools/fixture-tree.test.mjs",
 		"check-palette:test": "vitest run tools/check-palette.test.mjs",
 		"compile-schemas": "node tools/compile-schemas.mjs",
 		"compile-schemas:check": "node tools/compile-schemas.mjs --check",

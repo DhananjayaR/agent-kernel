@@ -6,6 +6,7 @@
 		"includes": [
 			"**",
 			"!**/tools/depcruise-selftest/fixture",
+			"!**/fixtures/support-triage",
 			"!**/packages/ui/src/assets/oak-mark-*.svg",
 			"!**/*.validate.js",
 			"!**/*.validate.d.ts"

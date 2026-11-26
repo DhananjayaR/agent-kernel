@@ -1,0 +1,4 @@
+mode: fallback
+judge:
+  model: "[MODEL]"
+  threshold: 0.80

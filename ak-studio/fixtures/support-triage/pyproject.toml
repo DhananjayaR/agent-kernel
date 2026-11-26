@@ -1,0 +1,17 @@
+[project]
+name = "support-triage"
+version = "0.1.0"
+description = "Support triage: triage, billing and kb-researcher agents behind one OAK app"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "agentkernel[openai,langgraph,adk,api,slack,whatsapp,gmail,redis,langfuse]>=0.10.2",
+]
+
+[dependency-groups]
+dev = [
+    "agentkernel[test]>=0.10.2",
+]
+
+[tool.uv]
+package = false

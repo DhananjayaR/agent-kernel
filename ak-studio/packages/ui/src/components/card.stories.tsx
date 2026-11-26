@@ -33,7 +33,7 @@ export const Default: Story = {
 		<Card className="w-dialog-m">
 			<CardHeader>
 				<CardTitle>claude</CardTitle>
-				<CardDescription>OAK 0.6.2, opened 2 days ago</CardDescription>
+				<CardDescription>OAK 0.10.2, opened 2 days ago</CardDescription>
 				<CardAction>
 					<StatusChip status="passed" label="Ready" />
 				</CardAction>
