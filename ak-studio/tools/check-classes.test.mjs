@@ -37,7 +37,7 @@ describe("check-classes", () => {
 		]);
 	});
 
-	it("reports each planted inline colour style, in a multi-line style block too", () => {
+	it("reports each planted inline colour style, in a multi-line style block and a conditional one too", () => {
 		const { violations } = checkClasses(["bad"], fixture);
 		expect(
 			violations
@@ -52,6 +52,7 @@ describe("check-classes", () => {
 			[17, "style color:"],
 			[19, 'fill="red"'],
 			[20, 'color="#fff"'],
+			[21, "style borderColor:"], // inside a conditional style expression
 		]);
 	});
 

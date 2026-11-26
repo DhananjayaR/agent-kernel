@@ -67,7 +67,7 @@ try {
 }
 const found = report.diagnostics
 	.filter((d) => RULES.has(d.category))
-	.map((d) => `${d.category}|${d.location.path}`)
+	.map((d) => `${d.category}|${d.location.path.replaceAll("\\", "/")}`)
 	.sort();
 const want = expected.map(([rule, file]) => `${rule}|${file}`).sort();
 if (JSON.stringify(found) !== JSON.stringify(want)) {

@@ -18,6 +18,7 @@ export function InlineColour({ el, tone }: { el: HTMLElement; tone: string }) {
 			<span style={{ ...swatch, ...ring }} />
 			<svg fill="red" aria-hidden="true" />
 			<Icon color="#fff" />
+			<span style={tone ? { borderColor: tone } : undefined} />
 		</div>
 	);
 }

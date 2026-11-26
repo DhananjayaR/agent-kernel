@@ -11,7 +11,8 @@
 // - the variable shorthand `utility-(--name)` for any variable not in ALLOWED_VARIABLES: it reads a value from
 //   outside the closed scale just as `[...]` does;
 // - an inline colour style: a colour property (`color`, `backgroundColor`, `borderColor`, `fill`, the `border`
-//   and `background` shorthands, ...) in a `style={{ ... }}` object or an object typed `CSSProperties`; a colour
+//   and `background` shorthands, ...) anywhere in a `style={...}` expression (a
+//   conditional too) or in an object typed `CSSProperties`; a colour
 //   property set on an element's `.style` or through `style.setProperty`; an SVG or icon colour attribute
 //   (`fill="..."`, `stroke=`, `color=`) with any literal value but currentColor, none, transparent or inherit.
 // Class checks read the whole text, as Tailwind's scanner does, so a class in a `cn()`/`cva()` string or a
@@ -118,9 +119,12 @@ const NEUTRAL_COLOUR_VALUES = new Set([
 	"transparent",
 	"inherit",
 ]);
-/** Where a style object starts: a JSX style prop, or an object typed or checked as CSSProperties. */
+/**
+ * Where a style object starts: a JSX style prop's whole expression (`style={{ ... }}`, and `style={cond ? { ... } :
+ * undefined}`), or an object typed or checked as CSSProperties.
+ */
 const STYLE_OBJECT_START =
-	/\bstyle=\{\{|:\s*(?:React\.)?CSSProperties\s*=\s*\{|\{(?=[^{}]*\}\s*(?:as|satisfies)\s+(?:React\.)?CSSProperties\b)/g;
+	/\bstyle=\{|:\s*(?:React\.)?CSSProperties\s*=\s*\{|\{(?=[^{}]*\}\s*(?:as|satisfies)\s+(?:React\.)?CSSProperties\b)/g;
 
 function lineAt(text, index) {
 	let line = 1;
@@ -219,7 +223,7 @@ export function checkClasses(roots, base = STUDIO) {
 			throw new Error(`not a directory: ${root}`);
 		}
 		for (const file of sourceFiles(dir)) {
-			const name = relative(base, file);
+			const name = relative(base, file).replaceAll("\\", "/");
 			if (isSkipped(name)) {
 				skipped.push(name);
 				continue;
