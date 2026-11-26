@@ -1,6 +1,6 @@
 // App commands (architecture.md, Features): the one way a feature offers an action to the rest of the app. A
 // feature declares its commands in its manifest; any feature runs one with `runCommand(id, args)` (runCommand.ts),
-// never by importing another feature. The same commands feed the command palette (Task 16), menus, shortcuts and
+// never by importing another feature. The same commands feed the command palette, menus, shortcuts and
 // error actions. A command is checked when it is defined, so a bad manifest fails as the app loads (and in tests),
 // not when someone presses a key.
 import type { ZodType } from "zod";
@@ -24,8 +24,9 @@ export interface CommandSpec<A = undefined> {
 	/** False hides the command (the palette leaves it out; its shortcut and runCommand do nothing). */
 	when?: () => boolean;
 	/**
-	 * The kernel capability (catalog id) the command needs. The palette lists a command whose capability is not
-	 * available with the reason, from useCapability, rather than hiding it.
+	 * The kernel capability (catalog id) the command needs. When the project's OAK version lacks it, the palette
+	 * lists the command with the version gate's reason rather than hiding it, and runCommand refuses it
+	 * (commandGate in runCommand.ts).
 	 */
 	capability?: string;
 	/** Runs the command with its parsed arguments. */

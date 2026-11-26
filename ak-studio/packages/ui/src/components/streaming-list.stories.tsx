@@ -3,7 +3,7 @@
 // (everything held, or the selection), clear, long lines (no wrap: the list scrolls sideways, the page never does),
 // 10,000 lines (only the rows in view are in the page), a failed stream, and the keyboard.
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { expectFocusRing, tabTo, tokenColour } from "../lib/story-checks";
 import { Button } from "./button";
@@ -119,23 +119,36 @@ export const Empty: Story = {
 };
 
 /** A view with lines arriving: a story-only button adds lines, as a stream's batches do. */
-function Arriving({ start = 40 }: { start?: number }) {
+function Arriving({
+	start = 40,
+	limit,
+	clearable = false,
+}: {
+	start?: number;
+	/** Keep only the newest `limit` lines, as the store's bounded buffer does. */
+	limit?: number;
+	clearable?: boolean;
+}) {
 	const [lines, setLines] = useState(() => ticks(start));
+	const next = useRef(start + 1);
+	const add = () => {
+		const from = next.current;
+		next.current += 10;
+		setLines((prev) => {
+			const all = [...prev, ...ticks(10, from)];
+			return limit === undefined ? all : all.slice(-limit);
+		});
+	};
 	return (
 		<div className="flex flex-col gap-3">
 			<StreamingListView
 				label="Ticker output"
 				lines={lines}
-				onCopy={() => {}}
+				onCopy={() => undefined}
+				onClear={clearable ? () => setLines([]) : undefined}
 				className="h-64 max-w-dialog-l"
 			/>
-			<Button
-				variant="outline"
-				className="self-start"
-				onPress={() =>
-					setLines((prev) => [...prev, ...ticks(10, prev.length + 1)])
-				}
-			>
+			<Button variant="outline" className="self-start" onPress={add}>
 				Add 10 lines
 			</Button>
 		</div>
@@ -221,9 +234,10 @@ export const Copy: Story = {
 		await expect(copied.split("\n")).toHaveLength(testRun.length);
 		await expect(copied).toContain("ERROR test_billing_handoff");
 		await expect(copied).not.toContain(ESC);
-		await expect(within(canvasElement).getByRole("status")).toHaveTextContent(
-			"Output copied",
-		);
+		const status = within(canvasElement).getByRole("status");
+		await expect(status).toHaveTextContent("Output copied");
+		// The check mark goes back to the copy icon after a moment: the screenshot shows the settled state.
+		await waitFor(() => expect(status.textContent).toBe(""), { timeout: 3000 });
 	},
 };
 
@@ -241,22 +255,69 @@ export const CopySelection: Story = {
 		);
 		await expect(args.onCopy).toHaveBeenCalledWith("WARNING");
 		selection?.removeAllRanges();
+		const status = within(canvasElement).getByRole("status");
+		await waitFor(() => expect(status.textContent).toBe(""), { timeout: 3000 });
 	},
 };
 
-/** Clear empties the view (the caller hides what it held; the record stays). */
+/**
+ * Clear empties the view (the caller hides what it held; the record stays), and following starts again: cleared
+ * while scrolled up, the next lines still come into view with no "Jump to latest".
+ */
 export const Clear: Story = {
-	render: function Render(args) {
-		const [lines, setLines] = useState(args.lines);
-		return (
-			<StreamingListView {...args} lines={lines} onClear={() => setLines([])} />
-		);
-	},
+	render: () => <Arriving clearable />,
 	play: async ({ canvasElement }) => {
+		const rows = tickerRows(canvasElement);
+		await waitFor(() => expect(atEnd(rows)).toBe(true));
+		rows.scrollTop = 0;
+		await within(canvasElement).findByRole("button", {
+			name: "Jump to latest",
+		});
 		await userEvent.click(
 			within(canvasElement).getByRole("button", { name: "Clear" }),
 		);
-		await expect(rowsOf(canvasElement)).toHaveTextContent("No output yet");
+		await expect(rows).toHaveTextContent("No output yet");
+		await expect(
+			within(canvasElement).queryByRole("button", { name: "Jump to latest" }),
+		).toBeNull();
+		const add = within(canvasElement).getByRole("button", {
+			name: "Add 10 lines",
+		});
+		await userEvent.click(add);
+		await userEvent.click(add);
+		await waitFor(() =>
+			expect(within(rows).getByText("Tick 60")).toBeVisible(),
+		);
+		await expect(atEnd(rows)).toBe(true);
+		await expect(
+			within(canvasElement).queryByRole("button", { name: "Jump to latest" }),
+		).toBeNull();
+	},
+};
+
+/** Scrolled up while the bounded buffer drops its oldest lines: the lines in view stay where they are. */
+export const KeepsPlaceWhileEvicting: Story = {
+	render: () => <Arriving start={60} limit={60} />,
+	play: async ({ canvasElement }) => {
+		const rows = tickerRows(canvasElement);
+		await waitFor(() => expect(atEnd(rows)).toBe(true));
+		rows.scrollTop = 20 * STREAM_ROW_HEIGHT;
+		await within(canvasElement).findByRole("button", {
+			name: "Jump to latest",
+		});
+		const before = within(rows)
+			.getByText("Tick 22")
+			.getBoundingClientRect().top;
+		await userEvent.click(
+			within(canvasElement).getByRole("button", { name: "Add 10 lines" }),
+		);
+		// Ticks 1 to 10 have gone from the top; Tick 22 has not moved.
+		await waitFor(() => expect(within(rows).queryByText("Tick 1")).toBeNull());
+		const after = within(rows).getByText("Tick 22").getBoundingClientRect().top;
+		await expect(Math.abs(after - before)).toBeLessThanOrEqual(1);
+		await expect(
+			within(canvasElement).getByRole("button", { name: "Jump to latest" }),
+		).toBeVisible();
 	},
 };
 

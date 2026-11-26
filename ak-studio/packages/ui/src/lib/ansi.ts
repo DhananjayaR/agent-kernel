@@ -82,10 +82,13 @@ function applySgr(state: SgrState, params: string): void {
 	}
 }
 
-/** CSI sequences (SGR among them), OSC sequences (titles, links) and two-character escapes. */
+/**
+ * CSI sequences (SGR among them), OSC sequences (titles, links), and other escapes: ESC, any intermediate bytes,
+ * then a final byte (`ESC ( B`, the character set `tput sgr0` selects; `ESC 7`; `ESC M`).
+ */
 const ESCAPE =
 	// biome-ignore lint/suspicious/noControlCharactersInRegex: matching terminal escape sequences is the point.
-	/\x1b\[([0-?]*)([ -/]*)([@-~])|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)?|\x1b[@-Z\\-_]?/g;
+	/\x1b\[([0-?]*)([ -/]*)([@-~])|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)?|\x1b[ -/]*[0-~]?/g;
 
 /** Control characters other than a tab (and ESC, handled above). */
 // biome-ignore lint/suspicious/noControlCharactersInRegex: stripping control characters is the point.

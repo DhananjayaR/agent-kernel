@@ -174,11 +174,21 @@ export function StreamingListView({
 		const before = previousLines.current;
 		previousLines.current = lines;
 		if (!el) return;
+		const first = lines[0]?.seq;
+		const firstBefore = before[0]?.seq;
+		// Emptied (Clear) or a different stream (it starts before the old first line): follow again, as at the start.
+		// No scroll event would say so: the list may already be at the top.
+		if (
+			first === undefined ||
+			(firstBefore !== undefined && first < firstBefore)
+		) {
+			following.current = true;
+			setShowJump(false);
+		}
 		if (following.current) {
 			scrollToEnd();
 			return;
 		}
-		const first = lines[0]?.seq;
 		if (first === undefined || before === lines) return;
 		// Lines are in seq order: those of the previous lines older than the new first one have gone.
 		let gone = 0;

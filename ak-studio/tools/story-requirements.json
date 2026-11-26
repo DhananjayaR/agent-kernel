@@ -82,6 +82,7 @@
 				"Copy",
 				"CopySelection",
 				"Clear",
+				"KeepsPlaceWhileEvicting",
 				"LongLines",
 				"TenThousandLines",
 				"StreamFailed",

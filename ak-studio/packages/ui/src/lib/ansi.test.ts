@@ -84,6 +84,9 @@ describe("parseAnsiLine", () => {
 		expect(stripAnsi(`${ESC}[?25lhidden cursor${ESC}[?25h`)).toBe(
 			"hidden cursor",
 		);
+		// `tput sgr0`: a character set selection, then a reset.
+		expect(stripAnsi(`${ESC}(B${ESC}[mdone`)).toBe("done");
+		expect(stripAnsi(`${ESC}7saved${ESC}8`)).toBe("saved");
 	});
 
 	it("keeps what follows the last carriage return, as a terminal shows a redrawn line", () => {

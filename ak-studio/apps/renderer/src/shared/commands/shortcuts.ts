@@ -3,14 +3,14 @@
 // Cmd on macOS and Ctrl elsewhere (P1b-plan ruling 13); `Ctrl` is Ctrl everywhere. Each platform resolves it to the
 // aria-keyshortcuts form ("Meta+J", "Control+J"), which is also how a key press is named (eventShortcut), so the
 // app's one keydown listener looks a press up in a map instead of testing every command. Mod+K is kept for the
-// command palette (Task 16 declares it).
+// command palette (app/shell/manifest.ts declares it).
 import type { Platform } from "@ak-studio/contract";
 
 /** How shortcuts resolve: macOS (Mod is Cmd) or anything else (Mod is Ctrl). */
 export type ShortcutPlatform = "mac" | "other";
 export const SHORTCUT_PLATFORMS: readonly ShortcutPlatform[] = ["mac", "other"];
 
-/** Shortcuts no command may take but the one named: Mod+K opens the command palette (Task 16). */
+/** Shortcuts no command may take but the one named: Mod+K opens the command palette (shell.openCommandPalette). */
 export const RESERVED_SHORTCUTS: Readonly<Record<string, string>> =
 	Object.freeze({ "Mod+K": "shell.openCommandPalette" });
 

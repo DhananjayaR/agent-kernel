@@ -131,7 +131,8 @@ feature F?**
   ```
 
 - [ ] One API: `catalog.status(id, version)` returns `available`, `needs-upgrade` (with `since`) or `removed`
-      (with `until` and `replacedBy`).
+      (with `until` and `replacedBy`); `catalog.get(id)` gives the entry those come from (added in P1b Task 16
+      for the command palette's "Needs OAK x.y").
 - [ ] One renderer hook and one component for the version-unavailable pattern from the design gate.
 - [ ] **Supported floor.** Studio declares the oldest OAK version it opens with full support.
       Decided 26 Nov 2026: **0.10** (the current minor; `ak-py` is 0.10.2). Below the floor the project opens

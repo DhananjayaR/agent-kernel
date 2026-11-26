@@ -403,6 +403,9 @@ type StudioError = {
 - `<CapabilityGate id="...">` wraps any control or section that needs a capability and renders the
   version-unavailable pattern when it is missing. No feature writes its own version check.
 - Each feature's manifest lists the capabilities it uses, so a test can confirm every one exists.
+- An app command can name the capability it needs. The command palette lists a command the project's
+  version lacks with the version gate's reason ("Needs OAK 0.12.0"), and `runCommand` refuses it. Both ask
+  `capabilityGate`, which reads the catalog and version the mounted `CatalogProvider` publishes.
 
 ## Features
 
@@ -411,7 +414,7 @@ Rules, Settings. Every feature has the same folder:
 
 ```
 features/config/
-  manifest.ts       id, tab or route, app commands, shortcuts, capabilities. The only file app/ imports.
+  manifest.ts       id, title, tab or route, app commands, shortcuts, capabilities. The only file app/ imports.
   api/              query keys and hooks over the contract (useConfigSection, useWriteConfigSection)
   model/            the feature store (UI state and working copies) and selectors
   components/       components used only by this feature

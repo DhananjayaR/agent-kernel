@@ -1,10 +1,10 @@
 // The shell's manifest: the shell joins the registry like a feature (app/features.ts lists it first), with no tab
 // and no route, only its app commands. shell.toggleBottomPanel takes Mod+J over from the bottom panel (P1b-plan
-// ruling 13); it acts in text fields too (`whileTyping`), as Mod+J did in P1a, since it types nothing. Mod+K is
-// kept for the command palette's shell.openCommandPalette (Task 16; shared/commands/shortcuts.ts). shell.showCommands
-// opens the bottom panel on the Commands view: the job progress pattern's "Show commands" (Task 15).
-// shell.openCommandPalette opens the command palette on Mod+K (Task 16), the id RESERVED_SHORTCUTS names; like Mod+J
-// it acts in text fields too, since it types nothing. The palette does not list it (it is open already).
+// ruling 13); it acts in text fields too (`whileTyping`), as Mod+J did in P1a, since it types nothing.
+// shell.showCommands opens the bottom panel on the Commands view: the job progress pattern's "Show commands" (Task
+// 15). shell.openCommandPalette opens the command palette on Mod+K, the shortcut RESERVED_SHORTCUTS keeps for this id
+// (shared/commands/shortcuts.ts); like Mod+J it acts in text fields too. The palette does not list it (it is open
+// already). The shell's title, "View", is the palette's prefix for these commands.
 import { defineCommand } from "../../shared/commands/command";
 import { defineFeature } from "../../shared/commands/feature";
 import { shellActions, shellActionsBound } from "./shellActions";

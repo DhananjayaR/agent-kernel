@@ -43,7 +43,7 @@ export function setCommands(list: readonly AppCommand[]): void {
 	byId = next;
 }
 
-/** Every app command, in manifest order: what the command palette lists (Task 16). */
+/** Every app command, in manifest order (the palette lists the registry's paletteCommands: the same, with titles). */
 export function getCommands(): readonly AppCommand[] {
 	return commands;
 }
