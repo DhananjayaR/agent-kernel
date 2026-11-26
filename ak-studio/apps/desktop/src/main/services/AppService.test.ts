@@ -68,7 +68,7 @@ function serve(service: AppService) {
 		)
 		.register(new SessionService({ events, streams, scopes, masker }));
 	for (const name of registry.missingHandlers())
-		if (Object.hasOwn(operations, name))
+		if (Object.hasOwn(operations, name) && !/^(app|window)\./.test(name))
 			registry.handle(name as OperationName, notUnderTest);
 	registry.start();
 	return registry;

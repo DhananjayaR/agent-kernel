@@ -45,12 +45,12 @@ describe("the operations map", () => {
 			expect(op.kind).toBe("request");
 		}
 		// The app's own operations, exactly; every other one is a feature's (`pnpm new:operation` adds them), named
-		// `<feature>.<camelCaseName>` after its feature's folder.
+		// `<feature>.<camelCaseName>` after its feature's folder (or with more parts: `deploy.backend.create`).
 		const core = /^(app|job|jobs|session|sessions|window)\./;
 		const names = Object.keys(operations).sort();
 		for (const name of names.filter((n) => !core.test(n)))
 			expect(name).toMatch(
-				/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*\.[a-z][a-zA-Z0-9]*$/,
+				/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\.[a-z][a-zA-Z0-9]*)+$/,
 			);
 		expect(names.filter((n) => core.test(n))).toEqual([
 			"app.info",

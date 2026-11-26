@@ -11,6 +11,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+	chmodSync,
 	cpSync,
 	existsSync,
 	lstatSync,
@@ -54,9 +55,8 @@ function copyLinks(from, to, dest) {
 	}
 }
 
-function copyWorkspace() {
-	// <temp>/ak-studio, beside a link to the repository's branding/ (two tests compare the app icon with the mark).
-	const parent = mkdtempSync(join(tmpdir(), "ak-studio-generators-"));
+/** Copies the workspace into `<parent>/ak-studio`, beside a link to the repository's branding/ (two tests compare the app icon with the mark). */
+function copyWorkspace(parent) {
 	const dest = join(parent, "ak-studio");
 	mkdirSync(dest);
 	symlinkSync(
@@ -113,6 +113,7 @@ function snapshot(root) {
 	return out;
 }
 
+let parent;
 let copy;
 
 /** Runs a Node script in the copy; answers its exit status and output. */
@@ -167,6 +168,14 @@ const CREATED = [
 	`${FEATURE_DIR}/api/useReleaseNotesPublishNotes.test.tsx`,
 	`${FEATURE_DIR}/api/useReleaseNotesReadDiskUsage.ts`,
 	`${FEATURE_DIR}/api/useReleaseNotesReadDiskUsage.test.tsx`,
+	`${FEATURE_DIR}/api/useReleaseNotesReadHistory.ts`,
+	`${FEATURE_DIR}/api/useReleaseNotesReadHistory.test.tsx`,
+	`${FEATURE_DIR}/api/useReleaseNotesSaveHistory.ts`,
+	`${FEATURE_DIR}/api/useReleaseNotesSaveHistory.test.tsx`,
+	`${FEATURE_DIR}/api/useReleaseNotesRebuildIndex.ts`,
+	`${FEATURE_DIR}/api/useReleaseNotesRebuildIndex.test.tsx`,
+	`${FEATURE_DIR}/api/useReleaseNotesReadDiskPath.ts`,
+	`${FEATURE_DIR}/api/useReleaseNotesReadDiskPath.test.tsx`,
 	"packages/contract/src/release-notes.ts",
 	"packages/runtime/src/release-notes/ReleaseNotesService.ts",
 	"packages/runtime/src/release-notes/ReleaseNotesService.test.ts",
@@ -186,11 +195,16 @@ const CHANGED = [
 ];
 
 beforeAll(() => {
-	copy = copyWorkspace();
+	// The folder is recorded before the copy starts, so a failed copy is still deleted.
+	parent = mkdtempSync(join(tmpdir(), "ak-studio-generators-"));
+	copy = copyWorkspace(parent);
 }, 120_000);
 
 afterAll(() => {
-	if (copy) rmSync(dirname(copy), { recursive: true, force: true });
+	if (parent) {
+		chmodSync(join(parent, "ak-studio/packages/ui/src"), 0o755);
+		rmSync(parent, { recursive: true, force: true });
+	}
 });
 
 describe("the generators, run in a copy of the workspace", () => {
@@ -209,6 +223,8 @@ describe("the generators, run in a copy of the workspace", () => {
 		refused(/not kebab-case/, "new-feature", "ReleaseNotes");
 		refused(/not kebab-case/, "new-feature", "release_notes");
 		refused(/not kebab-case/, "new-feature", "release--notes");
+		refused(/device name on Windows/, "new-feature", "con");
+		refused(/device name on Windows/, "new-component", "lpt1");
 		refused(/reserved/, "new-feature", "shell");
 		refused(/reserved/, "new-feature", "jobs");
 		refused(/exists/, "new-feature", "domain");
@@ -270,7 +286,7 @@ describe("the generators, run in a copy of the workspace", () => {
 		expect(snapshot(copy)).toEqual(before);
 	}, 60_000);
 
-	it("create a feature, a query, a command, a job, a desktop-only query and a component", () => {
+	it("create a feature, a query, a command, a job, desktop-only and project-scoped operations, and a component", () => {
 		const before = snapshot(copy);
 		generated("new-feature", FEATURE);
 		generated("new-operation", FEATURE, "read-summary", "--shape", "query");
@@ -283,6 +299,39 @@ describe("the generators, run in a copy of the workspace", () => {
 			"--shape",
 			"query",
 			"--desktop",
+		);
+		generated(
+			"new-operation",
+			FEATURE,
+			"read-history",
+			"--shape",
+			"query",
+			"--project",
+		);
+		generated(
+			"new-operation",
+			FEATURE,
+			"save-history",
+			"--shape",
+			"command",
+			"--project",
+		);
+		generated(
+			"new-operation",
+			FEATURE,
+			"rebuild-index",
+			"--shape",
+			"job",
+			"--project",
+		);
+		generated(
+			"new-operation",
+			FEATURE,
+			"read-disk-path",
+			"--shape",
+			"query",
+			"--desktop",
+			"--project",
 		);
 		generated("new-component", "status-line");
 		const after = snapshot(copy);
@@ -302,8 +351,24 @@ describe("the generators, run in a copy of the workspace", () => {
 			"saveSummary",
 			"publishNotes",
 			"readDiskUsage",
+			"readHistory",
+			"saveHistory",
+			"rebuildIndex",
+			"readDiskPath",
 		])
 			expect(contract).toContain(`"${FEATURE}.${op}"`);
+		const declared = readFileSync(
+			join(copy, "packages/contract/src/release-notes.ts"),
+			"utf8",
+		);
+		expect(declared).toMatch(
+			/releaseNotesReadHistory = query\(\{[^}]*projectId: ProjectId[\s\S]*?errors: \[ERROR_CODES\.projectNotOpen\]/,
+		);
+		const hook = readFileSync(
+			join(copy, FEATURE_DIR, "api/useReleaseNotesReadHistory.ts"),
+			"utf8",
+		);
+		expect(hook).toContain('releaseNotesKeys.detail(projectId, "readHistory")');
 	}, 120_000);
 
 	it("refuse to make the same feature, operation or component twice, writing nothing", () => {
@@ -328,6 +393,146 @@ describe("the generators, run in a copy of the workspace", () => {
 		);
 		refused(/already exists/, "new-component", "status-line");
 		expect(snapshot(copy)).toEqual(before);
+	}, 60_000);
+
+	it("run through a symlinked path: refuse or answer, never exit 0 having done nothing", () => {
+		const linked = join(parent, "linked");
+		symlinkSync(copy, linked, "junction");
+		const script = join(linked, "tools/generators/new-feature.mjs");
+		const before = snapshot(copy);
+		const bad = node([script, "../escape"]);
+		expect(bad.status, bad.out).toBe(1);
+		expect(bad.out).toMatch(/^refused: .*is a path/m);
+		const help = node([script, "--help"]);
+		expect(help.status).toBe(0);
+		expect(help.out).toMatch(/usage: pnpm new:feature/);
+		expect(snapshot(copy)).toEqual(before);
+	}, 60_000);
+
+	it("refuse an edit point it cannot find unambiguously, writing nothing", () => {
+		const service = join(
+			copy,
+			"packages/runtime/src/release-notes/ReleaseNotesService.ts",
+		);
+		const operations = join(copy, "packages/contract/src/operations.ts");
+		const originalService = readFileSync(service, "utf8");
+		const originalOperations = readFileSync(operations, "utf8");
+		// A method after `register`: the handler must not land inside it.
+		writeFileSync(
+			service,
+			originalService.replace(
+				/\n\}\n$/,
+				"\n\n\tcount(): number {\n\t\treturn 1;\n\t}\n}\n",
+			),
+		);
+		let before = snapshot(copy);
+		refused(
+			/not the class's last member/,
+			"new-operation",
+			FEATURE,
+			"read-tally",
+			"--shape",
+			"query",
+		);
+		expect(snapshot(copy)).toEqual(before);
+		writeFileSync(service, originalService);
+		// A comment inside the operations map.
+		writeFileSync(
+			operations,
+			originalOperations.replace(
+				"export const operations = {\n",
+				"export const operations = {\n\t// The app's own.\n",
+			),
+		);
+		before = snapshot(copy);
+		refused(
+			/operations. map holds something other/,
+			"new-operation",
+			FEATURE,
+			"read-tally",
+			"--shape",
+			"query",
+		);
+		expect(snapshot(copy)).toEqual(before);
+		writeFileSync(operations, originalOperations);
+		// A feature folder made by hand under a contract module's name.
+		const domainFeature = join(copy, "apps/renderer/src/features/domain");
+		mkdirSync(domainFeature);
+		writeFileSync(join(domainFeature, "manifest.ts"), "export {};\n");
+		before = snapshot(copy);
+		refused(
+			/another module/,
+			"new-operation",
+			"domain",
+			"read-tally",
+			"--shape",
+			"command",
+		);
+		expect(snapshot(copy)).toEqual(before);
+		rmSync(domainFeature, { recursive: true });
+	}, 60_000);
+
+	it("add a test case inside its describe when an afterEach follows it", () => {
+		const testFile = join(
+			copy,
+			"packages/runtime/src/release-notes/ReleaseNotesService.test.ts",
+		);
+		const text = readFileSync(testFile, "utf8").replace(
+			'import { describe, expect, it, vi } from "vitest";',
+			'import { afterEach, describe, expect, it, vi } from "vitest";',
+		);
+		writeFileSync(
+			testFile,
+			`${text}\nafterEach(() => {\n\tvi.restoreAllMocks();\n});\n`,
+		);
+		generated("new-operation", FEATURE, "read-tally", "--shape", "query");
+		const after = readFileSync(testFile, "utf8");
+		const tally = after.indexOf('it("answers release-notes.readTally"');
+		const close = after.indexOf("\n});\n\nafterEach(");
+		expect(tally).toBeGreaterThan(0);
+		expect(close).toBeGreaterThan(tally);
+		expect(after).toMatch(
+			/afterEach\(\(\) => \{\n\tvi\.restoreAllMocks\(\);\n\}\);\n$/,
+		);
+	}, 60_000);
+
+	it("put every file back when writing fails part way: a folder it cannot write in", () => {
+		const before = snapshot(copy);
+		const src = join(copy, "packages/ui/src");
+		// The component and its stories are written into components/; the index edit then fails in src/.
+		chmodSync(src, 0o555);
+		try {
+			refused(
+				/writing failed, so nothing was changed/,
+				"new-component",
+				"toolbar-row",
+			);
+		} finally {
+			chmodSync(src, 0o755);
+		}
+		expect(snapshot(copy)).toEqual(before);
+		expect(existsSync(join(src, "components/toolbar-row.tsx"))).toBe(false);
+	}, 60_000);
+
+	it("put every file back when Biome cannot fix what it wrote", () => {
+		const features = join(copy, "apps/renderer/src/app/features.ts");
+		const original = readFileSync(features, "utf8");
+		// A hand edit Biome will not fix by itself (its fix is unsafe), in a file the generator edits.
+		writeFileSync(
+			features,
+			`${original}\nexport function pause(): void {\n\tdebugger;\n}\n`,
+		);
+		const before = snapshot(copy);
+		refused(
+			/writing failed, so nothing was changed/,
+			"new-feature",
+			"changelog",
+		);
+		expect(snapshot(copy)).toEqual(before);
+		expect(existsSync(join(copy, "apps/renderer/src/features/changelog"))).toBe(
+			false,
+		);
+		writeFileSync(features, original);
 	}, 60_000);
 
 	it("add to services and tests that were edited by hand: a value import beside the types, code after the class", () => {

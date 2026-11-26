@@ -28,7 +28,7 @@ function deps() {
 		log,
 	});
 	const sessions = new SessionService({ events, streams, scopes, masker, log });
-	return { jobs, sessions, events, scopes };
+	return { jobs, sessions, streams, events, scopes, masker };
 }
 
 describe("registerFeatureServices", () => {

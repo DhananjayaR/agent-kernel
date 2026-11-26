@@ -72,8 +72,10 @@ export function registerServices(
 	registry.register(jobs);
 	const sessions = new SessionService({ events, streams, scopes, masker, log });
 	registry.register(sessions);
-	// The features' services: the runtime's (browser-safe, also served by the mock transport), then the
-	// desktop-only ones (`pnpm new:operation --desktop` adds each below this line).
-	registerFeatureServices(registry, { jobs, sessions, events, scopes });
+	// The features' services: the runtime's (browser-safe, also served by the mock transport), built from these
+	// dependencies (the ports join them in P2), then the desktop-only ones (`pnpm new:operation --desktop` adds
+	// each below the call).
+	const featureDeps = { jobs, sessions, streams, events, scopes, masker };
+	registerFeatureServices(registry, featureDeps);
 	return { app, window, masker, events, streams, scopes, jobs, sessions };
 }

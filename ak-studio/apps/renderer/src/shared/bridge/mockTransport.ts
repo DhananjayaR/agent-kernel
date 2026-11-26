@@ -31,6 +31,9 @@ import {
 } from "@ak-studio/contract";
 import {
 	EventBus,
+	FakeCommandRunner,
+	FakeProjectFs,
+	FakeWatcher,
 	InMemoryJobRecordStore,
 	JobService,
 	type Log,
@@ -42,6 +45,7 @@ import {
 	StreamHub,
 } from "@ak-studio/runtime";
 import { desktopFixtureHandlers } from "./desktopFixtures";
+import { FIXTURE_FILES } from "./fixtures";
 import { logStreamError, type StreamErrorHandler } from "./ipcTransport";
 
 export type MockHandlers = {
@@ -62,6 +66,9 @@ export type MockFixtureName = Extract<
 	OperationName,
 	`app.${string}` | `window.${string}`
 >;
+
+/** The fixture project's folder as the mock's FakeProjectFs holds it (an absolute path, as ProjectFs needs). */
+export const MOCK_PROJECT_ROOT = "/projects/support-triage";
 
 /** The version the mock reports for `app.info`. */
 export const MOCK_VERSION = "0.0.0-mock";
@@ -216,11 +223,18 @@ export function createMockBackend(
 	for (const service of [events, streams, jobs, sessions]) {
 		service.register(collected as never);
 	}
+	// The features' runtime services, over the ports' fakes: commands run nothing, the project folder is the
+	// support-triage fixture in memory, and the watcher reports only what a test announces.
 	registerFeatureServices(collected, {
+		commandRunner: new FakeCommandRunner(),
+		projectFs: new FakeProjectFs(MOCK_PROJECT_ROOT, FIXTURE_FILES),
+		watcher: new FakeWatcher(),
 		jobs,
 		sessions,
+		streams,
 		events,
 		scopes,
+		masker,
 	});
 	const mockWindow = createMockWindow();
 	const requests: Record<string, AnyRequestHandler> = {

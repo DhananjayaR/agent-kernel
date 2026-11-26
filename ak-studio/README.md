@@ -32,7 +32,7 @@ pnpm lint        # Biome (warnings fail) and its self-test, check-palette, check
 pnpm typecheck   # tsc -b over all members
 pnpm test        # every member's unit tests (Vitest), the tools' own tests and the generator test
 pnpm new:feature <name>                       # a feature folder in the renderer, listed in app/features.ts
-pnpm new:operation <feature> <name> --shape query|command|job [--desktop]   # an operation, end to end
+pnpm new:operation <feature> <name> --shape query|command|job [--desktop] [--project]   # an operation, end to end
 pnpm new:component <name> [--group <group>]   # a packages/ui component, its stories and its export
 pnpm test:generators      # run the three generators in a temporary copy and check the copy (part of pnpm test)
 pnpm check-palette        # no default-palette class, arbitrary value or colour literal in apps/renderer, packages/ui
@@ -111,6 +111,11 @@ from one, so the skeleton is never hand-written and passes every check as genera
 refuses to overwrite anything, and a refused run writes nothing. It then runs Biome (`check --write`) on what it
 wrote, which sorts the imports and exports it added.
 
+Writing is all or nothing: each file goes to a temporary file and is renamed into place, and if a write or the
+Biome step fails, every edited file gets its original text back and every created file and folder is removed. Edit
+points are found by structure (`register` must be the service's last member; a case goes at the end of the
+service test's `describe`); one that is missing or ambiguous is refused, never guessed.
+
 - `pnpm new:feature release-notes` creates `apps/renderer/src/features/release-notes/`: `manifest.ts` (id, a route
   at `/release-notes`, no commands, no capabilities; no tab: add one by hand with its `order`) and
   `manifest.test.tsx`; `strings.ts` (the title, "Release notes"); `api/keys.ts` (`keys("release-notes")`);
@@ -124,16 +129,24 @@ wrote, which sorts the imports and exports it added.
     does not survive quit) in `packages/contract/src/release-notes.ts`, created and exported from the contract's
     index on the feature's first operation, and its entry in the `operations` map;
   - its handler, a method of `ReleaseNotesService` in `packages/runtime/src/release-notes/`, with a test through
-    a real `ServiceRegistry`. A job's method is its runner, given to `JobService` with `jobs.define`. The service
-    is created on the first operation and listed in `packages/runtime/src/features.ts`, which `registerServices`
-    and the mock transport both register, so the browser serves what the app serves;
+    a real `ServiceRegistry`. The service takes its dependencies in its constructor (`FeatureDeps`: the ports
+    `commandRunner`, `projectFs` and `watcher`, optional until P2, and the core services `jobs`, `sessions`,
+    `streams`, `events`, `scopes`, `masker`). A job's method is its runner, given to `JobService` with
+    `jobs.define`. The service is created on the first operation and its factory, `(deps) => new
+    ReleaseNotesService(deps)`, listed in `packages/runtime/src/features.ts`, which `registerServices` (real
+    services; the ports from P2) and the mock transport (the ports' fakes) both register, so the browser serves
+    what the app serves;
   - its hook, `useReleaseNotesSaveSummary`, in the feature's `api/`, with a test against the mock transport: a
     command's uses `useStudioMutation`, a job's `useStartJob`, and a query's `useStudioQuery` with its own app-level
     key (`releaseNotesKeys.app("readSummary")`, `["release-notes", "readSummary"]`).
+  - `--project` makes it project-scoped: the input is `{ projectId }`, `errors` lists `project.notOpen`, the
+    handler calls `scopes.require(projectId)` (for a job, JobService checks), and a query's hook takes the
+    project's id and keys by `releaseNotesKeys.detail(projectId, "readSummary")`.
   - `--desktop`, for a query or command whose handler needs Node or Electron, puts the handler in
-    `apps/desktop/src/main/services/ReleaseNotesService.ts` instead, registered in `registerServices.ts`, and the
-    mock answers it from a fixture in `apps/renderer/src/shared/bridge/desktopFixtures.ts`. A job is never
-    desktop-only: its runner reaches Node through the runtime's ports.
+    `apps/desktop/src/main/services/ReleaseNotesService.ts` instead (constructed with the same `FeatureDeps`),
+    registered in `registerServices.ts`, and the mock answers it from a fixture in
+    `apps/renderer/src/shared/bridge/desktopFixtures.ts`. A job is never desktop-only: its runner reaches Node
+    through the ports in its runtime service's deps.
 - `pnpm new:component status-line` adds `StatusLine` and `StatusLineProps` (`packages/ui/src/components/status-line.tsx`)
   with its stories (`Display/Status line`; `--group` picks Controls, Display, Overlays, Structure or Patterns) and
   exports both from `packages/ui/src/index.ts`. A new story has no visual baseline: run `pnpm test:visual` and
@@ -144,9 +157,11 @@ feature's contract file and added to `sessionKinds`, and an app command with `de
 
 `pnpm test:generators` copies the workspace into a temporary folder (the files git sees, with `node_modules`
 linked so `@ak-studio/*` resolves inside the copy), checks the refusals leave the copy unchanged, runs all three
-generators (a feature, a query, a command, a job, a desktop-only query and a component), then runs Biome,
+generators (a feature, a query, a command, a job, desktop-only and project-scoped operations, and a component),
+checks appends to hand-edited files, edit points it must refuse, a run through a symlinked path and a write that
+fails part way (the copy byte-identical after), then runs Biome,
 depcruise, check-stories, check-classes, `tsc -b` and the contract, runtime, desktop and renderer tests in the
-copy, and deletes it. About 11 s.
+copy, and deletes it. About 15 s.
 
 **Design system** (values decided at the P1a design gate, 25 November 2026). `packages/ui/src/theme.css` is the
 Tailwind 4 entry: the default palette is removed (`--color-*: initial`) and only the Studio's colour tokens exist,

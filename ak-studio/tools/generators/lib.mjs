@@ -1,11 +1,22 @@
 // What the three generators share (`pnpm new:feature`, `pnpm new:operation`, `pnpm new:component`): the name
 // checks, the names derived from a kebab-case name, and the plan of files to create and edit. A plan is checked
 // whole before anything is written, so a refused run (a bad name, a file that already exists, an edit point that
-// is missing) leaves the tree as it was. After writing, the touched files go through the workspace's Biome
-// (`biome check --write`), which sorts the imports and exports the edits added.
+// is missing) leaves the tree as it was. Writing is all or nothing: each file goes to a temporary file beside it and
+// is renamed into place, then the touched files go through the workspace's Biome (`biome check --write`), which
+// sorts the imports and exports the edits added. If any step fails, every edited file gets its original text back
+// and every created file and folder is removed.
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	realpathSync,
+	renameSync,
+	rmdirSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
+import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /** The ak-studio/ workspace the generators write into (the one this file is in). */
@@ -17,6 +28,8 @@ export class GeneratorError extends Error {}
 /** Feature ids, operation names and component names: lower-case words joined by hyphens (feature.ts's FEATURE_ID). */
 export const KEBAB = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 const MAX_NAME = 40;
+/** Names Windows reserves for devices: a folder or file with one cannot be created there. */
+const WINDOWS_DEVICE = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/;
 
 /**
  * Checks a name given on the command line: a kebab-case name, never a path. Refuses separators, `..`, a leading
@@ -36,6 +49,10 @@ export function checkName(what, name) {
 	if (name.length > MAX_NAME)
 		throw new GeneratorError(
 			`${JSON.stringify(name)} is longer than ${MAX_NAME} characters`,
+		);
+	if (WINDOWS_DEVICE.test(name))
+		throw new GeneratorError(
+			`${JSON.stringify(name)} is a device name on Windows, where no file or folder can have it: choose another name`,
 		);
 	return name;
 }
@@ -113,8 +130,13 @@ export class Plan {
 		this.dirs = new Set();
 	}
 
+	/** The absolute path of a workspace path; throws (a generator bug) for one that would leave the workspace. */
 	abs(path) {
-		return join(this.root, path);
+		const root = resolve(this.root);
+		const full = resolve(root, path);
+		if (!full.startsWith(root + sep))
+			throw new Error(`${path} is outside the workspace (a generator bug)`);
+		return full;
 	}
 
 	exists(path) {
@@ -151,16 +173,53 @@ export class Plan {
 		this.files.set(path, after);
 	}
 
-	/** Writes every planned file, then formats them with the workspace's Biome. Answers the paths written. */
+	/**
+	 * Writes every planned file (to a temporary file beside it, then renamed into place), then formats them with the
+	 * workspace's Biome. All or nothing: if a write, a rename or Biome fails, the edited files get their original
+	 * text back, the created files and the folders made for them are removed, and the error is thrown again.
+	 * Answers the paths written.
+	 */
 	write() {
-		for (const dir of this.dirs) mkdirSync(this.abs(dir), { recursive: true });
-		for (const [path, text] of this.files) {
-			mkdirSync(dirname(this.abs(path)), { recursive: true });
-			writeFileSync(this.abs(path), text, "utf8");
+		const originals = new Map();
+		const written = [];
+		const madeDirs = [];
+		const tmp = (path) => `${this.abs(path)}.new-${process.pid}`;
+		const makeDir = (dir) => {
+			const missing = [];
+			for (let d = dir; !existsSync(d); d = dirname(d)) missing.unshift(d);
+			mkdirSync(dir, { recursive: true });
+			madeDirs.push(...missing);
+		};
+		try {
+			for (const dir of this.dirs) makeDir(this.abs(dir));
+			for (const [path, text] of this.files) {
+				if (!this.created.has(path))
+					originals.set(path, readFileSync(this.abs(path), "utf8"));
+				makeDir(dirname(this.abs(path)));
+				written.push(path);
+				writeFileSync(tmp(path), text, "utf8");
+				renameSync(tmp(path), this.abs(path));
+			}
+			const paths = [...this.files.keys()];
+			formatWithBiome(this.root, paths);
+			return paths;
+		} catch (err) {
+			for (const path of written) {
+				rmSync(tmp(path), { force: true });
+				if (originals.has(path))
+					writeFileSync(this.abs(path), originals.get(path), "utf8");
+				else rmSync(this.abs(path), { force: true });
+			}
+			for (const dir of madeDirs.reverse())
+				try {
+					rmdirSync(dir);
+				} catch {
+					// Not empty (something else was put there meanwhile): keep it.
+				}
+			throw new GeneratorError(
+				`writing failed, so nothing was changed (every file is as it was): ${err instanceof Error ? err.message : String(err)}`,
+			);
 		}
-		const paths = [...this.files.keys()];
-		formatWithBiome(this.root, paths);
-		return paths;
 	}
 }
 
@@ -176,7 +235,7 @@ function formatWithBiome(root, paths) {
 	} catch (err) {
 		const out = `${err.stdout ?? ""}${err.stderr ?? ""}`;
 		throw new Error(
-			`the files were written, but Biome reports problems it could not fix (a generator bug):\n${out}`,
+			`Biome reports problems in the generated or edited files that it could not fix (a hand edit the generator does not expect, or a generator bug):\n${out}`,
 		);
 	}
 }
@@ -288,9 +347,15 @@ export function runCli(main) {
 	}
 }
 
-/** True when the module at `url` is the script node was started with (not imported by a test). */
+/**
+ * True when the module at `url` is the script node was started with (not imported by a test). Both sides are
+ * compared as real paths: node runs a script by its real path, so through a symlinked folder `argv[1]` differs.
+ */
 export function isMain(url) {
-	return (
-		Boolean(process.argv[1]) && resolve(process.argv[1]) === fileURLToPath(url)
-	);
+	if (!process.argv[1]) return false;
+	try {
+		return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(url));
+	} catch {
+		return false;
+	}
 }
