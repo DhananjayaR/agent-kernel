@@ -407,22 +407,33 @@ export function planOperation(plan, featureName, operationName, options) {
 	return { op, ident, hookName, service };
 }
 
-/** Lists the job kind `op` in a feature manifest's `jobs`, adding the field after the id when there is none. */
+/**
+ * Lists the job kind `op` in a feature manifest's `jobs`, adding the field after the id when there is none. The
+ * list may be on one line or wrapped by Biome over several, with a trailing comma; it is written back on one line
+ * and Biome formats it again when the plan is written. A `jobs` that is not an array of string literals (a constant,
+ * a spread) is refused: the kind is added by hand.
+ */
 export function addJobKind(text, op) {
-	const list = text.match(/^(\tjobs: \[)([^\]]*)\],$/m);
-	if (list) {
-		const kinds =
-			list[2].trim() === "" ? [] : list[2].split(",").map((k) => k.trim());
+	const byHand = (why) =>
+		new GeneratorError(
+			`the feature's manifest.ts ${why}. Add "${op}" to its \`jobs\` by hand.`,
+		);
+	if (/^\tjobs:/m.test(text)) {
+		const list = text.match(/^\tjobs: \[([^\]]*)\],$/m);
+		if (!list) throw byHand("has a `jobs` that is not an array literal");
+		const kinds = list[1]
+			.split(",")
+			.map((kind) => kind.trim())
+			.filter((kind) => kind !== "");
+		if (!kinds.every((kind) => /^"[^"]+"$/.test(kind)))
+			throw byHand("lists a job kind that is not a string literal");
 		return text.replace(
 			list[0],
-			`${list[1]}${[...kinds, `"${op}"`].join(", ")}],`,
+			`\tjobs: [${[...kinds, `"${op}"`].join(", ")}],`,
 		);
 	}
 	const id = text.match(/^\tid: "[^"]+",$/m);
-	if (!id)
-		throw new GeneratorError(
-			"the feature's manifest.ts has no `id` line to add `jobs` after. Add the job kind to its `jobs` by hand.",
-		);
+	if (!id) throw byHand("has no `id` line to add `jobs` after");
 	return text.replace(id[0], `${id[0]}\n\tjobs: ["${op}"],`);
 }
 

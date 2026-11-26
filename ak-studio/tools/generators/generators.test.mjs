@@ -30,6 +30,7 @@ import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { addJobKind } from "./new-operation.mjs";
 
 const STUDIO = fileURLToPath(new URL("../../", import.meta.url));
 const MEMBERS = ["apps", "packages"];
@@ -203,6 +204,40 @@ beforeAll(() => {
 
 afterAll(() => {
 	if (parent) rmSync(parent, { recursive: true, force: true });
+});
+
+describe("addJobKind (new:operation's edit of a feature manifest)", () => {
+	const manifest = (jobs) =>
+		`export const aFeature = defineFeature({\n\tid: "a",\n${jobs}\tcommands: [],\n});\n`;
+
+	it("adds the field after the id, appends to one line, and to a list Biome wrapped with a trailing comma", () => {
+		expect(addJobKind(manifest(""), "a.one")).toContain(
+			'\tid: "a",\n\tjobs: ["a.one"],\n',
+		);
+		expect(addJobKind(manifest('\tjobs: ["a.one"],\n'), "a.two")).toContain(
+			'\tjobs: ["a.one", "a.two"],\n',
+		);
+		const wrapped = manifest(
+			'\tjobs: [\n\t\t"a.one",\n\t\t"a.two",\n\t\t"a.three",\n\t],\n',
+		);
+		expect(addJobKind(wrapped, "a.four")).toContain(
+			'\tjobs: ["a.one", "a.two", "a.three", "a.four"],\n',
+		);
+		expect(addJobKind(manifest("\tjobs: [],\n"), "a.one")).toContain(
+			'\tjobs: ["a.one"],\n',
+		);
+	});
+
+	it("refuses a jobs that is not an array of string literals, rather than adding a second key", () => {
+		for (const jobs of [
+			"\tjobs: KINDS,\n",
+			"\tjobs: [...KINDS],\n",
+			'\tjobs: [...KINDS, "a.one"],\n',
+		])
+			expect(() => addJobKind(manifest(jobs), "a.two")).toThrow(
+				/Add "a\.two" to its `jobs` by hand/,
+			);
+	});
 });
 
 describe("the generators, run in a copy of the workspace", () => {
@@ -664,6 +699,15 @@ describe("the generators, run in a copy of the workspace", () => {
 			);
 		}
 		generated("new-operation", FEATURE, "archive-notes", "--shape", "job");
+		// Three kinds are wrapped by Biome over several lines with a trailing comma; a fourth joins that list.
+		const manifestPath = join(copy, FEATURE_DIR, "manifest.ts");
+		expect(readFileSync(manifestPath, "utf8")).toMatch(
+			/^\tjobs: \[\n(\t\t"release-notes\.\w+",\n){3}\t\],$/m,
+		);
+		generated("new-operation", FEATURE, "export-notes", "--shape", "job");
+		expect(readFileSync(manifestPath, "utf8")).toMatch(
+			/^\tjobs: \[\n\t\t"release-notes\.publishNotes",\n\t\t"release-notes\.rebuildIndex",\n\t\t"release-notes\.archiveNotes",\n\t\t"release-notes\.exportNotes",\n\t\],$/m,
+		);
 		generated("new-operation", FEATURE, "read-word-count", "--shape", "query");
 		generated(
 			"new-operation",

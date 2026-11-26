@@ -248,6 +248,12 @@ describe("Job ownership and show commands", () => {
 		expect(feature("a", { show: "a.show", commands: [show] }).show).toBe(
 			"a.show",
 		);
+		// A manifest not made by defineFeature is checked by the registry as well.
+		expect(() =>
+			buildRegistry([
+				{ id: "a", commands: [], capabilities: [], show: "a.show" },
+			]),
+		).toThrow(/show command a\.show is not one of its commands/);
 	});
 });
 

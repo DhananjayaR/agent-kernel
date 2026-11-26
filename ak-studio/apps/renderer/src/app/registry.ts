@@ -100,7 +100,14 @@ export function buildRegistry(
 				);
 			jobOwners.set(kind, manifest.id);
 		}
-		if (manifest.show !== undefined) shows.set(manifest.id, manifest.show);
+		if (manifest.show !== undefined) {
+			// defineFeature checks this too; a manifest built another way is checked here.
+			if (!manifest.commands.some((command) => command.id === manifest.show))
+				throw new Error(
+					`feature ${manifest.id}'s show command ${manifest.show} is not one of its commands`,
+				);
+			shows.set(manifest.id, manifest.show);
+		}
 	}
 	tabs.sort((a, b) => a.order - b.order);
 	const defaultTab = tabs[0];
