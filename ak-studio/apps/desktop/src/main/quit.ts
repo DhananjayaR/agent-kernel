@@ -2,10 +2,12 @@
 // gate to Electron's `before-quit` and to closing the last window, and `confirmUnload` to `will-prevent-unload`,
 // with native dialogs behind the injected `ask`. No Electron import, so both are tested without it.
 //
-// The rule: with nothing running, quit at once. Jobs that can be cancelled (and every queued job): ask, then
-// cancel them. A started job that survives quit (`terraform apply`): ask with Wait as the default and a warned
+// The rule: with nothing running and nothing unsaved, quit at once. Unsaved work the renderer reported
+// (`app.setUnsaved`): ask first, before anything is cancelled. Jobs that can be cancelled (and every queued job):
+// ask, then cancel them. A started job that survives quit (`terraform apply`): ask with Wait as the default and a warned
 // Quit anyway. Sessions alone are stopped without asking. Cancelling and stopping get 5 seconds in all; the app
-// then quits whatever is left (logged), and a job left behind shows as interrupted on the next launch.
+// then quits whatever is left (logged), and a job left behind shows as interrupted on the next launch. A quit
+// the gate allowed that has not happened 5 seconds later is withdrawn, so a later quit is asked afresh.
 import type { Job, Session } from "@ak-studio/contract";
 import type { Log, QuitPlan } from "@ak-studio/runtime";
 import { dialogStrings } from "./strings";
@@ -34,6 +36,8 @@ export interface QuitGateOptions {
 		cancelAll(jobs: readonly Pick<Job, "id">[]): Promise<void>;
 	};
 	sessions: { list(): Session[]; stopAll(): Promise<void> };
+	/** What the renderer last reported as unsaved (`app.setUnsaved`), as labels. */
+	unsaved(): readonly string[];
 	/** Shows a dialog and answers the index of the button chosen. */
 	ask(dialog: PromptDialog): Promise<number>;
 	/** Quits for real (Electron's `app.quit()`), once the gate allows it; that quit passes `request()`. */
@@ -50,6 +54,18 @@ const defaultSetTimer: SetTimer = (fn, ms) => {
 
 const liveSessions = (sessions: readonly Session[]) =>
 	sessions.filter((s) => s.state !== "stopped" && s.state !== "failed");
+
+export function quitUnsavedDialog(items: readonly string[]): PromptDialog {
+	const s = dialogStrings.quitUnsaved;
+	return {
+		type: "warning",
+		message: s.message,
+		detail: s.detail(items),
+		buttons: [s.quit, s.stay],
+		defaultId: 1,
+		cancelId: 1,
+	};
+}
 
 export function cancelJobsDialog(plan: QuitPlan): PromptDialog {
 	const s = dialogStrings.cancelJobs;
@@ -87,24 +103,38 @@ export function finishJobsDialog(plan: QuitPlan): PromptDialog {
 export class QuitGate {
 	readonly #jobs: QuitGateOptions["jobs"];
 	readonly #sessions: QuitGateOptions["sessions"];
+	readonly #unsaved: () => readonly string[];
 	readonly #ask: QuitGateOptions["ask"];
 	readonly #quit: () => void;
 	readonly #log: Log;
 	readonly #setTimer: SetTimer;
 	#state: "idle" | "busy" | "allowed" = "idle";
+	/** Set while allowed: the person chose "Quit without saving" in this quit. */
+	#unsavedConfirmed = false;
+	/** Withdraws an allowance that was not used in time. */
+	#cancelAllowance: () => void = () => {};
 
 	constructor(options: QuitGateOptions) {
 		this.#jobs = options.jobs;
 		this.#sessions = options.sessions;
+		this.#unsaved = options.unsaved;
 		this.#ask = options.ask;
 		this.#quit = options.quit;
 		this.#log = options.log;
 		this.#setTimer = options.setTimer ?? defaultSetTimer;
 	}
 
-	/** Whether a quit has been allowed (and not aborted since). */
+	/** Whether a quit has been allowed (and not aborted or withdrawn since). */
 	get allowed(): boolean {
 		return this.#state === "allowed";
+	}
+
+	/**
+	 * Whether this allowed quit was confirmed as "Quit without saving": the window's `beforeunload` that follows
+	 * then passes without asking again (index.ts, `will-prevent-unload`).
+	 */
+	get unsavedConfirmed(): boolean {
+		return this.#state === "allowed" && this.#unsavedConfirmed;
 	}
 
 	/** A quit attempt: true lets it go on now; false means stop it (the gate quits later if it may). */
@@ -115,9 +145,10 @@ export class QuitGate {
 		if (
 			plan.toCancel.length === 0 &&
 			plan.blocking.length === 0 &&
-			liveSessions(this.#sessions.list()).length === 0
+			liveSessions(this.#sessions.list()).length === 0 &&
+			this.#unsaved().length === 0
 		) {
-			this.#state = "allowed";
+			this.#allow(false);
 			return true;
 		}
 		this.#state = "busy";
@@ -127,18 +158,45 @@ export class QuitGate {
 
 	/** A quit the gate allowed did not happen (a window chose to stay open): the next quit is decided afresh. */
 	aborted(): void {
-		if (this.#state === "allowed") this.#state = "idle";
+		if (this.#state === "allowed") this.#withdraw();
+	}
+
+	/**
+	 * Allows the quit. If the app is still running QUIT_WAIT_MS later (a window's unload stalled, or the quit was
+	 * stopped some other way), the allowance is withdrawn, so a later quit is decided afresh.
+	 */
+	#allow(unsavedConfirmed: boolean): void {
+		this.#cancelAllowance();
+		this.#state = "allowed";
+		this.#unsavedConfirmed = unsavedConfirmed;
+		this.#cancelAllowance = this.#setTimer(() => {
+			if (this.#state === "allowed") this.#withdraw();
+		}, QUIT_WAIT_MS);
+	}
+
+	#withdraw(): void {
+		this.#cancelAllowance();
+		this.#cancelAllowance = () => {};
+		this.#state = "idle";
+		this.#unsavedConfirmed = false;
 	}
 
 	async #decide(): Promise<void> {
 		try {
-			// Asked afresh after each answer: a job can start, or a queued one turn into one that must finish, while
-			// a dialog is open, and it must not be cancelled without its own question.
+			// Asked afresh after each answer: a job can start, or a queued one turn into one that must finish, or
+			// something new become unsaved, while a dialog is open, and it must not be lost without its own question.
+			// Unsaved work is asked about first, before anything is cancelled.
 			let cancelConfirmed = false;
 			let overrideConfirmed = false;
+			const unsavedConfirmed = new Set<string>();
 			for (;;) {
+				const unsaved = this.#unsaved();
 				const plan = this.#jobs.quitPlan();
-				if (plan.blocking.length > 0 && !overrideConfirmed) {
+				if (unsaved.some((item) => !unsavedConfirmed.has(item))) {
+					const choice = await this.#ask(quitUnsavedDialog(unsaved));
+					if (choice !== 0) return this.#stayOpen();
+					for (const item of unsaved) unsavedConfirmed.add(item);
+				} else if (plan.blocking.length > 0 && !overrideConfirmed) {
 					const choice = await this.#ask(finishJobsDialog(plan));
 					if (choice !== 1) return this.#stayOpen();
 					overrideConfirmed = true;
@@ -152,13 +210,13 @@ export class QuitGate {
 				}
 			}
 			await this.#shutDown();
+			this.#allow(unsavedConfirmed.size > 0);
 		} catch (err) {
 			this.#log(
 				`the quit dialog failed, so the app stays open: ${describe(err)}`,
 			);
 			return this.#stayOpen();
 		}
-		this.#state = "allowed";
 		this.#quit();
 	}
 
@@ -169,6 +227,13 @@ export class QuitGate {
 	/** Cancels every job and stops every session, waiting QUIT_WAIT_MS at most; logs what was left. */
 	async #shutDown(): Promise<void> {
 		const plan = this.#jobs.quitPlan();
+		// Only unsaved work was asked about: nothing to wait for.
+		if (
+			plan.toCancel.length === 0 &&
+			plan.blocking.length === 0 &&
+			liveSessions(this.#sessions.list()).length === 0
+		)
+			return;
 		// Each failure is logged as it happens; one failing does not cut the other's wait short.
 		const settled = (what: string, run: () => Promise<void>) =>
 			new Promise<void>((resolve) => resolve(run())).catch((err: unknown) => {

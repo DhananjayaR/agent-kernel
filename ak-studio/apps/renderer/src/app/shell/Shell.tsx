@@ -30,18 +30,16 @@ import {
 	ToastRegion,
 	WindowControls,
 } from "@ak-studio/ui";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
 import { getTransport, isStudioFailure } from "../../shared/bridge/client";
 import {
-	appInfoQueryKey,
 	cacheStoredLayout,
 	cacheStoredTheme,
-	fetchAppInfo,
-	storeLayout,
-	storeTheme,
+	useAppInfo,
 } from "../../shared/queries";
+import { useStudioMutation } from "../../shared/query/hooks";
 import { useWindowMaximized } from "../useWindowMaximized";
 import { tabFromPath } from "./routes";
 import { shellStrings } from "./strings";
@@ -67,7 +65,7 @@ function describeError(error: unknown): string {
 
 /** The root route. Waits for `app.info` (the stored layout sizes the panels when they mount). */
 export function Shell() {
-	const info = useQuery({ queryKey: appInfoQueryKey, queryFn: fetchAppInfo });
+	const info = useAppInfo();
 	// Under 300 ms in practice (a local call): no indicator, the themed page shows meanwhile.
 	if (info.isPending) return null;
 	return <LoadedShell info={info.data} error={info.error} />;
@@ -92,8 +90,7 @@ function LoadedShell({
 	const [settingsOpen, setSettingsOpen] = useState(false);
 	const [toasts] = useState(createToastQueue);
 
-	const saveLayout = useMutation({
-		mutationFn: storeLayout,
+	const saveLayout = useStudioMutation("app.setLayout", {
 		onSuccess: (stored) => cacheStoredLayout(queryClient, stored),
 		// Saved in the background as the person works: a failure is a background notice, not a blocking error.
 		onError: () =>
@@ -103,15 +100,14 @@ function LoadedShell({
 				description: shellStrings.layoutNotSaved.description,
 			}),
 	});
-	const saveTheme = useMutation({
-		mutationFn: storeTheme,
+	const saveTheme = useStudioMutation("app.setTheme", {
 		onSuccess: (stored) => cacheStoredTheme(queryClient, stored),
 	});
 
 	const rememberPanel = (bottomPanel: BottomPanelLayout) => {
 		const next = { bottomPanel };
 		setLayout(next);
-		saveLayout.mutate(next);
+		saveLayout.mutate({ layout: next });
 	};
 
 	const theme: ThemePreference = info?.theme ?? "system";
@@ -197,7 +193,7 @@ function LoadedShell({
 				isOpen={settingsOpen}
 				onOpenChange={setSettingsOpen}
 				theme={theme}
-				onThemeChange={(next) => saveTheme.mutate(next)}
+				onThemeChange={(next) => saveTheme.mutate({ theme: next })}
 				error={
 					saveTheme.isError
 						? {

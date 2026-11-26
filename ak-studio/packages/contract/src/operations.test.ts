@@ -5,6 +5,7 @@ import {
 	appInfo,
 	appSetLayout,
 	appSetTheme,
+	appSetUnsaved,
 	BOTTOM_PANEL_HEIGHT,
 	contract,
 	DEFAULT_SHELL_LAYOUT,
@@ -47,6 +48,7 @@ describe("the operations map", () => {
 			"app.info",
 			"app.setLayout",
 			"app.setTheme",
+			"app.setUnsaved",
 			"job.cancel",
 			"job.respond",
 			"jobs.dismissInterrupted",
@@ -119,6 +121,27 @@ describe("the operations map", () => {
 		});
 		expect(appSetTheme.input.safeParse({ theme: "Light" }).success).toBe(false);
 		expect(appSetTheme.input.safeParse({}).success).toBe(false);
+	});
+
+	it("declares app.setUnsaved over labels only, strict, answering nothing", () => {
+		expect(appSetUnsaved.shape).toBe("command");
+		expect(
+			appSetUnsaved.input.parse({ items: ["Config: session section"] }),
+		).toEqual({ items: ["Config: session section"] });
+		expect(appSetUnsaved.input.parse({ items: [] })).toEqual({ items: [] });
+		for (const bad of [
+			{},
+			{ items: "Config" },
+			{ items: [""] },
+			{ items: [1] },
+			{ items: [], extra: true },
+		]) {
+			expect(
+				appSetUnsaved.input.safeParse(bad).success,
+				JSON.stringify(bad),
+			).toBe(false);
+		}
+		expect(appSetUnsaved.output.parse({ stray: 1 })).toEqual({});
 	});
 
 	it("declares app.setLayout with a strict layout and bounded height", () => {

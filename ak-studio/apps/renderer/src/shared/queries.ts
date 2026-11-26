@@ -1,22 +1,21 @@
-// The renderer's queries against the bridge. Everything goes through `getTransport()`, so the same code runs on
-// IPC in the app and on the mock in a browser.
-import type {
-	OutputOf,
-	ShellLayout,
-	ThemePreference,
-} from "@ak-studio/contract";
-import { QueryClient } from "@tanstack/react-query";
-import { getTransport } from "./bridge/client";
+// The app-level data the shell and the root read and write: `app.info` (version, platform and the stored
+// preferences) under its key from the key factory, through the shared hooks, and the cache updates after a
+// preference is stored. The same code runs on IPC in the app and on the mock in a browser.
+import type { OutputOf, ThemePreference } from "@ak-studio/contract";
+import type { QueryClient } from "@tanstack/react-query";
+import { type StudioQueryResult, useStudioQuery } from "./query/hooks";
+import { keys } from "./query/keys";
 
-export const appInfoQueryKey = ["app.info"] as const;
+/** The `app` domain: app-level data that belongs to no project. */
+export const appKeys = keys("app");
 
-export const fetchAppInfo = () => getTransport().request("app.info", {});
+/** `app.info`'s key: the `app` domain itself, so a `domain.changed` for `app` refreshes it. */
+export const appInfoQueryKey = appKeys.all;
 
-export const storeTheme = (theme: ThemePreference) =>
-	getTransport().request("app.setTheme", { theme });
-
-export const storeLayout = (layout: ShellLayout) =>
-	getTransport().request("app.setLayout", { layout });
+/** The app's version, platform and stored preferences. */
+export function useAppInfo(): StudioQueryResult<"app.info"> {
+	return useStudioQuery("app.info", {}, { key: appInfoQueryKey });
+}
 
 /** The preference to apply for the current `app.info` result: the system's until (or unless) it arrives. */
 export function themeFromInfo(
@@ -43,11 +42,4 @@ export function cacheStoredLayout(
 	queryClient.setQueryData<OutputOf<"app.info">>(appInfoQueryKey, (old) =>
 		old ? { ...old, layout: stored.layout } : old,
 	);
-}
-
-export function createQueryClient(): QueryClient {
-	// A failed bridge call is a StudioFailure the page shows; retrying would only delay that.
-	return new QueryClient({
-		defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
-	});
 }

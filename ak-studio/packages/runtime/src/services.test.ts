@@ -1,5 +1,5 @@
 // The job and session operations served end to end: one ServiceRegistry with EventBus, StreamHub, JobService
-// and SessionService registered, as the desktop (Task 6) and the mock transport (Task 7) will wire them. Its
+// and SessionService registered, as the desktop (Task 6) and the mock transport (Task 7) wire them. Its
 // contract is the app's job and session operations and streams plus a test job kind and session kind (the app's
 // kind maps are empty in P1b). Every operation has a handler, the registry starts, and a job and a session run
 // through the registry with their `job.updated` and `session.updated` events parsed on the `events` stream.

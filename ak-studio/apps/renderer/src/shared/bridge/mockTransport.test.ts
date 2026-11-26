@@ -6,7 +6,11 @@ import {
 	StudioFailure,
 } from "@ak-studio/contract";
 import { describe, expect, it, vi } from "vitest";
-import { createMockTransport, MOCK_VERSION } from "./mockTransport";
+import {
+	createMockBackend,
+	createMockTransport,
+	MOCK_VERSION,
+} from "./mockTransport";
 
 async function errorOf(promise: Promise<unknown>) {
 	try {
@@ -115,11 +119,17 @@ describe("mockTransport", () => {
 			theme: "light",
 			layout: DEFAULT_SHELL_LAYOUT,
 		});
+		const log = vi.fn();
 		const broken = createMockTransport({
 			handlers: { "app.info": () => ({ version: 9 }) as never },
+			log,
 		});
 		expect((await errorOf(broken.request("app.info", {}))).code).toBe(
 			ERROR_CODES.invalidOutput,
+		);
+		// A broken output is a bug in a service: logged, as main logs it.
+		expect(log).toHaveBeenCalledWith(
+			expect.stringContaining("app.info failed with bridge.invalidOutput"),
 		);
 	});
 
@@ -130,6 +140,7 @@ describe("mockTransport", () => {
 					throw new Error("fixture broke");
 				},
 			},
+			log: vi.fn(),
 		});
 		expect(await errorOf(transport.request("app.info", {}))).toMatchObject({
 			code: ERROR_CODES.internal,
@@ -143,28 +154,133 @@ describe("mockTransport", () => {
 		expect(error.code).toBe(ERROR_CODES.unknownOperation);
 	});
 
-	// TEMPORARY (P1b Task 3): replaced in Task 7, when the mock runs the runtime's job, session and event services.
-	it("answers bridge.unavailable for the job, session and event operations until their services exist", async () => {
-		const transport = createMockTransport({ onStreamError: vi.fn() });
-		for (const call of [
-			transport.request("jobs.list", {}),
-			transport.request("job.cancel", { jobId: "j1" }),
-			transport.request("sessions.list", {}),
-		]) {
-			expect((await errorOf(call)).code).toBe(ERROR_CODES.unavailable);
-		}
-		const onStreamError = vi.fn();
-		const failing = createMockTransport({ onStreamError });
-		const onEvent = vi.fn();
-		failing.subscribe("events", {}, onEvent)();
-		failing.subscribe("stream.read", { streamId: "s1" }, onEvent)();
-		expect(onEvent).not.toHaveBeenCalled();
+	it("accepts app.setUnsaved and ignores it (a browser has no quit rule)", async () => {
+		const transport = createMockTransport();
+		await expect(
+			transport.request("app.setUnsaved", {
+				items: ["Config: session section"],
+			}),
+		).resolves.toEqual({});
+		const error = await errorOf(
+			transport.request("app.setUnsaved", {
+				items: [""],
+			}),
+		);
+		expect(error.code).toBe(ERROR_CODES.invalidInput);
+	});
+
+	it("serves the job and session operations from the runtime's services", async () => {
+		const transport = createMockTransport();
+		await expect(transport.request("jobs.list", {})).resolves.toEqual({
+			jobs: [],
+		});
+		await expect(transport.request("jobs.interrupted", {})).resolves.toEqual({
+			records: [],
+		});
+		await expect(transport.request("sessions.list", {})).resolves.toEqual({
+			sessions: [],
+		});
 		expect(
-			onStreamError.mock.calls.map(([name, error]) => [name, error.code]),
-		).toEqual([
-			["events", ERROR_CODES.unavailable],
-			["stream.read", ERROR_CODES.unavailable],
-		]);
+			(await errorOf(transport.request("job.cancel", { jobId: "j1" }))).code,
+		).toBe(ERROR_CODES.jobNotFound);
+		expect(
+			(await errorOf(transport.request("session.stop", { sessionId: "s1" })))
+				.code,
+		).toBe(ERROR_CODES.sessionNotFound);
+		expect(
+			(
+				await errorOf(
+					transport.request("session.start", { kind: "t.none", args: {} }),
+				)
+			).code,
+		).toBe(ERROR_CODES.sessionUnknownKind);
+	});
+
+	it("delivers what the services emit on events, parsed, until unsubscribed", () => {
+		const backend = createMockBackend();
+		const onEvent = vi.fn();
+		const stop = backend.transport.subscribe("events", {}, onEvent);
+		backend.events.emit({
+			type: "domain.changed",
+			domain: "config",
+			projectId: "p1",
+		});
+		stop();
+		backend.events.emit({ type: "domain.changed", domain: "config" });
+		expect(onEvent).toHaveBeenCalledExactlyOnceWith({
+			type: "domain.changed",
+			domain: "config",
+			projectId: "p1",
+		});
+	});
+
+	it("serves stream.read from StreamHub, batched and masked with the registry's masker", async () => {
+		vi.useFakeTimers();
+		try {
+			const backend = createMockBackend();
+			backend.masker.add("sk-secret-value");
+			const id = backend.streams.create();
+			backend.streams.write(id, "stdout", "one\nkey sk-secret-value\n");
+			backend.streams.end(id);
+			const batches: unknown[] = [];
+			backend.transport.subscribe("stream.read", { streamId: id }, (b) =>
+				batches.push(b),
+			);
+			expect(batches).toEqual([]);
+			await vi.advanceTimersByTimeAsync(100);
+			expect(batches).toMatchObject([
+				{
+					chunks: [{ text: "one" }, { text: "key ••••" }],
+					dropped: 0,
+					ended: true,
+				},
+			]);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("ends stream.read for an unknown stream with stream.notFound", () => {
+		const onStreamError = vi.fn();
+		const transport = createMockTransport({ onStreamError });
+		const onEvent = vi.fn();
+		transport.subscribe("stream.read", { streamId: "s1" }, onEvent)();
+		expect(onEvent).not.toHaveBeenCalled();
+		expect(onStreamError.mock.calls[0]?.[1]).toMatchObject({
+			code: ERROR_CODES.streamNotFound,
+		});
+	});
+
+	it("never throws back into the services: a failing subscriber is logged, and the stream goes on", async () => {
+		vi.useFakeTimers();
+		try {
+			const log = vi.fn();
+			const backend = createMockBackend({ log });
+			const seen: string[] = [];
+			backend.transport.subscribe("events", {}, (event) => {
+				seen.push(event.type);
+				throw new Error("view broke");
+			});
+			expect(() =>
+				backend.events.emit({ type: "domain.changed", domain: "config" }),
+			).not.toThrow();
+			const id = backend.streams.create();
+			backend.transport.subscribe("stream.read", { streamId: id }, () => {
+				throw new Error("view broke");
+			});
+			backend.streams.write(id, "stdout", "a\n");
+			await vi.advanceTimersByTimeAsync(100);
+			backend.events.emit({ type: "domain.changed", domain: "graph" });
+			expect(seen).toEqual(["domain.changed", "domain.changed"]);
+			expect(log).toHaveBeenCalledWith(
+				expect.stringContaining("events: a subscriber failed: view broke"),
+			);
+			expect(log).toHaveBeenCalledWith(
+				expect.stringContaining("stream.read: a subscriber failed: view broke"),
+			);
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 
 	it("waits latencyMs before answering", async () => {

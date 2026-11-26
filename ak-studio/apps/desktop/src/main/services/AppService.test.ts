@@ -271,6 +271,41 @@ describe("AppService", () => {
 		expect(readPreferences(file).theme).toBe("light");
 	});
 
+	it("keeps the unsaved list the renderer reports, in memory only, for the quit rule", async () => {
+		const service = new AppService({
+			version: "1",
+			platform: "linux",
+			preferencesFile: file,
+		});
+		const registry = serve(service);
+		expect(service.unsaved).toEqual([]);
+		await expect(
+			registry.request("app.setUnsaved", {
+				items: ["Config: session section", "Rules: refunds"],
+			}),
+		).resolves.toEqual({ ok: true, value: {} });
+		expect(service.unsaved).toEqual([
+			"Config: session section",
+			"Rules: refunds",
+		]);
+		// Nothing is written: unsaved work is the window's state, not a preference.
+		expect(() => readFileSync(file, "utf8")).toThrow();
+		await registry.request("app.setUnsaved", { items: [] });
+		expect(service.unsaved).toEqual([]);
+		// Labels only, strict: content or an unknown key is refused and the list is kept.
+		service.setUnsaved(["Config: session section"]);
+		await expect(
+			registry.request("app.setUnsaved", {
+				items: ["Config"],
+				content: "x",
+			}),
+		).resolves.toMatchObject({
+			ok: false,
+			error: { code: ERROR_CODES.invalidInput },
+		});
+		expect(service.unsaved).toEqual(["Config: session section"]);
+	});
+
 	it("maps Node platforms onto the contract's", () => {
 		expect(toPlatform("linux")).toBe("linux");
 		expect(toPlatform("darwin")).toBe("darwin");

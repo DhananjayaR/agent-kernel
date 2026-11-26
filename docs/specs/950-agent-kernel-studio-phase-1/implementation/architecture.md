@@ -46,7 +46,7 @@ touches the project's files, processes and OAK environment.
 | `packages/ui` | React, shadcn/ui primitives, Tailwind | `contract`, `shared`, `features`, anything that fetches data |
 | `packages/contract` | zod | Anything with side effects; Node or Electron APIs |
 | `packages/runtime` | `contract`, zod | Node built-ins; `electron`; the renderer; `apps/desktop` |
-| `renderer/shared` | `contract`, `ui` | `features` |
+| `renderer/shared` | `contract`, `ui`; `runtime` in the mock transport only (`shared/bridge/`) | `features` |
 | `renderer/features/<a>` | `shared`, `ui`, `contract` | **Any other feature**; `electron`; Node built-ins |
 | `renderer/app` | Everything in the renderer | `electron`; Node built-ins |
 | `desktop/services` | `contract`, `runtime`, `desktop/infra` | The renderer; another service's internals (services talk through injected interfaces) |

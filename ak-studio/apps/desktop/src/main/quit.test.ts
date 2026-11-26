@@ -9,6 +9,7 @@ import {
 	QUIT_WAIT_MS,
 	QuitGate,
 	type QuitGateOptions,
+	type SetTimer,
 } from "./quit";
 
 const job = (id: string, title: string, extra: Partial<Job> = {}): Job => ({
@@ -40,11 +41,12 @@ function deferred<T = void>(): Deferred<T> {
 	return { promise, resolve };
 }
 
-/** A fake world: the plan and sessions the test sets, cancelAll and stopAll that the test finishes. */
-function setup() {
+/** A fake world: the plan, sessions and unsaved list the test sets, cancelAll and stopAll that the test finishes. */
+function setup(extra: Partial<QuitGateOptions> = {}) {
 	const world = {
 		plan: { toCancel: [], blocking: [] } as QuitPlan,
 		sessions: [] as Session[],
+		unsaved: [] as string[],
 	};
 	const cancelled = deferred();
 	const stopped = deferred();
@@ -69,7 +71,15 @@ function setup() {
 	});
 	const quit = vi.fn();
 	const log = vi.fn<Log>();
-	const options: QuitGateOptions = { jobs, sessions, ask, quit, log };
+	const options: QuitGateOptions = {
+		jobs,
+		sessions,
+		unsaved: () => [...world.unsaved],
+		ask,
+		quit,
+		log,
+		...extra,
+	};
 	const gate = new QuitGate(options);
 	/** Answers the newest dialog with the button labelled `label`. */
 	const answer = async (label: string) => {
@@ -171,7 +181,7 @@ describe("QuitGate: jobs to cancel", () => {
 		await flush();
 		expect(s.asked[0]).toMatchObject({
 			message: "Quit and cancel 1 job?",
-			detail: "These jobs will be cancelled:\n• Create project",
+			detail: "This job will be cancelled:\n• Create project",
 		});
 	});
 
@@ -280,7 +290,7 @@ describe("QuitGate: a job that must finish", () => {
 		expect(s.asked).toEqual([
 			{
 				type: "warning",
-				message: "Wait for 1 job to finish before quitting?",
+				message: "1 job must finish before the app can quit",
 				detail:
 					"Still running:\n• Apply changes\n\nQuit anyway stops it partway. That can damage what it was changing, such as a Terraform state file, and you may have to repair it by hand.",
 				buttons: ["Wait", "Quit anyway"],
@@ -309,7 +319,7 @@ describe("QuitGate: a job that must finish", () => {
 		s.gate.request();
 		await flush();
 		expect(s.asked[0]).toMatchObject({
-			message: "Wait for 2 jobs to finish before quitting?",
+			message: "2 jobs must finish before the app can quit",
 			detail:
 				"Still running:\n• Apply changes\n• Destroy deployment\n\nQuit anyway stops them partway. That can damage what they were changing, such as a Terraform state file, and you may have to repair it by hand.\n\nQuitting also cancels 1 other job.",
 		});
@@ -397,6 +407,175 @@ describe("QuitGate: re-entrancy", () => {
 		expect(s.gate.request()).toBe(false);
 		await flush();
 		expect(s.ask).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe("QuitGate: unsaved work, asked first", () => {
+	it("asks Quit without saving? naming the items, with Stay as the default, before any jobs question", async () => {
+		const s = setup();
+		s.world.unsaved = ["Config: session section", "Rules: refunds"];
+		s.world.plan.toCancel = [job("j1", "Create project")];
+		expect(s.gate.request()).toBe(false);
+		await flush();
+		expect(s.asked).toEqual([
+			{
+				type: "warning",
+				message: "Quit without saving?",
+				detail:
+					"Unsaved changes in:\n• Config: session section\n• Rules: refunds",
+				buttons: ["Quit without saving", "Stay"],
+				defaultId: 1,
+				cancelId: 1,
+			},
+		]);
+		await s.answer("Quit without saving");
+		// Only now the jobs question; nothing was cancelled before it.
+		expect(s.jobs.cancelAll).not.toHaveBeenCalled();
+		expect(s.asked[1]).toMatchObject({ message: "Quit and cancel 1 job?" });
+		await s.answer("Cancel jobs and quit");
+		s.cancelled.resolve();
+		s.stopped.resolve();
+		await flush();
+		expect(s.quit).toHaveBeenCalledTimes(1);
+		// The window's beforeunload that follows passes without a second question.
+		expect(s.gate.unsavedConfirmed).toBe(true);
+	});
+
+	it("Stay keeps everything: no jobs question, nothing cancelled, the app open, and the next quit asks again", async () => {
+		const s = setup();
+		s.world.unsaved = ["Config: session section"];
+		s.world.plan.toCancel = [job("j1", "Create project")];
+		s.world.sessions = [session("s1", "running")];
+		s.gate.request();
+		await flush();
+		await s.answer("Stay");
+		expect(s.ask).toHaveBeenCalledTimes(1);
+		expect(s.jobs.cancelAll).not.toHaveBeenCalled();
+		expect(s.sessions.stopAll).not.toHaveBeenCalled();
+		expect(s.quit).not.toHaveBeenCalled();
+		expect(s.gate.allowed).toBe(false);
+		expect(s.gate.unsavedConfirmed).toBe(false);
+		expect(s.gate.request()).toBe(false);
+		await flush();
+		expect(s.ask).toHaveBeenCalledTimes(2);
+		expect(s.asked[1]).toMatchObject({ message: "Quit without saving?" });
+	});
+
+	it("asks even when nothing is running, and quits at once on yes without waiting", async () => {
+		const s = setup();
+		s.world.unsaved = ["Config: session section"];
+		expect(s.gate.request()).toBe(false);
+		await flush();
+		await s.answer("Quit without saving");
+		expect(s.sessions.stopAll).not.toHaveBeenCalled();
+		expect(s.quit).toHaveBeenCalledTimes(1);
+		expect(s.gate.allowed).toBe(true);
+		expect(s.gate.unsavedConfirmed).toBe(true);
+	});
+
+	it("asks again if something new became unsaved while a jobs dialog was open", async () => {
+		const s = setup();
+		s.world.unsaved = ["Config: session section"];
+		s.world.plan.toCancel = [job("j1", "Create project")];
+		s.gate.request();
+		await flush();
+		await s.answer("Quit without saving");
+		s.world.unsaved = ["Config: session section", "Rules: refunds"];
+		await s.answer("Cancel jobs and quit");
+		expect(s.jobs.cancelAll).not.toHaveBeenCalled();
+		expect(s.asked[2]).toMatchObject({
+			message: "Quit without saving?",
+			detail:
+				"Unsaved changes in:\n• Config: session section\n• Rules: refunds",
+		});
+		await s.answer("Stay");
+		expect(s.jobs.cancelAll).not.toHaveBeenCalled();
+		expect(s.quit).not.toHaveBeenCalled();
+	});
+
+	it("is not confirmed for a quit that had nothing unsaved", () => {
+		const s = setup();
+		expect(s.gate.request()).toBe(true);
+		expect(s.gate.unsavedConfirmed).toBe(false);
+	});
+});
+
+describe("QuitGate: an allowance that is not used", () => {
+	it("is withdrawn once the 5-second bound passes without the app quitting, so a later quit asks again", async () => {
+		const s = setup();
+		expect(s.gate.request()).toBe(true);
+		await vi.advanceTimersByTimeAsync(QUIT_WAIT_MS - 1);
+		expect(s.gate.allowed).toBe(true);
+		await vi.advanceTimersByTimeAsync(1);
+		expect(s.gate.allowed).toBe(false);
+		s.world.plan.toCancel = [job("j1", "Create project")];
+		expect(s.gate.request()).toBe(false);
+		await flush();
+		expect(s.ask).toHaveBeenCalledTimes(1);
+	});
+
+	it("is withdrawn after a shutdown whose quit did not happen, with the unsaved confirmation", async () => {
+		const s = setup();
+		s.world.unsaved = ["Config: session section"];
+		s.world.plan.toCancel = [job("j1", "Create project")];
+		s.gate.request();
+		await flush();
+		await s.answer("Quit without saving");
+		await s.answer("Cancel jobs and quit");
+		s.cancelled.resolve();
+		s.stopped.resolve();
+		await flush();
+		expect(s.quit).toHaveBeenCalledTimes(1);
+		await vi.advanceTimersByTimeAsync(QUIT_WAIT_MS);
+		expect(s.gate.allowed).toBe(false);
+		expect(s.gate.unsavedConfirmed).toBe(false);
+		expect(s.gate.request()).toBe(false);
+		await flush();
+		expect(s.asked.at(-1)).toMatchObject({ message: "Quit without saving?" });
+	});
+
+	it("is withdrawn at once by a refused unload, and its timer is cancelled", () => {
+		const timers: Array<{ ms: number; cancelled: boolean }> = [];
+		const setTimer: SetTimer = (_fn, ms) => {
+			const timer = { ms, cancelled: false };
+			timers.push(timer);
+			return () => {
+				timer.cancelled = true;
+			};
+		};
+		const s = setup({ setTimer });
+		expect(s.gate.request()).toBe(true);
+		expect(timers).toEqual([{ ms: QUIT_WAIT_MS, cancelled: false }]);
+		s.gate.aborted();
+		expect(s.gate.allowed).toBe(false);
+		expect(timers).toEqual([{ ms: QUIT_WAIT_MS, cancelled: true }]);
+	});
+});
+
+describe("QuitGate: the 5-second bound's timer", () => {
+	it("uses the injected timer and cancels it when everything stopped in time", async () => {
+		const timers: Array<{ ms: number; cancelled: boolean }> = [];
+		const setTimer: SetTimer = (_fn, ms) => {
+			const timer = { ms, cancelled: false };
+			timers.push(timer);
+			return () => {
+				timer.cancelled = true;
+			};
+		};
+		const s = setup({ setTimer });
+		s.world.sessions = [session("s1", "running")];
+		s.gate.request();
+		await flush();
+		expect(timers).toEqual([{ ms: QUIT_WAIT_MS, cancelled: false }]);
+		s.stopped.resolve();
+		await flush();
+		expect(s.quit).toHaveBeenCalledTimes(1);
+		// The bound's timer is cancelled; the second is the allowance's, armed as the gate quits.
+		expect(timers).toEqual([
+			{ ms: QUIT_WAIT_MS, cancelled: true },
+			{ ms: QUIT_WAIT_MS, cancelled: false },
+		]);
+		expect(s.log).not.toHaveBeenCalled();
 	});
 });
 

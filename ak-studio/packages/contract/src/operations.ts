@@ -104,6 +104,17 @@ export const appSetLayout = command({
 	errors: [ERROR_CODES.preferencesNotSaved],
 });
 
+/**
+ * Tells main what is unsaved in the window, so the quit rule can ask about it before it asks about jobs (P1b
+ * ruling 11). Labels only, never content ("Config: session section"); the whole list each time, `[]` when
+ * nothing is unsaved.
+ */
+export const appSetUnsaved = command({
+	name: "app.setUnsaved",
+	input: z.strictObject({ items: z.array(z.string().min(1)) }),
+	output: z.object({}),
+});
+
 /** Minimises the window. Answers once it is asked; a missing window is not an error. */
 export const windowMinimize = command({
 	name: "window.minimize",
@@ -140,6 +151,7 @@ export const operations = {
 	"app.info": appInfo,
 	"app.setLayout": appSetLayout,
 	"app.setTheme": appSetTheme,
+	"app.setUnsaved": appSetUnsaved,
 	"job.cancel": jobCancel,
 	"job.respond": jobRespond,
 	"jobs.dismissInterrupted": jobsDismissInterrupted,

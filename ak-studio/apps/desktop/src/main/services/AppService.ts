@@ -1,5 +1,6 @@
 // AppService: the app's version, the platform, and the app preferences (the theme and the shell layout), stored
-// together in one file in the app's data folder.
+// together in one file in the app's data folder. It also holds what the renderer last reported as unsaved
+// (`app.setUnsaved`), in memory only, so the quit rule can ask about it before it asks about jobs.
 // No Electron import: index.ts passes the version, platform and file path in.
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
@@ -74,6 +75,7 @@ export class AppService implements Service {
 	readonly #file: string;
 	readonly #onThemeChange: ((theme: ThemePreference) => void) | undefined;
 	#prefs: Preferences;
+	#unsaved: readonly string[] = [];
 
 	constructor(options: AppServiceOptions) {
 		this.#version = options.version;
@@ -135,10 +137,25 @@ export class AppService implements Service {
 		return { layout };
 	}
 
+	/** What the renderer last reported as unsaved: labels such as "Config: session section". */
+	get unsaved(): readonly string[] {
+		return this.#unsaved;
+	}
+
+	/**
+	 * Replaces the unsaved list (the renderer sends the whole list each time). index.ts also clears it when the
+	 * page loads again, since a reloaded or crashed renderer has lost whatever it held.
+	 */
+	setUnsaved(items: readonly string[]): Record<string, never> {
+		this.#unsaved = Object.freeze([...items]);
+		return {};
+	}
+
 	register(registry: ServiceRegistry): void {
 		registry
 			.handle("app.info", () => this.info())
 			.handle("app.setLayout", ({ layout }) => this.setLayout(layout))
-			.handle("app.setTheme", ({ theme }) => this.setTheme(theme));
+			.handle("app.setTheme", ({ theme }) => this.setTheme(theme))
+			.handle("app.setUnsaved", ({ items }) => this.setUnsaved(items));
 	}
 }

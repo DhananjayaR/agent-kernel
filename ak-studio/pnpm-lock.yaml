@@ -229,6 +229,9 @@ importers:
       '@ak-studio/contract':
         specifier: workspace:*
         version: link:../../packages/contract
+      '@ak-studio/runtime':
+        specifier: workspace:*
+        version: link:../../packages/runtime
       '@ak-studio/ui':
         specifier: workspace:*
         version: link:../../packages/ui

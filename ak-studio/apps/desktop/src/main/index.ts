@@ -33,7 +33,7 @@ import {
 	resolveDevServerUrl,
 } from "./security";
 import { PREFERENCES_FILE } from "./services/AppService";
-import { registerServices } from "./services/registerServices";
+import { registerServices, type Services } from "./services/registerServices";
 import {
 	clampWindowState,
 	MIN_SIZE,
@@ -128,6 +128,8 @@ let mainWindow: BrowserWindow | null = null;
 const appContents = new WeakSet<WebContents>();
 /** Decides every quit (startBridge creates it); unset only if the bridge failed to start, and the app exits. */
 let quitGate: QuitGate | undefined;
+/** The registered services (startBridge creates them); the window clears the unsaved list when its page reloads. */
+let services: Services | undefined;
 
 /** The main process's log: the registry, the services and the quit rule report here (masked where it matters). */
 const log: Log = (message) => console.error(`[studio] ${message}`);
@@ -207,15 +209,22 @@ function createWindow(): BrowserWindow {
 		event.preventDefault();
 	});
 	// The renderer's beforeunload refused (unsaved changes, P1b Task 7): ask natively, so it works even when the
-	// renderer is busy. preventDefault is what lets the unload go on, and only works synchronously. Staying also
-	// cancels a quit in progress, so the next quit is decided afresh.
+	// renderer is busy. preventDefault is what lets the unload go on, and only works synchronously. A quit whose
+	// "Quit without saving" was already answered passes without a second question. Staying also cancels a quit in
+	// progress, so the next quit is decided afresh.
 	win.webContents.on("will-prevent-unload", (event) => {
-		const leave = confirmUnload((prompt) =>
-			dialog.showMessageBoxSync(win, { ...prompt, noLink: true }),
-		);
+		const leave =
+			quitGate?.unsavedConfirmed === true ||
+			confirmUnload((prompt) =>
+				dialog.showMessageBoxSync(win, { ...prompt, noLink: true }),
+			);
 		if (leave) event.preventDefault();
 		else quitGate?.aborted();
 	});
+	// A page that loads again (a reload) or a renderer that crashed has lost what it held unsaved: the quit rule
+	// must not ask about it. The renderer reports anew as the person edits.
+	win.webContents.on("did-navigate", () => services?.app.setUnsaved([]));
+	win.webContents.on("render-process-gone", () => services?.app.setUnsaved([]));
 	persistWindowState(win, stateFile);
 	const url = devServerUrl ?? APP_URL;
 	win.loadURL(url).catch((err: unknown) => {
@@ -232,7 +241,7 @@ function startBridge(): void {
 	// registerServices hands the registry's masker to the services, so errors and stream output share it, and
 	// the registry's log, so every service reports to the same place.
 	const registry = new ServiceRegistry({ log });
-	const services = registerServices(registry, {
+	const registered = registerServices(registry, {
 		window: () => mainWindow,
 		jobRecordsDir: join(app.getPath("userData"), JOB_RECORDS_FOLDER),
 		log,
@@ -246,16 +255,19 @@ function startBridge(): void {
 			},
 		},
 	});
-	nativeTheme.themeSource = services.app.theme;
+	services = registered;
+	nativeTheme.themeSource = registered.app.theme;
 	registry.start();
 	quitGate = new QuitGate({
-		jobs: services.jobs,
-		sessions: services.sessions,
+		jobs: registered.jobs,
+		sessions: registered.sessions,
+		// What the renderer last reported as unsaved: asked about before any job.
+		unsaved: () => registered.app.unsaved,
 		ask: askQuit,
 		// Once allowed, this quit passes before-quit (the gate answers true) and closes the window.
 		quit: () => app.quit(),
 		// Its lines can carry an exception's text: masked like the services' lines.
-		log: (message) => log(services.masker.mask(message)),
+		log: (message) => log(registered.masker.mask(message)),
 	});
 	new BridgeServer({
 		registry,

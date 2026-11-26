@@ -12,16 +12,25 @@ import {
 	appInfoQueryKey,
 	cacheStoredLayout,
 	cacheStoredTheme,
-	createQueryClient,
-	fetchAppInfo,
-	storeLayout,
-	storeTheme,
 	themeFromInfo,
 } from "./queries";
+import { createQueryClient } from "./query/client";
+import { requestStudio } from "./query/hooks";
+
+const fetchAppInfo = () => requestStudio("app.info", {});
+const storeTheme = (theme: "dark" | "light" | "system") =>
+	requestStudio("app.setTheme", { theme });
+const storeLayout = (layout: {
+	bottomPanel: { open: boolean; height: number };
+}) => requestStudio("app.setLayout", { layout });
 
 afterEach(() => setTransport(undefined));
 
 describe("app.info", () => {
+	it("is keyed by the app domain, so a domain event for app refreshes it", () => {
+		expect(appInfoQueryKey).toEqual(["app"]);
+	});
+
 	it("answers from the mock transport", async () => {
 		setTransport(createMockTransport());
 		expect(await fetchAppInfo()).toMatchObject({ theme: "system" });

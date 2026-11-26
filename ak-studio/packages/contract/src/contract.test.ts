@@ -222,6 +222,7 @@ describe("the contract's maps", () => {
 		for (const name of [
 			"app.setTheme",
 			"app.setLayout",
+			"app.setUnsaved",
 			"window.minimize",
 			"window.toggleMaximize",
 			"window.close",

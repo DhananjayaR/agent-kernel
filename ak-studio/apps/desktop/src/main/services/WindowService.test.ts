@@ -125,6 +125,7 @@ describe("WindowService", () => {
 			"app.info",
 			"app.setLayout",
 			"app.setTheme",
+			"app.setUnsaved",
 		]);
 	});
 });

@@ -1,32 +1,43 @@
-// The mock Transport, for the browser, tests and Storybook: answers from fixture handlers, with the same
-// contract checks as the main process (input parsed, output and stream events parsed and stripped, exceptions
-// turned into StudioErrors), so the renderer behaves the same against it as against the app.
+// The mock Transport, for the browser, tests and Storybook. It runs a real ServiceRegistry from
+// @ak-studio/runtime (pre-flight ruling 9), the same one the main process serves, so the renderer behaves the same
+// against it as against the app: the input parsed, the output and stream events parsed and stripped, exceptions
+// turned into StudioErrors, errors masked. Behind it: fixture handlers for `app.*` and `window.*`, and the
+// runtime's EventBus, StreamHub, JobService and SessionService over an in-memory JobRecordStore, sharing the
+// registry's masker.
 import {
 	type Contract,
 	contract,
 	DEFAULT_SHELL_LAYOUT,
-	ERROR_CODES,
 	type HandlerInputOf,
 	type HandlerResultOf,
 	type InputOf,
-	lookup,
+	type OperationMap,
 	type OperationName,
 	type Operations,
 	type OutputOf,
-	runOperation,
 	type ShellLayout,
 	type StreamEventOf,
 	type StreamHandlerEventOf,
 	type StreamHandlerInputOf,
 	type StreamInputOf,
+	type StreamMap,
 	type StreamName,
 	type Streams,
 	StudioFailure,
-	startStream,
 	type ThemePreference,
 	type Transport,
-	unknownOperationError,
 } from "@ak-studio/contract";
+import {
+	EventBus,
+	InMemoryJobRecordStore,
+	JobService,
+	type Log,
+	ProjectScopes,
+	type SecretMasker,
+	ServiceRegistry,
+	SessionService,
+	StreamHub,
+} from "@ak-studio/runtime";
 import { logStreamError, type StreamErrorHandler } from "./ipcTransport";
 
 export type MockHandlers = {
@@ -42,6 +53,12 @@ export type MockStreamHandlers = {
 	) => () => void;
 };
 
+/** The operations the mock answers from fixtures: the app's own and the window's. The services serve the rest. */
+export type MockFixtureName = Extract<
+	OperationName,
+	`app.${string}` | `window.${string}`
+>;
+
 /** The version the mock reports for `app.info`. */
 export const MOCK_VERSION = "0.0.0-mock";
 
@@ -56,27 +73,15 @@ export function createMockWindow(): MockWindow {
 }
 
 /**
- * TEMPORARY (P1b Task 3): the job, session and event operations have no fixture until the mock runs the runtime's
- * services (P1b Task 7, on Tasks 4 and 5). Until then each answers `bridge.unavailable`, as the app does.
- */
-function notYetServed(name: string): never {
-	throw new StudioFailure({
-		code: ERROR_CODES.unavailable,
-		message: "This part of the app is not available yet.",
-		detail: `${name} has no service until a later P1b task.`,
-	});
-}
-
-/**
  * Fixture answers: `app.info` reports the browser platform; `app.setTheme` and `app.setLayout` keep their values in
- * memory (a reload starts again from the defaults, as on a first run). The window requests act on `mockWindow`
- * (minimise and close do nothing in a browser).
+ * memory (a reload starts again from the defaults, as on a first run); `app.setUnsaved` is accepted and ignored (a
+ * browser has no quit rule). The window requests act on `mockWindow` (minimise and close do nothing in a browser).
  */
 export function defaultMockHandlers(
 	initialTheme: ThemePreference = "system",
 	initialLayout: ShellLayout = DEFAULT_SHELL_LAYOUT,
 	mockWindow: MockWindow = createMockWindow(),
-): MockHandlers {
+): Pick<MockHandlers, MockFixtureName> {
 	let theme = initialTheme;
 	let layout = initialLayout;
 	return {
@@ -94,6 +99,7 @@ export function defaultMockHandlers(
 			theme = input.theme;
 			return { theme };
 		},
+		"app.setUnsaved": () => ({}),
 		"window.close": () => ({}),
 		"window.minimize": () => ({}),
 		"window.toggleMaximize": () => {
@@ -102,22 +108,13 @@ export function defaultMockHandlers(
 				listener(mockWindow.maximized);
 			return { maximized: mockWindow.maximized };
 		},
-		// TEMPORARY (P1b Task 3), replaced in Task 7.
-		"job.cancel": () => notYetServed("job.cancel"),
-		"job.respond": () => notYetServed("job.respond"),
-		"jobs.dismissInterrupted": () => notYetServed("jobs.dismissInterrupted"),
-		"jobs.interrupted": () => notYetServed("jobs.interrupted"),
-		"jobs.list": () => notYetServed("jobs.list"),
-		"session.start": () => notYetServed("session.start"),
-		"session.stop": () => notYetServed("session.stop"),
-		"sessions.list": () => notYetServed("sessions.list"),
 	};
 }
 
 /** Fixture streams: `window.state` reports `mockWindow`'s flag at once and on every change. */
 export function defaultMockStreams(
 	mockWindow: MockWindow = createMockWindow(),
-): MockStreamHandlers {
+): Pick<MockStreamHandlers, "window.state"> {
 	return {
 		"window.state": (_input, emit) => {
 			const listener = (maximized: boolean) => emit({ maximized });
@@ -127,51 +124,171 @@ export function defaultMockStreams(
 				mockWindow.listeners.delete(listener);
 			};
 		},
-		// TEMPORARY (P1b Task 3), replaced in Task 7: fails at once with bridge.unavailable.
-		events: () => notYetServed("events"),
-		"stream.read": () => notYetServed("stream.read"),
 	};
 }
 
 export interface MockTransportOptions {
-	/** Replace any of the default fixture handlers. */
+	/** Replace any handler: a fixture's, or one a service registers. */
 	handlers?: Partial<MockHandlers>;
 	streams?: Partial<MockStreamHandlers>;
-	/** The contract to serve (default: the app's). Tests pass a test-local one. */
+	/** The contract to serve (default: the app's). Tests pass a test-local one; only what it declares is served. */
 	contract?: Contract;
 	/** Delay before each answer, to show pending states (default 0). */
 	latencyMs?: number;
 	onStreamError?: StreamErrorHandler;
+	/** Where the registry and the services report bugs, as main's log does (default: the console). */
+	log?: Log;
+}
+
+/** The mock's transport and the services behind it, for tests that emit events or watch jobs and sessions. */
+export interface MockBackend {
+	transport: Transport;
+	registry: ServiceRegistry<OperationMap, StreamMap>;
+	masker: SecretMasker;
+	events: EventBus;
+	streams: StreamHub;
+	scopes: ProjectScopes;
+	jobs: JobService;
+	sessions: SessionService;
+	window: MockWindow;
+}
+
+type AnyRequestHandler = (input: unknown) => unknown;
+type AnyStreamHandler = (
+	input: unknown,
+	emit: (event: unknown) => void,
+) => () => void;
+
+/** Collects the handlers a service registers, so fixtures and overrides can be merged before the registry starts. */
+class HandlerCollector {
+	readonly requests = new Map<string, AnyRequestHandler>();
+	readonly streams = new Map<string, AnyStreamHandler>();
+
+	handle(name: string, handler: (input: never) => unknown): this {
+		this.requests.set(name, handler as AnyRequestHandler);
+		return this;
+	}
+
+	handleStream(
+		name: string,
+		handler: (input: never, emit: never) => () => void,
+	): this {
+		this.streams.set(name, handler as AnyStreamHandler);
+		return this;
+	}
+}
+
+const consoleLog: Log = (message) => console.error(`[studio mock] ${message}`);
+
+/**
+ * Builds the mock: services first, then fixtures, then the caller's overrides, each registered on a real
+ * ServiceRegistry if the served contract declares it. The registry starts at once, so a declared operation with
+ * no handler throws here, as the app refuses to start.
+ */
+export function createMockBackend(
+	options: MockTransportOptions = {},
+): MockBackend {
+	const log = options.log ?? consoleLog;
+	const served: Contract = options.contract ?? contract;
+	const registry = new ServiceRegistry<OperationMap, StreamMap>({
+		contract: served,
+		log,
+	});
+	const masker = registry.masker;
+	const events = new EventBus({ masker, log });
+	const streams = new StreamHub({ masker, log: (m) => log(masker.mask(m)) });
+	const scopes = new ProjectScopes({ masker, log });
+	const jobs = new JobService({
+		events,
+		streams,
+		scopes,
+		records: new InMemoryJobRecordStore(),
+		masker,
+		log,
+	});
+	const sessions = new SessionService({ events, streams, scopes, masker, log });
+
+	const collected = new HandlerCollector();
+	for (const service of [events, streams, jobs, sessions]) {
+		service.register(collected as never);
+	}
+	const mockWindow = createMockWindow();
+	const requests: Record<string, AnyRequestHandler> = {
+		...Object.fromEntries(collected.requests),
+		...(defaultMockHandlers(
+			"system",
+			DEFAULT_SHELL_LAYOUT,
+			mockWindow,
+		) as Record<string, AnyRequestHandler>),
+		...(options.handlers as Record<string, AnyRequestHandler> | undefined),
+	};
+	const streamHandlers: Record<string, AnyStreamHandler> = {
+		...Object.fromEntries(collected.streams),
+		...(defaultMockStreams(mockWindow) as Record<string, AnyStreamHandler>),
+		...(options.streams as Record<string, AnyStreamHandler> | undefined),
+	};
+	for (const [name, handler] of Object.entries(requests)) {
+		if (Object.hasOwn(served.operations, name))
+			registry.handle(name, handler as never);
+	}
+	for (const [name, handler] of Object.entries(streamHandlers)) {
+		if (Object.hasOwn(served.streams, name))
+			registry.handleStream(name, handler as never);
+	}
+	registry.start();
+
+	const transport = createRegistryTransport(registry, {
+		latencyMs: options.latencyMs ?? 0,
+		onStreamError: options.onStreamError ?? logStreamError,
+		log,
+	});
+	return {
+		transport,
+		registry,
+		masker,
+		events,
+		streams,
+		scopes,
+		jobs,
+		sessions,
+		window: mockWindow,
+	};
 }
 
 export function createMockTransport(
 	options: MockTransportOptions = {},
 ): Transport {
-	const mockWindow = createMockWindow();
-	const handlers: Partial<MockHandlers> = {
-		...defaultMockHandlers("system", DEFAULT_SHELL_LAYOUT, mockWindow),
-		...options.handlers,
-	};
-	const streamHandlers: Partial<MockStreamHandlers> = {
-		...defaultMockStreams(mockWindow),
-		...options.streams,
-	};
-	const onStreamError = options.onStreamError ?? logStreamError;
-	const latencyMs = options.latencyMs ?? 0;
-	const served: Contract = options.contract ?? contract;
+	return createMockBackend(options).transport;
+}
 
+/**
+ * A Transport over a registry in the same page: what IPC does in the app, without the wire. A request rejects
+ * with a StudioFailure; a stream's events and its end reach the caller through callbacks that never throw back
+ * into the services (StreamHub calls them from a timer, EventBus from inside `emit`).
+ */
+function createRegistryTransport(
+	registry: ServiceRegistry<OperationMap, StreamMap>,
+	options: { latencyMs: number; onStreamError: StreamErrorHandler; log: Log },
+): Transport {
+	const { latencyMs, onStreamError, log } = options;
+	const guarded =
+		<A extends unknown[]>(what: string, fn: (...args: A) => void) =>
+		(...args: A): void => {
+			try {
+				fn(...args);
+			} catch (err) {
+				log(
+					`${what} failed: ${err instanceof Error ? err.message : String(err)}`,
+				);
+			}
+		};
 	return {
 		async request<N extends OperationName>(
 			name: N,
 			input: InputOf<N>,
 		): Promise<OutputOf<N>> {
-			const op = lookup(served.operations, name);
-			const handler = lookup(handlers, name) as
-				| ((input: unknown) => unknown)
-				| undefined;
 			if (latencyMs > 0) await new Promise((r) => setTimeout(r, latencyMs));
-			if (!op || !handler) throw new StudioFailure(unknownOperationError(name));
-			const result = await runOperation(op, handler, input);
+			const result = await registry.request(name, input);
 			if (!result.ok) throw new StudioFailure(result.error);
 			return result.value as OutputOf<N>;
 		},
@@ -181,21 +298,14 @@ export function createMockTransport(
 			input: StreamInputOf<N>,
 			onEvent: (event: StreamEventOf<N>) => void,
 		): () => void {
-			const stream = lookup(served.streams, name);
-			const handler = lookup(streamHandlers, name) as
-				| ((input: unknown, emit: (event: unknown) => void) => () => void)
-				| undefined;
-			if (!stream || !handler) {
-				onStreamError(name, unknownOperationError(name));
-				return () => {};
-			}
-			// Same checks as the main process: input parsed, each event parsed; an invalid event ends the stream.
-			const result = startStream(stream, handler, input, (message) => {
-				if (message.ok) onEvent(message.event as StreamEventOf<N>);
-				else onStreamError(name, message.error);
+			const deliver = guarded(`${name}: a subscriber`, onEvent);
+			const report = guarded(`${name}: the error handler`, onStreamError);
+			const result = registry.subscribe(name, input, (message) => {
+				if (message.ok) deliver(message.event as StreamEventOf<N>);
+				else report(name, message.error);
 			});
 			if (!result.ok) {
-				onStreamError(name, result.error);
+				report(name, result.error);
 				return () => {};
 			}
 			return result.value;
