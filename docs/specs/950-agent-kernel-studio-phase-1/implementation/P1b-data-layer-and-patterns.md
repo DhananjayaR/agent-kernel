@@ -66,10 +66,10 @@ settled once, here. Options and recommendations, with the artboards each pattern
 
 | Pattern | Options explored | Decision | Approved by | Date |
 |---|---|---|---|---|
-| Job progress, approval, background notice | | | | |
-| Session control, streaming list, command palette | | | | |
-| Changed on disk, unsaved guard | | | | |
-| Version gate, empty, cannot read, error | | | | |
+| Job progress, approval, background notice | 2–3 per question ([options](../research/technology/p1b-design-gate-options.md), row a) | As recommended: job progress inline in the view that started it, its commands in the Commands panel, "Stop", "Show commands", elapsed time, several jobs stacked; approval is one body in a card where the work happens or a modal (typed name) for real infrastructure and destructive actions, no "Cancel" on the card; background notice is a state icon on the tab and one toast template with "Show", no running-jobs list until P6 | Dhananjaya Rajasinghe | 26 Nov 2026 |
+| Session control, streaming list, command palette | 2–3 per question ([options](../research/technology/p1b-design-gate-options.md), row b) | As recommended: run control as built in P1a, the coding agent's status item opens its drawer; streaming list without wrapping, ANSI colours mapped to existing tokens, copy, clear, "Jump to latest"; command palette a top-centre overlay on Mod+K, one flat list with feature prefixes, version-gated commands listed with their reason | Dhananjaya Rajasinghe | 26 Nov 2026 |
+| Changed on disk, unsaved guard | 2–3 per question ([options](../research/technology/p1b-design-gate-options.md), row c) | As recommended: a banner at the top of the view (floating over the canvas), info tone without a working copy and warning with a conflict, "Keep mine", "Take theirs", "Compare" (compare view settled when first used); the in-app guard a modal with Save, Discard and Stay | Dhananjaya Rajasinghe | 26 Nov 2026 |
+| Version gate, empty, cannot read, error | 2–3 per question ([options](../research/technology/p1b-design-gate-options.md), row d) | As recommended: a gated tab shows an empty state with the version needed and the upgrade command to copy; a gated form section is tagged and opens to a banner over read-only fields; one control settled when first used; one family for empty, cannot read and error, centred when nothing is left to show, a banner otherwise | Dhananjaya Rajasinghe | 26 Nov 2026 |
 
 ## Work packages
 

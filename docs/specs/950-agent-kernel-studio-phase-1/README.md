@@ -82,7 +82,7 @@ PRD's milestones.
 |---|---|---|---|---|---|
 | P0 | Technology selection | Before 1 | In review (spikes ran on Linux; record drafted; Windows and macOS deferred by the owner; spike S5 added; no turn has run on a subscription yet) | n/a | [P0](implementation/P0-technology-selection.md) |
 | P1a | App foundation: workspace, shell, bridge, design system | Before 1 | Started 24 Nov 2026: Tasks 1–10 done on Linux; shell layout and component set await sign-off. The 25 Nov branding changes are decided and built (`c3085c7c`) | Palette, fonts, density, theme only | [P1a](implementation/P1a-app-foundation.md), [plan](implementation/P1a-plan.md) |
-| P1b | Data and feature layer, shared patterns, Studio skills | Before 1 | Started 26 Nov 2026: approval gate passed; plan written | No | [P1b](implementation/P1b-data-layer-and-patterns.md) |
+| P1b | Data and feature layer, shared patterns, Studio skills | Before 1 | Started 26 Nov 2026: approval gate passed; plan written | Patterns: yes (26 Nov 2026) | [P1b](implementation/P1b-data-layer-and-patterns.md) |
 | P2 | Open a project and know its OAK version | 1 | Not started | No | [P2](implementation/P2-project-and-kernel-version.md) |
 | P3 | See the project: read-only Canvas, Code, Config | 1 | Not started | No | [P3](implementation/P3-read-only-builder.md) |
 | P6 | Build with AI | 2 | Not started | No | [outline](implementation/P4-P12.md#p6--build-with-ai) |
@@ -241,6 +241,7 @@ Detail: [P2](implementation/P2-project-and-kernel-version.md).
 | 25 Nov 2026 | The licence is decided before any build leaves the team, not at P12 (open decision 9) | [Open decisions](#open-decisions) |
 | 25 Nov 2026 | **One folder.** The implementation plan moves into the team's folder, `docs/specs/950-agent-kernel-studio-phase-1/`: the implementation docs into `implementation/` (`later-phases.md` renamed `P4-P12.md`, so it does not clash with the team's `later-phases/`), the technology research into `research/technology/`, and the two READMEs into this one. `PHASE-1-PLAN.md` maps the PRD milestones to the implementation phases. Ruled at the owner's request, so the team and the implementation refer to one plan | This file, [PHASE-1-PLAN.md](PHASE-1-PLAN.md) |
 | 26 Nov 2026 | P1b approval gate passed. The architecture and the ground rules are approved as written. D12 still holds: config forms use React Hook Form with strict, precompiled Ajv; the bridge keeps zod (D5). Approved by Dhananjaya Rajasinghe. Closes open decision 6a | [architecture](implementation/architecture.md), [conventions](implementation/conventions-and-skills.md), [P1b](implementation/P1b-data-layer-and-patterns.md#approval-gate) |
+| 26 Nov 2026 | P1b design gate: all five sign-off rows approved as recommended in the options note (job progress, approval and background notice; session control, streaming list and the command palette; changed on disk and the unsaved guard; version gate and the empty, cannot-read and error family; nothing drawn first). The changed-on-disk banner uses the info tone when there is no working copy, which departs from the canvas and brief 00. Approved by Dhananjaya Rajasinghe | [P1b](implementation/P1b-data-layer-and-patterns.md#design-gate), [options](research/technology/p1b-design-gate-options.md) |
 
 ### Open decisions
 
