@@ -42,10 +42,13 @@ describe("useAboutTicker", () => {
 			expect(result.current.ticker.session?.state).toBe("running"),
 		);
 		expect(result.current.ticker.session?.info).toEqual({ startedAt: 5_000 });
+		const { stop } = result.current.ticker;
 		await act(() => clock.advance(3_000));
 		await waitFor(() =>
 			expect(result.current.texts).toEqual(["Tick 1", "Tick 2", "Tick 3"]),
 		);
+		// New lines re-render the view, but the calls keep their identity while the same session runs.
+		expect(result.current.ticker.stop).toBe(stop);
 		await act(() => result.current.ticker.stop());
 		await waitFor(() =>
 			expect(result.current.ticker.session?.state).toBe("stopped"),

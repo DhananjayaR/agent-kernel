@@ -3,6 +3,7 @@
 // `useStream(session.streamId)` (shared/streams/streamStore.ts). Not generated: the generators make queries,
 // commands and jobs; a session kind and its hook are written by hand on the same pattern.
 import type { Session, SessionArgsOf } from "@ak-studio/contract";
+import { useMemo } from "react";
 import {
 	startSession,
 	stopSession,
@@ -20,16 +21,22 @@ export interface AboutTicker {
 	stop(): Promise<void>;
 }
 
-/** About: the ticker session. */
+/** About: the ticker session. `start` and `stop` keep their identity until the live session changes. */
 export function useAboutTicker(): AboutTicker {
 	const session = useSession(KIND);
-	const live =
-		session && session.state !== "stopped" && session.state !== "failed";
-	return {
-		session,
-		start: (args = {}) => startSession({ kind: KIND, args }),
-		stop: async () => {
-			if (live) await stopSession(session.id);
-		},
-	};
+	const liveId =
+		session && session.state !== "stopped" && session.state !== "failed"
+			? session.id
+			: undefined;
+	const calls = useMemo(
+		() => ({
+			start: (args: SessionArgsOf<typeof KIND> = {}) =>
+				startSession({ kind: KIND, args }),
+			stop: async () => {
+				if (liveId !== undefined) await stopSession(liveId);
+			},
+		}),
+		[liveId],
+	);
+	return { session, ...calls };
 }
