@@ -8,7 +8,7 @@
 | Depends on | [P1b](P1b-data-layer-and-patterns.md) |
 | Unlocks | Every later phase. All of them ask this phase "what does this project's version support?" |
 | Screens | Welcome, the shell's status bar, the Commands panel |
-| Claude Design | [`Start-Welcome`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-Main), [`Start-Welcome-FirstLaunch`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-Start-Welcome-FirstLaunch), [`Start-Welcome-ToolchainMissing`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-Start-Welcome-ToolchainMissing), [`Start-Welcome-NotAProject`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-Start-Welcome-NotAProject); [`StatusBar`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-StatusBar), [`BottomPanel`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-BottomPanel) (pages Start and System) |
+| Claude Design | [`Start-Welcome`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-Main), [`Start-Welcome-FirstLaunch`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-Start-Welcome-FirstLaunch), [`Start-Welcome-ToolchainMissing`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-Start-Welcome-ToolchainMissing), [`Start-Welcome-NotAProject`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-Start-Welcome-NotAProject); [`StatusBar`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-StatusBar), [`BottomPanel`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-BottomPanel); [`Start-Welcome-Settings`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-Start-Welcome-Settings), [`Settings-AgentPermissions`](https://claude.ai/artifact/HxwXUwENoUhpnjKdQb1k8j#artboard-Settings-AgentPermissions) (pages Start, System and Settings) |
 
 ## Outcome
 
@@ -38,6 +38,8 @@ are marked unavailable instead of failing.
 ## Design gate
 
 Follow [design-process.md](design-process.md). Existing input: briefs 00, 01 and 02 on the feature branch.
+Options and recommendations, with the review of each artboard:
+[research/technology/p2-design-gate-options.md](../research/technology/p2-design-gate-options.md).
 
 | Screen | Requirements (from the PRD and brief 02) | Questions to settle |
 |---|---|---|
