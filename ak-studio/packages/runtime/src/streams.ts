@@ -13,6 +13,7 @@ import {
 	StudioFailure,
 	type streamRead,
 } from "@ak-studio/contract";
+import { defaultLog, type Log } from "./host";
 import type { StreamRegistrar } from "./registry";
 import type { SecretMasker } from "./secrets";
 import { strings } from "./strings";
@@ -36,6 +37,8 @@ export interface StreamHubOptions {
 	batchLines?: number;
 	/** Milliseconds since the epoch, for each chunk's `at`. */
 	now?: () => number;
+	/** Where a subscriber whose send fails is reported. */
+	log?: Log;
 }
 
 const defaultSchedule: Schedule = (fn) => {
@@ -102,6 +105,7 @@ export class StreamHub {
 	readonly #backlogLines: number;
 	readonly #batchLines: number;
 	readonly #now: () => number;
+	readonly #log: Log;
 	readonly #streams = new Map<StreamId, StreamState>();
 	// Ids stay unique across restarts (a job record can name a stream from an earlier run): a random prefix per
 	// hub, then a counter.
@@ -120,6 +124,7 @@ export class StreamHub {
 			"batchLines",
 		);
 		this.#now = options.now ?? Date.now;
+		this.#log = options.log ?? defaultLog;
 	}
 
 	/** Creates an empty stream and answers its id. */
@@ -183,12 +188,7 @@ export class StreamHub {
 			state.readers.add(reader);
 			// The backlog goes out on the first flush, never inside subscribe.
 			if (state.nextSeq > 0 || state.ended) this.#wake(reader);
-			return () => {
-				reader.closed = true;
-				reader.cancelFlush?.();
-				reader.cancelFlush = undefined;
-				state.readers.delete(reader);
-			};
+			return () => close(reader);
 		});
 	}
 
@@ -227,9 +227,26 @@ export class StreamHub {
 		const ended = state.ended && caughtUp;
 		if (chunks.length === 0 && dropped === 0 && !ended) return;
 		if (ended) reader.endedSent = true;
-		reader.send({ chunks, dropped, ended });
+		try {
+			reader.send({ chunks, dropped, ended });
+		} catch (err) {
+			// This runs in a timer: nothing above can catch it. Drop only this subscriber; the others carry on.
+			close(reader);
+			this.#log(
+				`a stream.read subscriber failed and was closed: ${err instanceof Error ? err.message : String(err)}`,
+			);
+			return;
+		}
 		if (!caughtUp) this.#wake(reader);
 	}
+}
+
+/** Stops sending to `reader`: no more flushes, and it leaves its stream. */
+function close(reader: Reader): void {
+	reader.closed = true;
+	reader.cancelFlush?.();
+	reader.cancelFlush = undefined;
+	reader.state.readers.delete(reader);
 }
 
 function positive(value: number, name: string): number {

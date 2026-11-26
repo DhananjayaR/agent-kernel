@@ -1,7 +1,7 @@
 // Electron main process: one window serving the renderer from app://studio/, with the security baseline.
 // The only file in src/main that imports Electron values; the others take Electron objects as arguments.
 import { join } from "node:path";
-import { SecretMasker, ServiceRegistry } from "@ak-studio/runtime";
+import { ServiceRegistry } from "@ak-studio/runtime";
 import {
 	app,
 	BrowserWindow,
@@ -190,11 +190,9 @@ function createWindow(): BrowserWindow {
  * handler, so the app refuses to start.
  */
 function startBridge(): void {
-	// One masker for the registry's errors and the services' stream output.
-	const masker = new SecretMasker();
-	const registry = new ServiceRegistry({ masker });
+	// registerServices hands the registry's masker to the services, so errors and stream output share it.
+	const registry = new ServiceRegistry();
 	const services = registerServices(registry, {
-		masker,
 		window: () => mainWindow,
 		app: {
 			version: app.getVersion(),

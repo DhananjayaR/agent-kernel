@@ -366,7 +366,8 @@ function p1bRegistry(
 	const registry = new ServiceRegistry({
 		contract: p1bContract,
 		log,
-		capabilities: options.capabilities,
+		// Every capability is available unless a test says otherwise (start() refuses a gated contract with none).
+		capabilities: options.capabilities ?? { status: () => "available" },
 		masker: options.masker,
 	});
 	registry
@@ -450,12 +451,55 @@ describe("ServiceRegistry capability refusal", () => {
 		expect(status).not.toHaveBeenCalled();
 	});
 
-	it("treats every capability as available when no checker is given", async () => {
-		const { registry, gatedHandler } = p1bRegistry();
-		await expect(registry.request("t.gated", {})).resolves.toMatchObject({
-			ok: true,
+	it("fails start-up when an operation names a capability and no checker is given", () => {
+		const registry = new ServiceRegistry({
+			contract: p1bContract,
+			log: vi.fn(),
 		});
-		expect(gatedHandler).toHaveBeenCalledOnce();
+		registry
+			.handle("t.gated", () => ({}))
+			.handle("t.declared", () => ({}))
+			.handleStream("t.lines", () => () => {});
+		expect(() => registry.start()).toThrow(
+			/t\.gated names a capability.*no CapabilityChecker/,
+		);
+		expect(registry.started).toBe(false);
+	});
+
+	it("starts with no checker when no operation names a capability", () => {
+		const registry = new ServiceRegistry({
+			contract: testContract,
+			log: vi.fn(),
+		});
+		registry
+			.handle("t.echo", (input) => input)
+			.handleStream("t.ticks", () => () => {});
+		expect(() => registry.start()).not.toThrow();
+	});
+
+	it("refuses an operation that names a capability when no checker is given (fails closed)", async () => {
+		// Only reachable if an operation gains a capability after start; start() refuses it otherwise.
+		const op: { -readonly [K in keyof typeof echo]: (typeof echo)[K] } & {
+			capability?: string;
+		} = { ...echo };
+		const handler = vi.fn((input: { text: string }) => input);
+		const registry = new ServiceRegistry({
+			contract: { operations: { "t.echo": op }, streams: {} },
+			log: vi.fn(),
+		});
+		registry.handle("t.echo", handler);
+		registry.start();
+		op.capability = "t.capability";
+		await expect(
+			registry.request("t.echo", { text: "a" }),
+		).resolves.toMatchObject({
+			ok: false,
+			error: {
+				code: ERROR_CODES.capabilityUnavailable,
+				detail: "t.capability",
+			},
+		});
+		expect(handler).not.toHaveBeenCalled();
 	});
 });
 
@@ -514,6 +558,42 @@ describe("ServiceRegistry masking", () => {
 			ok: false,
 			error: { code: ERROR_CODES.unknownOperation, detail: "t.••••" },
 		});
+	});
+
+	it("masks a request's invalidOutput detail when the schema's message repeats a secret", async () => {
+		const leaky = defineOperation({
+			name: "t.leaky",
+			input: z.object({}),
+			output: z.object({
+				value: z.string().transform((value) => {
+					throw new Error(`cannot answer ${value}`);
+				}),
+			}),
+		});
+		const log = vi.fn();
+		const registry = new ServiceRegistry({
+			contract: { operations: { "t.leaky": leaky }, streams: {} },
+			log,
+			masker: masked(),
+		});
+		registry.handle("t.leaky", () => ({ value: SECRET }));
+		registry.start();
+		const result = await registry.request("t.leaky", {});
+		expect(result).toMatchObject({
+			ok: false,
+			error: {
+				code: ERROR_CODES.invalidOutput,
+				detail: expect.stringContaining("cannot answer ••••"),
+			},
+		});
+		expect(JSON.stringify(result)).not.toContain(SECRET);
+		expect(String(log.mock.calls[0]?.[0])).not.toContain(SECRET);
+	});
+
+	it("exposes its masker, so services mask with the same known secrets", () => {
+		const masker = masked();
+		expect(new ServiceRegistry({ masker }).masker).toBe(masker);
+		expect(new ServiceRegistry().masker).toBeInstanceOf(SecretMasker);
 	});
 
 	it("masks the error of a stream that fails to start", () => {

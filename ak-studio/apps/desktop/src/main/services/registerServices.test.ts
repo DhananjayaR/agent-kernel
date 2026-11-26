@@ -66,13 +66,11 @@ describe("registerServices", () => {
 		}
 	});
 
-	it("serves events and stream.read from EventBus and StreamHub, with stream output masked by the registry's masker", () => {
+	it("serves events and stream.read from EventBus and StreamHub", () => {
 		vi.useFakeTimers();
-		const masker = new SecretMasker();
-		const registry = new ServiceRegistry({ masker });
-		const services = registerServices(registry, { ...deps, masker });
+		const registry = new ServiceRegistry();
+		const services = registerServices(registry, deps);
 		registry.start();
-		expect(services.masker).toBe(masker);
 
 		const events: StreamMessage[] = [];
 		expect(registry.subscribe("events", {}, (m) => events.push(m)).ok).toBe(
@@ -83,7 +81,7 @@ describe("registerServices", () => {
 			{ ok: true, event: { type: "domain.changed", domain: "about" } },
 		]);
 
-		masker.add("hunter22");
+		services.masker.add("hunter22");
 		const streamId = services.streams.create();
 		services.streams.write(streamId, "stdout", "password hunter22");
 		services.streams.end(streamId);
@@ -106,6 +104,38 @@ describe("registerServices", () => {
 		expect(
 			registry.subscribe("stream.read", { streamId: "nope" }, () => {}),
 		).toMatchObject({ ok: false, error: { code: ERROR_CODES.streamNotFound } });
+	});
+
+	it("masks with one masker: a secret added to it is hidden in error details and in stream output", async () => {
+		vi.useFakeTimers();
+		const masker = new SecretMasker();
+		const registry = new ServiceRegistry({ masker });
+		const services = registerServices(registry, deps);
+		registry.start();
+		expect(services.masker).toBe(masker);
+		expect(services.masker).toBe(registry.masker);
+
+		services.masker.add("tok-123456");
+		await expect(registry.request("app.tok-123456", {})).resolves.toMatchObject(
+			{
+				ok: false,
+				error: { code: ERROR_CODES.unknownOperation, detail: "app.••••" },
+			},
+		);
+		const streamId = services.streams.create();
+		services.streams.write(streamId, "stdout", "using tok-123456");
+		const batches: StreamMessage[] = [];
+		registry.subscribe("stream.read", { streamId }, (m) => batches.push(m));
+		vi.runAllTimers();
+		expect(JSON.stringify(batches)).not.toContain("tok-123456");
+		expect(batches).toEqual([
+			{
+				ok: true,
+				event: expect.objectContaining({
+					chunks: [expect.objectContaining({ text: "using ••••" })],
+				}),
+			},
+		]);
 	});
 
 	it.todo(

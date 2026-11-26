@@ -314,6 +314,31 @@ describe("StreamHub", () => {
 		expect(late.batches().map(texts)).toEqual([["a", "b"]]);
 	});
 
+	it("closes only the reader whose send throws, logs it, and still ends the others", () => {
+		const log = vi.fn();
+		const { hub, clock, registry, read } = setup({ log, batchLines: 1 });
+		const id = hub.create();
+		const sends: unknown[] = [];
+		registry.subscribe("stream.read", { streamId: id }, (m) => {
+			sends.push(m);
+			throw new Error("window gone");
+		});
+		const ok = read(id);
+		hub.write(id, "stdout", "a\nb");
+		hub.end(id);
+		expect(() => {
+			for (let i = 0; i < 5; i++) clock.tick();
+		}).not.toThrow();
+		expect(sends).toHaveLength(1); // closed after the first failure: no retry, no timer left
+		expect(log).toHaveBeenCalledOnce();
+		expect(log.mock.calls[0]?.[0]).toMatch(/window gone/);
+		expect(ok.batches().map((b) => [texts(b), b.ended])).toEqual([
+			[["a"], false],
+			[["b"], true],
+		]);
+		expect(clock.pending()).toBe(0);
+	});
+
 	it("masks known secrets in every chunk", () => {
 		const masker = new SecretMasker();
 		masker.add("sk-live-0123456789");

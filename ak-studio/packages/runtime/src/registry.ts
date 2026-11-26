@@ -72,13 +72,17 @@ export interface ServiceRegistryOptions<
 	contract?: Contract<Ops, S>;
 	/** Where bugs are reported: a broken output, an unexpected exception, an undeclared error code. */
 	log?: Log;
-	/** Checks the capability an operation names. Defaults to every capability being available. */
+	/**
+	 * Checks the capability an operation names. Required when any operation names one: without it `start()`
+	 * throws, and a request for such an operation is refused (the check fails closed).
+	 */
 	capabilities?: CapabilityChecker;
-	/** Masks known secrets in every error's message and detail. Defaults to one that knows none. */
+	/**
+	 * Masks known secrets in every error's message and detail. Defaults to a new one that knows none; services
+	 * that mask (StreamHub) take it from `registry.masker`, so there is one set of known secrets.
+	 */
 	masker?: SecretMasker;
 }
-
-const everyCapability: CapabilityChecker = { status: () => "available" };
 
 export class ServiceRegistry<
 	Ops extends OperationMap = Operations,
@@ -86,7 +90,7 @@ export class ServiceRegistry<
 > {
 	readonly #contract: Contract<Ops, S>;
 	readonly #log: Log;
-	readonly #capabilities: CapabilityChecker;
+	readonly #capabilities: CapabilityChecker | undefined;
 	readonly #masker: SecretMasker;
 	readonly #requests = new Map<string, (input: unknown) => unknown>();
 	readonly #streams = new Map<
@@ -99,7 +103,7 @@ export class ServiceRegistry<
 		this.#contract =
 			options.contract ?? (studioContract as unknown as Contract<Ops, S>);
 		this.#log = options.log ?? defaultLog;
-		this.#capabilities = options.capabilities ?? everyCapability;
+		this.#capabilities = options.capabilities;
 		this.#masker = options.masker ?? new SecretMasker();
 	}
 
@@ -145,8 +149,9 @@ export class ServiceRegistry<
 	}
 
 	/**
-	 * Ends registration. Throws if any declared operation or stream has no handler, so the app refuses to start
-	 * rather than fail on first use. Until it succeeds, every request answers `bridge.unavailable`.
+	 * Ends registration. Throws if any declared operation or stream has no handler, or if an operation names a
+	 * capability and no CapabilityChecker was given, so the app refuses to start rather than fail (or skip the
+	 * check) on first use. Until it succeeds, every request answers `bridge.unavailable`.
 	 */
 	start(): void {
 		const missing = this.missingHandlers();
@@ -155,7 +160,22 @@ export class ServiceRegistry<
 				`no handler registered for: ${missing.join(", ")} (every operation in the contract needs one)`,
 			);
 		}
+		if (!this.#capabilities) {
+			const gated = Object.values(this.#contract.operations).find(
+				(op) => op.capability !== undefined,
+			);
+			if (gated) {
+				throw new Error(
+					`${gated.name} names a capability (${gated.capability}) but the registry has no CapabilityChecker`,
+				);
+			}
+		}
 		this.#started = true;
+	}
+
+	/** The masker every error is masked with. */
+	get masker(): SecretMasker {
+		return this.#masker;
 	}
 
 	get started(): boolean {
@@ -225,7 +245,10 @@ export class ServiceRegistry<
 	}
 
 	#requireCapability(capability: string, input: unknown): void {
-		const status = this.#capabilities.status(capability, projectIdOf(input));
+		// No checker: fail closed (start() refuses a contract that needs one, so this is belt and braces).
+		const status =
+			this.#capabilities?.status(capability, projectIdOf(input)) ??
+			"needs-upgrade";
 		if (status === "available") return;
 		throw new StudioFailure({
 			code: ERROR_CODES.capabilityUnavailable,

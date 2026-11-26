@@ -3,7 +3,7 @@
 // fails the test and not only the app's start-up. No Electron import: index.ts passes Electron's values in.
 import {
 	EventBus,
-	SecretMasker,
+	type SecretMasker,
 	type ServiceRegistry,
 	StreamHub,
 } from "@ak-studio/runtime";
@@ -16,8 +16,6 @@ export interface ServiceDeps {
 	app: AppServiceOptions;
 	/** The app's window, or null before it exists and after it closes. */
 	window: () => ControlledWindow | null;
-	/** The masker the registry masks errors with, so stream output is masked with the same known secrets. */
-	masker?: SecretMasker;
 }
 
 /** The registered services, for index.ts to read start-up state from (e.g. the stored theme). */
@@ -38,7 +36,8 @@ export function registerServices(
 	registry.register(app);
 	const window = new WindowService(deps.window);
 	registry.register(window);
-	const masker = deps.masker ?? new SecretMasker();
+	// One masker: the registry's (errors) is the hub's (stream output), so a secret added once is hidden in both.
+	const masker = registry.masker;
 	const events = new EventBus();
 	registry.register(events);
 	const streams = new StreamHub({ masker });
