@@ -122,9 +122,12 @@ export function VersionTag({
 function Upgrade({
 	props,
 	text,
+	inPopover = false,
 }: {
 	props: Common;
 	text: VersionNoticeStrings;
+	/** In the popover the quiet button keeps its padding inside the popover's edge. */
+	inPopover?: boolean;
 }) {
 	const command =
 		props.status === "needs-upgrade" ? props.upgradeCommand : undefined;
@@ -143,7 +146,11 @@ function Upgrade({
 				</>
 			) : null}
 			{props.onOpenDocs ? (
-				<Button variant="ghost" className="-ms-3" onPress={props.onOpenDocs}>
+				<Button
+					variant="ghost"
+					className={inPopover ? undefined : "-ms-3"}
+					onPress={props.onOpenDocs}
+				>
 					{text.docs}
 				</Button>
 			) : null}
@@ -207,7 +214,7 @@ export function VersionNotice(props: VersionNoticeProps) {
 			}
 		>
 			<p className="text-ui text-text">{description}</p>
-			<Upgrade props={props} text={text} />
+			<Upgrade props={props} text={text} inPopover />
 		</Popover>
 	);
 }
