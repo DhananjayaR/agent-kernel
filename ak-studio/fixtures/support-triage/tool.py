@@ -1,25 +1,48 @@
-from agents import function_tool
+"""Custom tools: plain functions, bound to each framework with its OAK ToolBuilder in app.py."""
 
 
-@function_tool
-def lookup_order(order_id: str) -> dict:
-    """Look up an order by id."""
-    return {"order_id": order_id, "status": "[STATUS]"}
+def lookup_order(order_id: str) -> str:
+    """
+    Look up an order.
+
+    :param order_id: The order id.
+    :return: The order status.
+    """
+    return f"Order {order_id}: [STATUS]"
 
 
-@function_tool(needs_approval=lambda _ctx, args, _id: args["amount"] > 200)
-def refund_payment(order_id: str, amount: float) -> dict:
-    """Refund a payment. Human approval when amount > 200."""
-    return {"order_id": order_id, "refunded": amount}
+def refund_payment(order_id: str, amount: float) -> str:
+    """
+    Refund a payment. Needs human approval when the amount is above 200 (see needs_approval_over_limit).
+
+    :param order_id: The order to refund.
+    :param amount: The amount to refund.
+    :return: Confirmation of the refund.
+    """
+    return f"Refunded {amount:.2f} for {order_id}."
 
 
-@function_tool
-def search_docs(query: str) -> list[str]:
-    """Search the Help Center."""
-    return []
+async def needs_approval_over_limit(_context, params: dict, _call_id: str) -> bool:
+    """The OpenAI Agents SDK approval condition for refund_payment: amount > 200."""
+    return float(params.get("amount", 0)) > 200
 
 
-@function_tool
-def create_ticket(subject: str, body: str) -> dict:
-    """Create a support ticket."""
-    return {"ticket_id": "[ID]", "subject": subject}
+def search_docs(query: str) -> str:
+    """
+    Search the Help Center.
+
+    :param query: What to look for.
+    :return: Matching articles.
+    """
+    return f"[RESULTS for {query}]"
+
+
+def create_ticket(subject: str, body: str) -> str:
+    """
+    Create a support ticket.
+
+    :param subject: The ticket subject.
+    :param body: The ticket text.
+    :return: The ticket id.
+    """
+    return "[TICKET ID]"

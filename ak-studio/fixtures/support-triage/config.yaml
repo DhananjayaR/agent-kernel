@@ -1,29 +1,56 @@
+# Support triage: OAK configuration. Keys follow agentkernel.core.config.AKConfig (OAK 0.10.x).
+# [PLACEHOLDER] values are not given by the project brief.
 execution:
   mode: rest_sync
   message_type: delta
 
 session:
   type: redis
+  redis:
+    url: "redis://[HOST]:6379"
 
+# Input: OpenAI Guardrails (PII detection, jailbreak); output: Walled AI (safety, PII redaction). The OpenAI
+# checks file (config_path) is not part of the fixture's file list, so it is not set here.
 guardrail:
-  enabled: true
   input:
+    enabled: true
     type: openai
-    config:
-      checks: [pii_detection, jailbreak]
   output:
+    enabled: true
     type: walledai
-    config:
-      checks: [safety, pii_redaction]
+    pii: true
 
 trace:
   enabled: true
   type: langfuse
 
+# Channels: Slack #support, WhatsApp and Gmail, all routed to triage. The Slack channel itself is chosen in the
+# Slack app's event subscription, not here.
 slack:
   agent: triage
-  channels: ["#support"]
+  bot_token_key: SLACK_BOT_TOKEN
+  signing_secret_key: SLACK_SIGNING_SECRET
 whatsapp:
   agent: triage
 gmail:
   agent: triage
+
+# Help Center: an Open Knowledge Format bundle. kb-researcher writes to it; the other agents read.
+okf:
+  databases:
+    help-center:
+      type: local
+      uri: ./help-center
+      description: Help Center articles
+      producer: [kb-researcher]
+      consumer: [triage, billing]
+
+# BR-010: code run by agents has no network access.
+sandbox:
+  enabled: true
+  default_profile: default
+  profiles:
+    default:
+      type: "[PROVIDER]"
+      policy:
+        network_egress: deny

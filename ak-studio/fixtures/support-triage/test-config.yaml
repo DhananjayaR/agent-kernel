@@ -1,4 +1,4 @@
+# Keys follow agentkernel.test.config.AKTestConfig. The 0.80 match threshold is passed in app_test.py.
 mode: fallback
-judge:
-  model: "[MODEL]"
-  threshold: 0.80
+llm:
+  model: "[JUDGE MODEL]"

@@ -23,6 +23,7 @@
 		"depcruise": "node tools/depcruise.mjs",
 		"depcruise:selftest": "node tools/depcruise-selftest/run.mjs",
 		"check-palette": "node tools/check-palette.mjs",
+		"check-fixture": "python3 tools/check-fixture.py",
 		"fixture-tree:test": "vitest run tools/fixture-tree.test.mjs",
 		"check-palette:test": "vitest run tools/check-palette.test.mjs",
 		"compile-schemas": "node tools/compile-schemas.mjs",

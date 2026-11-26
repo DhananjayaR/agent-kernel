@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "agentkernel[openai,langgraph,adk,api,slack,whatsapp,gmail,redis,langfuse]>=0.10.2",
+    "langchain-anthropic>=1.0.0,<2.0.0",
 ]
 
 [dependency-groups]
