@@ -5,6 +5,7 @@ const swatch: CSSProperties = { width: 8, background: "var(--role-surface)" };
 const ring = { outlineColor: "Highlight" } satisfies CSSProperties;
 
 export function InlineColour({ el, tone }: { el: HTMLElement; tone: string }) {
+	const [color, backgroundColor, stroke, padding] = [tone, tone, tone, 4];
 	el.style.borderColor = tone;
 	el.style.setProperty("background-color", tone);
 	return (
@@ -19,6 +20,17 @@ export function InlineColour({ el, tone }: { el: HTMLElement; tone: string }) {
 			<svg fill="red" aria-hidden="true" />
 			<Icon color="#fff" />
 			<span style={tone ? { borderColor: tone } : undefined} />
+			<span style={{ color }} />
+			<span style={{ padding, backgroundColor }} />
+			<span style={{ ...swatch, color }} />
+			<span
+				style={{
+					// a comment before the key
+					color: "red",
+				}}
+			/>
+			<span style={{ ["fill"]: tone }} />
+			{createElement("p", { style: { stroke } })}
 		</div>
 	);
 }

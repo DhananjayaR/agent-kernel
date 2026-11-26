@@ -12,8 +12,10 @@ const venv = [
 ].find((path) => existsSync(path));
 const python = venv ?? (process.platform === "win32" ? "python" : "python3");
 
+// No __pycache__ in the fixture: the check imports hooks.py from it (fixture-tree.test.mjs lists its files).
 const result = spawnSync(python, [here("./check-fixture.py")], {
 	stdio: "inherit",
+	env: { ...process.env, PYTHONDONTWRITEBYTECODE: "1" },
 });
 if (result.error) {
 	console.error(

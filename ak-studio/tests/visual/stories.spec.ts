@@ -3,7 +3,7 @@
 // an edit here. Each story is opened alone (iframe.html), at its own viewport when it names one (the shell
 // stories), and photographed only once Storybook has finished it: rendered, its play function run and its
 // afterEach checks passed. The bundled fonts must have loaded first.
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 
@@ -36,6 +36,15 @@ const ids = storyIds();
 
 test("the built Storybook lists the stories", () => {
 	expect(ids.length).toBeGreaterThanOrEqual(MIN_STORIES);
+});
+
+test("every baseline belongs to a story and theme (none left by a deleted or renamed story)", () => {
+	const expected = new Set(
+		ids.flatMap((id) => THEMES.map((theme) => `${id}-${theme}.png`)),
+	);
+	const baselines = join(__dirname, "__screenshots__", "linux");
+	const orphans = readdirSync(baselines).filter((name) => !expected.has(name));
+	expect(orphans).toEqual([]);
 });
 
 /** Waits until Storybook has finished the story (after play and afterEach); fails on a story that errored. */

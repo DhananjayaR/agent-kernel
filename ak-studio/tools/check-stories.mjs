@@ -4,14 +4,17 @@
 //
 //   node tools/check-stories.mjs [studio-root]   (default: ak-studio/; requirements from <root>/tools/story-requirements.json)
 //
-// Component files (COMPONENT_GLOBS): packages/ui/src/components/*.tsx, and every .tsx under a feature's
-// components/ or screens/ folder; stories and tests are not components. Each needs `<name>.stories.tsx` beside it.
+// Component files (COMPONENT_GLOBS): every .tsx under packages/ui/src/components, and under a feature's components/
+// or screens/ folder; stories and tests are not components. Each needs `<name>.stories.tsx` beside it, with at least
+// one named story export (an empty stories file fails). Both top folders must exist, so a rename cannot shrink the
+// check silently.
 // story-requirements.json may also say:
 // - `required`: for a glob of component files, the story export names (CSF: `export const Empty`) each one's
 //   stories file must have. A glob that matches no component fails, so a typo cannot pass silently;
 // - `coveredBy`: a component whose stories live in another stories file (a part shown inside a larger story).
-//   That file must exist and name the component, alone or as the start of a story's name (`ProjectSwitcher` or
-//   `ProjectSwitcherOpen` for project-switcher.tsx);
+//   That file must exist and show the component: a story export named after it, alone or as the start of the name
+//   (`ProjectSwitcher` or `ProjectSwitcherOpen` for project-switcher.tsx, not `ProjectSwitchers`), or its meta's
+//   `component: ProjectSwitcher`. An import or a comment naming it does not count;
 // - `exempt`: a component file with no stories, and why. Each needs a reason.
 // A `coveredBy` or `exempt` entry for a file that is gone, or that now has its own stories file, is stale and fails.
 //
@@ -23,7 +26,7 @@ import { fileURLToPath } from "node:url";
 
 const STUDIO = fileURLToPath(new URL("../", import.meta.url));
 export const COMPONENT_GLOBS = [
-	"packages/ui/src/components/*.tsx",
+	"packages/ui/src/components/**/*.tsx",
 	"apps/renderer/src/features/*/components/**/*.tsx",
 	"apps/renderer/src/features/*/screens/**/*.tsx",
 ];
@@ -86,10 +89,23 @@ function* walk(dir, base) {
 	}
 }
 
+/** The folders the component globs read: each must exist. */
+export const COMPONENT_FOLDERS = [
+	"packages/ui/src/components",
+	"apps/renderer/src/features",
+];
+
+/** True when the stories file `text` shows component `name`: a story named after it, or its meta's `component`. */
+export function showsComponent(text, name) {
+	const story = new RegExp(`^${name}(?:[A-Z0-9_]|$)`);
+	if (storyNames(text).some((exported) => story.test(exported))) return true;
+	return new RegExp(`^\\s*component:\\s*${name}\\s*[,}\\n]`, "m").test(text);
+}
+
 /** The component files under `root` (relative, `/`-separated, sorted). */
 export function componentFiles(root) {
 	const globs = COMPONENT_GLOBS.map(globToRegExp);
-	const tops = ["packages/ui/src/components", "apps/renderer/src/features"];
+	const tops = COMPONENT_FOLDERS;
 	return tops
 		.flatMap((top) => [...walk(join(root, top), root)])
 		.filter((file) => !NOT_COMPONENTS.test(file))
@@ -110,9 +126,16 @@ export function checkStories(root, requirements) {
 	const problems = [];
 	const report = (file, problem) => problems.push({ file, problem });
 
+	for (const folder of COMPONENT_FOLDERS)
+		if (!exists(folder)) report(folder, "component folder is missing");
+
 	for (const file of components) {
 		const own = storiesFileOf(file);
-		if (exists(own)) continue;
+		if (exists(own)) {
+			if (storyNames(read(own)).length === 0)
+				report(file, `${own.split("/").at(-1)} has no story export`);
+			continue;
+		}
 		if (Object.hasOwn(exempt, file)) continue;
 		if (Object.hasOwn(coveredBy, file)) continue;
 		report(file, `has no stories file (${own.split("/").at(-1)})`);
@@ -124,9 +147,11 @@ export function checkStories(root, requirements) {
 			report(file, "has its own stories file now: remove its coveredBy entry");
 		else if (!exists(stories))
 			report(file, `coveredBy names ${stories}, which does not exist`);
-		// The name at a word start: a story about it (`BottomPanelClosed`) or the component itself.
-		else if (!new RegExp(`\\b${componentName(file)}`).test(read(stories)))
-			report(file, `${stories} does not show ${componentName(file)}`);
+		else if (!showsComponent(read(stories), componentName(file)))
+			report(
+				file,
+				`${stories} has no story named after ${componentName(file)} and no component: ${componentName(file)}`,
+			);
 	}
 
 	for (const [file, reason] of Object.entries(exempt)) {

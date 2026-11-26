@@ -99,11 +99,11 @@ jobs:
 
       # Visual regression: a screenshot of every story, dark and light, compared with the baselines committed under
       # ak-studio/tests/visual/__screenshots__/linux/. Linux only: fonts render differently on each operating system.
-      # Not yet run on a runner: the first run may need the baselines refreshed from ubuntu-latest
-      # (`pnpm test:visual --update-snapshots`).
+      # Uses the Storybook built above (test:visual:run; test:visual would build it again). Not yet run on a runner:
+      # the first run may need the baselines refreshed from ubuntu-latest (`pnpm test:visual --update-snapshots`).
       - name: Visual regression (Linux)
         if: runner.os == 'Linux'
-        run: pnpm test:visual
+        run: pnpm test:visual:run
 
       # P0 found Ubuntu runners may block the unprivileged user namespaces Electron's sandbox uses. Not yet
       # verified on a runner: remove this step if the e2e tests pass without it.

@@ -37,7 +37,7 @@ describe("check-classes", () => {
 		]);
 	});
 
-	it("reports each planted inline colour style, in a multi-line style block and a conditional one too", () => {
+	it("reports each planted inline colour style: multi-line, conditional, shorthand, after a comment, computed, createElement", () => {
 		const { violations } = checkClasses(["bad"], fixture);
 		expect(
 			violations
@@ -46,13 +46,19 @@ describe("check-classes", () => {
 		).toEqual([
 			[4, "background:"],
 			[5, "outlineColor:"],
-			[8, ".style.borderColor ="],
-			[9, 'style.setProperty("background-color"'],
-			[14, "style backgroundColor:"],
-			[17, "style color:"],
-			[19, 'fill="red"'],
-			[20, 'color="#fff"'],
-			[21, "style borderColor:"], // inside a conditional style expression
+			[9, ".style.borderColor ="],
+			[10, 'style.setProperty("background-color"'],
+			[15, "style backgroundColor:"],
+			[18, "style color:"],
+			[20, 'fill="red"'],
+			[21, 'color="#fff"'],
+			[22, "style borderColor:"], // inside a conditional style expression
+			[23, "style color"], // shorthand property
+			[24, "style backgroundColor"], // shorthand after another key
+			[25, "style color"], // shorthand after a spread
+			[29, "style color:"], // after a comment
+			[32, "style fill:"], // computed key
+			[33, "style stroke"], // a createElement style property
 		]);
 	});
 

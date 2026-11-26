@@ -41,6 +41,7 @@ pnpm storybook            # Storybook dev server for packages/ui on 127.0.0.1:60
 pnpm build-storybook      # static Storybook into packages/ui/storybook-static/
 pnpm test:storybook       # every story (packages/ui and the renderer), dark and light, in headless Chromium with axe
 pnpm test:visual          # build Storybook, then screenshot every story, dark and light, against the Linux baselines
+pnpm test:visual:run      # the same against the Storybook already built (CI builds it once)
 pnpm depcruise   # boundary rules (dependency-cruiser, swc parser)
 pnpm depcruise:selftest  # proves the rules can fail and the parser finds modules
 pnpm build       # check-palette, then electron-vite (production): main, preload and renderer into apps/desktop/out/
@@ -236,9 +237,10 @@ class compiles to nothing even where the check cannot see it. Its scope is `apps
 shorthand for any variable but React Aria's `--trigger-width`, or an inline colour style (a colour property in
 `style={{ ... }}` or a `CSSProperties` object, on `.style` or through `setProperty`, or a literal `fill`, `stroke`
 or `color` attribute other than `currentColor` or `none`) fails; only the token reference page
-(`tokens.stories.tsx`) may paint colours inline. `check-stories` needs a `<name>.stories.tsx` beside each file in
-`packages/ui/src/components/` and in a feature's `components/` or `screens/`; `tools/story-requirements.json`
-lists the stories a pattern of components must have, components shown in another stories file (`coveredBy`) and
+(`tokens.stories.tsx`) may paint colours inline. `check-stories` needs a `<name>.stories.tsx` with at least one story beside each
+file under `packages/ui/src/components/` and in a feature's `components/` or `screens/`; `tools/story-requirements.json`
+lists the stories a pattern of components must have, components shown in another stories file (`coveredBy`: a story named after the component, or its meta's
+`component:`) and
 exemptions with their reason. Both are scripts with planted-file self-tests (`tools/check-*-fixture/`, ignored by
 Biome). `pnpm biome:selftest` copies `tools/biome-selftest/fixture/` to a temporary folder whose `biome.json`
 extends the real one, and expects each planted electron, Node built-in and `window`/`document` use to be reported.

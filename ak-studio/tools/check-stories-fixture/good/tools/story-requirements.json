@@ -1,10 +1,24 @@
 {
 	"required": [
-		{ "pattern": "packages/ui/src/components/gauge.tsx", "stories": ["Default", "Empty", "Error"] },
-		{ "pattern": "apps/renderer/src/features/*/screens/*.tsx", "stories": ["Empty", "Busy"] }
+		{
+			"pattern": "packages/ui/src/components/gauge.tsx",
+			"stories": [
+				"Default",
+				"Empty",
+				"Error"
+			]
+		},
+		{
+			"pattern": "apps/renderer/src/features/*/screens/*.tsx",
+			"stories": [
+				"Empty",
+				"Busy"
+			]
+		}
 	],
 	"coveredBy": {
-		"packages/ui/src/components/chip.tsx": "packages/ui/src/components/group.stories.tsx"
+		"packages/ui/src/components/chip.tsx": "packages/ui/src/components/group.stories.tsx",
+		"packages/ui/src/components/dial.tsx": "packages/ui/src/components/dials.stories.tsx"
 	},
 	"exempt": {
 		"packages/ui/src/components/parts.tsx": "Internal parts, shown through their owners' stories."

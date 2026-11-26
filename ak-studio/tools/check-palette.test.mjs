@@ -1,6 +1,7 @@
 // Proves check-palette can fail: a planted default-palette class and arbitrary value are reported, and the
 // command exits non-zero. Run by `pnpm test` (root).
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
@@ -32,6 +33,8 @@ describe("check-palette", () => {
 	});
 
 	it("skips the generated validators (*.validate.js, *.validate.d.ts) and reads the rest", () => {
+		for (const planted of ["session.validate.js", "session.validate.d.ts"])
+			expect(existsSync(`${fixture}generated/${planted}`), planted).toBe(true);
 		const { files, violations } = checkPalette(["generated"], fixture);
 		expect(files).toBe(1);
 		expect(violations).toEqual([]);

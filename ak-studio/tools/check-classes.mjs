@@ -21,7 +21,9 @@
 // Skipped: generated files (`*.validate.js`, `*.validate.d.ts`), the fixture project (`fixtures/support-triage`)
 // and build output. Inline colour styles are allowed in ALLOWS_INLINE_COLOUR only: the design-token reference
 // page paints each role colour from its variable.
-// Known limits: class names built at run time, and a style object passed by name (`style={styles}`) that is not
+// Known limits: a colour set through a custom property (`style={{ "--x": "red" }}`; a hex or rgb() value there is
+// still a colour literal to check-palette); any component prop named `color` with a literal value is reported, not
+// only an SVG or icon one; class names built at run time; and a style object passed by name (`style={styles}`) that is not
 // typed CSSProperties where it is written.
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
@@ -99,8 +101,10 @@ const COLOUR_PROPERTIES = [
 	"scrollbarColor",
 	"WebkitTextFillColor",
 ];
+// A colour key in an object: after `{` or `,` (and any comments), plain, quoted or computed (`["color"]`), with a
+// value (`color: x`) or as a shorthand property (`{ color }`, `{ ...base, color }`).
 const COLOUR_KEY = new RegExp(
-	`(?<=[{,]\\s*)(["']?)(${COLOUR_PROPERTIES.join("|")})\\1\\s*:`,
+	`(?<=[{,]\\s*(?:(?://[^\\n]*\\n|/\\*[\\s\\S]*?\\*/)\\s*)*)(\\[\\s*)?(["'\`]?)(${COLOUR_PROPERTIES.join("|")})\\2\\s*(\\])?\\s*(?=([:,}]))`,
 	"g",
 );
 const DOM_STYLE_ASSIGNMENT = new RegExp(
@@ -121,10 +125,10 @@ const NEUTRAL_COLOUR_VALUES = new Set([
 ]);
 /**
  * Where a style object starts: a JSX style prop's whole expression (`style={{ ... }}`, and `style={cond ? { ... } :
- * undefined}`), or an object typed or checked as CSSProperties.
+ * undefined}`), a `style: { ... }` property (createElement props), or an object typed or checked as CSSProperties.
  */
 const STYLE_OBJECT_START =
-	/\bstyle=\{|:\s*(?:React\.)?CSSProperties\s*=\s*\{|\{(?=[^{}]*\}\s*(?:as|satisfies)\s+(?:React\.)?CSSProperties\b)/g;
+	/\bstyle=\{|\bstyle:\s*\{|:\s*(?:React\.)?CSSProperties\s*=\s*\{|\{(?=[^{}]*\}\s*(?:as|satisfies)\s+(?:React\.)?CSSProperties\b)/g;
 
 function lineAt(text, index) {
 	let line = 1;
@@ -175,11 +179,15 @@ export function findInlineColourStyles(text) {
 	for (const start of text.matchAll(STYLE_OBJECT_START)) {
 		const open = start.index + start[0].lastIndexOf("{");
 		const block = text.slice(open, blockEnd(text, open));
-		for (const m of block.matchAll(COLOUR_KEY))
+		for (const m of block.matchAll(COLOUR_KEY)) {
+			// A computed key needs its closing bracket; a plain one must not have one.
+			if (Boolean(m[1]) !== Boolean(m[4])) continue;
+			const shorthand = m[5] !== ":";
 			add(
 				open + m.index,
-				`${start[0].startsWith("style") ? "style " : ""}${m[2]}:`,
+				`${start[0].startsWith("style") ? "style " : ""}${m[3]}${shorthand ? "" : ":"}`,
 			);
+		}
 	}
 	for (const m of text.matchAll(DOM_STYLE_ASSIGNMENT)) add(m.index, m[0]);
 	for (const m of text.matchAll(SET_PROPERTY)) add(m.index, m[0]);

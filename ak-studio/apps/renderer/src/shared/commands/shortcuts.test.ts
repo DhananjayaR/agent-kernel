@@ -224,6 +224,8 @@ describe("findShortcutClashes", () => {
 			["F11", ["other"]], // full screen
 			["Mod+Q", ["mac"]], // quit
 			["Mod+H", ["mac"]], // hide
+			["Mod+Alt+H", ["mac"]], // hide others
+			["Mod+Shift+V", ["mac"]], // paste and match style
 		] as const)
 			for (const platform of SHORTCUT_PLATFORMS) {
 				const clashes = findShortcutClashes(

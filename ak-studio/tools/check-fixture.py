@@ -18,6 +18,10 @@ import types
 import typing
 from pathlib import Path
 
+# No __pycache__ in the fixture when hooks.py is imported (fixture-tree.test.mjs lists its files). The launcher
+# (check-fixture.mjs) also sets PYTHONDONTWRITEBYTECODE.
+sys.dont_write_bytecode = True
+
 FIXTURE = Path(__file__).resolve().parent.parent / "fixtures" / "support-triage"
 
 
@@ -99,9 +103,6 @@ def main() -> int:
     except ImportError as err:
         print(f"check-fixture skipped: agentkernel is not importable here ({err})")
         return 0
-
-    # No __pycache__ left in the fixture (fixture-tree.test.mjs lists its files).
-    sys.dont_write_bytecode = True
 
     self_test(AKConfig)
 

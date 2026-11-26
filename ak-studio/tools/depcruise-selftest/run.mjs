@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { cruise } from "../cruise-lib.mjs";
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
-const EXPECTED_MODULES = 43;
+const EXPECTED_MODULES = 45;
 const expected = [
 	["renderer-ui-no-electron", "apps/renderer/src/violation.ts"], // resolves via fixture node_modules
 	["renderer-ui-no-electron", "apps/renderer/src/required.ts"], // require()
@@ -36,6 +36,8 @@ const expected = [
 	["renderer-shared-is-a-leaf", "apps/renderer/src/shared/usesApp.ts"],
 	["renderer-features-not-app", "apps/renderer/src/features/a/usesApp.ts"],
 	["electron-only-in-entry-points", "apps/desktop/src/main/quit.ts"], // value import outside index/preload
+	["electron-only-in-entry-points", "apps/desktop/src/main/mixed.ts"], // { type X, value }
+	["electron-only-in-entry-points", "apps/desktop/src/main/reexport.ts"], // export { app } from "electron"
 	["electron-only-in-entry-points", "packages/runtime/src/electron.ts"],
 	[
 		"renderer-runtime-only-in-bridge",

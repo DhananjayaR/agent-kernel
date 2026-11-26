@@ -10,6 +10,7 @@ import {
 	componentFiles,
 	componentName,
 	globToRegExp,
+	showsComponent,
 	storyNames,
 } from "./check-stories.mjs";
 
@@ -37,11 +38,17 @@ describe("check-stories", () => {
 			// A component file, a feature screen and a feature component (nested) with no stories file.
 			"apps/renderer/src/features/demo/components/table/Table.tsx: has no stories file (Table.stories.tsx)",
 			"apps/renderer/src/features/demo/screens/DemoScreen.tsx: has no stories file (DemoScreen.stories.tsx)",
+			// A ui component in a subfolder is checked too.
+			"packages/ui/src/components/forms/slider.tsx: has no stories file (slider.stories.tsx)",
+			// A stories file with a meta and no story.
+			"packages/ui/src/components/hollow.tsx: hollow.stories.tsx has no story export",
 			"packages/ui/src/components/widget.tsx: has no stories file (widget.stories.tsx)",
-			// coveredBy: a file that does not show the component; a stale entry; a file that is gone.
-			"packages/ui/src/components/pill.tsx: packages/ui/src/components/group.stories.tsx does not show Pill",
+			// coveredBy: a file that does not show the component; a stale entry; a file that is gone; a file that
+			// only imports the component, names it in a comment and has a near-miss story (Knobs).
+			"packages/ui/src/components/pill.tsx: packages/ui/src/components/group.stories.tsx has no story named after Pill and no component: Pill",
 			"packages/ui/src/components/tile.tsx: has its own stories file now: remove its coveredBy entry",
 			"packages/ui/src/components/badge.tsx: coveredBy names a file that is gone",
+			"packages/ui/src/components/knob.tsx: packages/ui/src/components/group.stories.tsx has no story named after Knob and no component: Knob",
 			// exempt: no reason; a file that is gone.
 			"packages/ui/src/components/frame.tsx: is exempt without a reason",
 			"packages/ui/src/components/gone.tsx: is exempt but the file is gone",
@@ -61,12 +68,52 @@ describe("check-stories", () => {
 		expect(empty.stderr).toContain("no component files found");
 	});
 
-	it("passes the good tree: own stories with the required names, coveredBy, exempt and `export { A as B }`", () => {
+	it("fails a tree whose features/ folder is gone (a rename cannot shrink the check)", () => {
+		const root = fixture("nofeatures");
+		expect(checkStories(root, requirementsOf(root)).problems).toEqual([
+			{
+				file: "apps/renderer/src/features",
+				problem: "component folder is missing",
+			},
+		]);
+		expect(run(root).status).toBe(1);
+	});
+
+	it("passes the good tree: own stories with the required names, coveredBy (story prefix or meta component), exempt and `export { A as B }`", () => {
 		const root = fixture("good");
 		const { components, problems } = checkStories(root, requirementsOf(root));
-		expect(components).toHaveLength(4);
+		expect(components).toHaveLength(5);
 		expect(problems).toEqual([]);
 		expect(run(root).status).toBe(0);
+	});
+
+	it("counts a component shown only by a story named after it or by the meta's component", () => {
+		const file = (body) => `export default { title: "x" };\n${body}`;
+		expect(showsComponent(file("export const ChipOpen = {};"), "Chip")).toBe(
+			true,
+		);
+		expect(showsComponent(file("export const Chip = {};"), "Chip")).toBe(true);
+		expect(
+			showsComponent(
+				'export default {\n\ttitle: "x",\n\tcomponent: Chip,\n};\nexport const Default = {};',
+				"Chip",
+			),
+		).toBe(true);
+		expect(showsComponent(file("export const Chips = {};"), "Chip")).toBe(
+			false,
+		);
+		expect(
+			showsComponent(
+				`import { Chip } from "./chip";\n// Chip is here\n${file("export const Default = {};")}`,
+				"Chip",
+			),
+		).toBe(false);
+		expect(
+			showsComponent(
+				file("// component: Chip\nexport const Default = {};"),
+				"Chip",
+			),
+		).toBe(false);
 	});
 
 	it("reads story export names and component names", () => {
