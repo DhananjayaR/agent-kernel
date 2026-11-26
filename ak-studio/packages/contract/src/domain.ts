@@ -1,7 +1,7 @@
 // The domain types the services and the renderer share: the platform, ids, file revisions, jobs and their user requests,
 // sessions, stream chunks, recorded commands and the event union the `events` stream carries. One zod schema
 // each, so the main process, the mock and the renderer's types all come from the same declaration. The Job,
-// UserRequest and Session fields are those in architecture.md (Jobs, Sessions), with `projectId` and `seq` added
+// UserRequest and Session fields are those in architecture.md (Jobs, Sessions), with `projectId`, `seq` and the job's `startedAt` added
 // (`seq` counts the service's changes to one job or session, so the renderer keeps the newest after a reload).
 // All are output schemas: plain objects, so undeclared fields are stripped before they cross the bridge.
 import "./zodConfig";
@@ -115,6 +115,11 @@ export const jobSchema = z.object({
 	/** See the quit rule: a job that survives quit blocks it until it ends. */
 	survivesQuit: z.boolean(),
 	projectId: ProjectId.optional(),
+	/**
+	 * When the job started running, in milliseconds since the epoch (absent while queued). The job progress pattern
+	 * shows the elapsed time from it, so a reloaded window counts from the real start, not from zero.
+	 */
+	startedAt: z.number().optional(),
 	/**
 	 * Counts this job's announced changes: JobService adds one before each `job.updated`, so a higher `seq` is a
 	 * newer state of the same job (the renderer's store keeps the newest, whichever arrives first).

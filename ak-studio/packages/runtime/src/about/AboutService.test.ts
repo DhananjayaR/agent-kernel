@@ -235,7 +235,10 @@ describe("AboutService", () => {
 			kind: "confirm",
 			title: aboutStrings.confirm.title,
 			summary: aboutStrings.confirm.summary,
-			options: [{ id: "approve" }, { id: "deny" }],
+			options: [
+				{ id: "approve", label: aboutStrings.confirm.approveLabel },
+				{ id: "deny", label: aboutStrings.confirm.denyLabel },
+			],
 		});
 		expect(
 			await registry.request("job.respond", {

@@ -10,7 +10,10 @@ export const aboutStrings = {
 	confirm: {
 		title: "Run the last step?",
 		summary:
-			"The demo job has run two of its three steps. Approve to run the last one, or deny to stop the job here. Nothing outside the app changes.",
+			"The demo job has run two of its three steps. Run the last one, or stop the job here. Nothing outside the app changes.",
+		/** The buttons say what happens (copy rules). */
+		approveLabel: "Run the last step",
+		denyLabel: "Stop the job",
 	},
 	noteChanged:
 		"The note changed since you opened it. Your text is kept: compare it with the new note and save again.",

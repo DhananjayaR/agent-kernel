@@ -876,6 +876,74 @@ describe("JobService: confirm and a runner's own cancel", () => {
 		expect(reached).toEqual(["approved", "after"]);
 	});
 
+	it("labels the approve and deny options with what happens when the runner says so", async () => {
+		const s = setup();
+		const { runner } = confirming({
+			title: "Apply the plan?",
+			summary: "Creates 3 resources",
+			approveLabel: "Apply plan",
+			denyLabel: "Keep the plan",
+		});
+		s.jobs.define("t.demo", runner);
+		serve(s);
+		const jobId = await start(s, "t.demo");
+		expect(current(s, jobId)?.request?.options).toEqual([
+			{ id: CONFIRM_OPTION_IDS.approve, label: "Apply plan" },
+			{ id: CONFIRM_OPTION_IDS.deny, label: "Keep the plan" },
+		]);
+	});
+
+	it("accepts deny on confirm-by-name without the typed name; approve still needs the exact name", async () => {
+		const s = setup();
+		const { runner, reached } = confirming({
+			title: "Destroy the stack?",
+			summary: "Deletes every resource",
+			destructive: true,
+			expectedName: "prod",
+		});
+		s.jobs.define("t.demo", runner);
+		serve(s);
+		const jobId = await start(s, "t.demo");
+		await expect(answer(s, jobId, "approve")).resolves.toMatchObject({
+			ok: false,
+			error: { code: ERROR_CODES.invalidInput },
+		});
+		await expect(answer(s, jobId, "approve", "Prod")).resolves.toMatchObject({
+			ok: false,
+			error: { code: ERROR_CODES.invalidInput },
+		});
+		await expect(answer(s, jobId, "deny")).resolves.toEqual({
+			ok: true,
+			value: {},
+		});
+		await settle();
+		expect(reached).toEqual(["denied"]);
+		expect(current(s, jobId)?.state).toBe("cancelled");
+	});
+
+	it("ends the job cancelled when its runner catches its own cancel and returns a result", async () => {
+		const s = setup();
+		let after = false;
+		s.jobs.define("t.demo", async (_input, ctx) => {
+			try {
+				ctx.cancel();
+			} catch {
+				// Swallowed on purpose: the job must still end cancelled.
+			}
+			after = true;
+			return { total: 1 } as never;
+		});
+		serve(s);
+		const jobId = await start(s, "t.demo");
+		await settle();
+		expect(after).toBe(true);
+		const ended = current(s, jobId);
+		expect(ended?.state).toBe("cancelled");
+		expect(ended?.result).toBeUndefined();
+		expect(ended?.error).toBeUndefined();
+		expect(s.log).not.toHaveBeenCalled();
+	});
+
 	it("rejects a confirm when the job is cancelled while it waits", async () => {
 		const s = setup();
 		const { runner, reached } = confirming({
@@ -915,6 +983,9 @@ describe("JobService: queueing", () => {
 			"running",
 		]);
 		expect(current(s, a)?.projectId).toBe("p1");
+		// A job carries its start time once it runs (the elapsed time counts from it); a queued one has none.
+		expect(current(s, a)?.startedAt).toBe(1000);
+		expect(current(s, b)?.startedAt).toBeUndefined();
 		demoRuns.calls[0]?.finish.resolve({ total: 1 });
 		await settle();
 		expect(current(s, b)?.state).toBe("running");

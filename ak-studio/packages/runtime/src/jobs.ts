@@ -77,7 +77,8 @@ export interface JobContext {
 	/**
 	 * Ends the job as cancelled, from inside its runner (a denied confirm, say). It aborts the signal and throws, so
 	 * nothing after it runs; JobService ends the job `cancelled` once the runner settles. A runner may always cancel
-	 * itself, whether or not its kind is cancellable by the user.
+	 * itself, whether or not its kind is cancellable by the user. A runner that catches the throw and carries on
+	 * still ends `cancelled` once it returns: its signal is aborted, and what it returns is dropped.
 	 */
 	cancel(): never;
 	/** The job's output stream (read with `stream.read`); masked by StreamHub. Ignored once the job has ended. */
@@ -96,8 +97,12 @@ export interface JobConfirmRequest {
 	affects?: string[];
 	/** Marks the approve option as destructive. */
 	destructive?: boolean;
-	/** The name the user types to approve (`confirm-by-name`). */
+	/** The name the user types to approve (`confirm-by-name`). Denying never needs it. */
 	expectedName?: string;
+	/** The approve button's label: what happens ("Apply plan"). Defaults to "Approve". */
+	approveLabel?: string;
+	/** The deny button's label: what happens ("Stop the job"). Defaults to "Deny". */
+	denyLabel?: string;
 }
 
 /** What `ctx.cancel()` throws: the runner's own cancel, told apart from a failure by #settle. Never leaves the service. */
@@ -370,6 +375,7 @@ export class JobService<Kinds extends JobKindMap = JobKinds> {
 		const startedAt = this.#now();
 		entry.started = true;
 		entry.startedAt = startedAt;
+		entry.job.startedAt = startedAt;
 		entry.job.state = "running";
 		this.#emit(entry);
 		void this.#run(entry);
@@ -754,7 +760,7 @@ function snapshot(job: Job): Job {
 function confirmRequest(request: JobConfirmRequest): JobRequest {
 	const approve: NonNullable<UserRequest["options"]>[number] = {
 		id: CONFIRM_OPTION_IDS.approve,
-		label: strings.confirmApprove,
+		label: request.approveLabel ?? strings.confirmApprove,
 	};
 	if (request.destructive) approve.destructive = true;
 	return {
@@ -767,12 +773,18 @@ function confirmRequest(request: JobConfirmRequest): JobRequest {
 			: { expectedName: request.expectedName }),
 		options: [
 			approve,
-			{ id: CONFIRM_OPTION_IDS.deny, label: strings.confirmDeny },
+			{
+				id: CONFIRM_OPTION_IDS.deny,
+				label: request.denyLabel ?? strings.confirmDeny,
+			},
 		],
 	};
 }
 
-/** Why `answer` does not fit `request`, or undefined when it does. */
+/**
+ * Why `answer` does not fit `request`, or undefined when it does. Denying a `confirm-by-name` request needs no
+ * typed name: the name guards the action, and saying no to it is always safe.
+ */
 function answerProblem(
 	request: UserRequest,
 	answer: JobAnswer,
@@ -785,6 +797,7 @@ function answerProblem(
 	if (
 		request.kind === "confirm-by-name" &&
 		request.expectedName !== undefined &&
+		answer.optionId !== CONFIRM_OPTION_IDS.deny &&
 		answer.name !== request.expectedName
 	) {
 		return "the typed name is not the name the request asks for";
