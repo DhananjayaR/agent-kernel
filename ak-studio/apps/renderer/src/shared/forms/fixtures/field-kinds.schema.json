@@ -1,0 +1,28 @@
+{
+	"$comment": "Test-only schema, not part of AKConfig: the session slice has no boolean and no enum field, so the SchemaForm tests take those two kinds (and a required string) from here. Regenerate the validator with pnpm compile-schemas.",
+	"properties": {
+		"name": {
+			"description": "A required text field.",
+			"type": "string"
+		},
+		"enabled": {
+			"default": false,
+			"description": "A boolean field.",
+			"type": "boolean"
+		},
+		"mode": {
+			"default": "fast",
+			"description": "An enum field.",
+			"enum": ["fast", "thorough"],
+			"type": "string"
+		},
+		"ratio": {
+			"default": 0.5,
+			"description": "A number field.",
+			"type": "number"
+		}
+	},
+	"required": ["name"],
+	"title": "FieldKinds",
+	"type": "object"
+}

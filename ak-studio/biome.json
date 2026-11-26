@@ -6,7 +6,9 @@
 		"includes": [
 			"**",
 			"!**/tools/depcruise-selftest/fixture",
-			"!**/packages/ui/src/assets/oak-mark-*.svg"
+			"!**/packages/ui/src/assets/oak-mark-*.svg",
+			"!**/*.validate.js",
+			"!**/*.validate.d.ts"
 		]
 	},
 	"formatter": { "enabled": true, "indentStyle": "tab", "lineEnding": "lf" },

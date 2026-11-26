@@ -1,0 +1,96 @@
+{
+	"$comment": "Slice of the session section of AKConfig (ak-py agentkernel.core.config._SessionStoreConfig), from model_json_schema() with Pydantic 2.14.3; properties type, cache, dynamodb and connection_store kept, the rest dropped. Fixture for the P1b SchemaForm skeleton; regenerate the validator with pnpm compile-schemas.",
+	"$defs": {
+		"_DynamoDBConfig": {
+			"properties": {
+				"table_name": {
+					"description": "DynamoDB table name for session storage. Table should have a partition key named 'session_id' and a sort key named 'key'",
+					"title": "Table Name",
+					"type": "string"
+				},
+				"ttl": {
+					"default": 604800,
+					"description": "DynamoDB item TTL in seconds (0 disables). Used to compute UNIX epoch 'expiry_time' attribute written per item.",
+					"title": "Ttl",
+					"type": "integer"
+				}
+			},
+			"required": ["table_name"],
+			"title": "_DynamoDBConfig",
+			"type": "object"
+		},
+		"_SessionCacheConfig": {
+			"properties": {
+				"size": {
+					"default": 256,
+					"description": "Maximum number of sessions to cache in memory",
+					"title": "Size",
+					"type": "integer"
+				}
+			},
+			"title": "_SessionCacheConfig",
+			"type": "object"
+		},
+		"_SessionConnectionStoreConfig": {
+			"properties": {
+				"table_name": {
+					"anyOf": [
+						{
+							"type": "string"
+						},
+						{
+							"type": "null"
+						}
+					],
+					"default": null,
+					"description": "DynamoDB only: name of the EXISTING WebSocket connections table (partition key 'user_id', sort key 'connection_id', GSI 'connection_id-index' on connection_id, TTL attribute 'expiry_time'); the store never creates it. Required for WebSocket modes on dynamodb sessions; unused by other backends.",
+					"title": "Table Name"
+				},
+				"ttl": {
+					"default": 86400.0,
+					"description": "Seconds after which a connection mapping expires following its last write: the safety net for gateway pods that die without cleaning up (normal cleanup happens on disconnect and stale pushes).",
+					"title": "Ttl",
+					"type": "number"
+				}
+			},
+			"title": "_SessionConnectionStoreConfig",
+			"type": "object"
+		}
+	},
+	"properties": {
+		"type": {
+			"default": "in_memory",
+			"description": "Session store backend: a built-in short name (in_memory, redis, valkey, dynamodb, cosmosdb, firestore) or a dotted path to a SessionStore subclass",
+			"title": "Type",
+			"type": "string"
+		},
+		"cache": {
+			"anyOf": [
+				{
+					"$ref": "#/$defs/_SessionCacheConfig"
+				},
+				{
+					"type": "null"
+				}
+			],
+			"default": null
+		},
+		"dynamodb": {
+			"anyOf": [
+				{
+					"$ref": "#/$defs/_DynamoDBConfig"
+				},
+				{
+					"type": "null"
+				}
+			],
+			"default": null
+		},
+		"connection_store": {
+			"$ref": "#/$defs/_SessionConnectionStoreConfig",
+			"description": "The WebSocket gateway's connection store, provided on this session backend (spec #495 §9)"
+		}
+	},
+	"title": "_SessionStoreConfig",
+	"type": "object"
+}
