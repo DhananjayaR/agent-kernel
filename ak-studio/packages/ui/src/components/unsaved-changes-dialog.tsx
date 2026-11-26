@@ -9,7 +9,8 @@
 //   ("Discard changes"; a view may name the thing); **Stay** cancels the navigation, and so does Escape. A click on
 //   the scrim does nothing, so a stray click can neither lose work nor leave.
 // - **A save that fails** keeps the dialog open with the error under the body (what happened, what to do), so the
-//   person can try again, discard, or stay. While it runs, Save is pending and the others are disabled.
+//   person can try again, discard, or stay. While it runs, Stay and Discard are disabled and a second Save does
+//   nothing; Save shows its pending state once the save has run 300 ms.
 //
 // An alert dialog built on Modal: focus moves into it (onto the dialog, never onto Discard) and returns to where it
 // was when it closes. Presentational: the renderer's UnsavedChangesGuard opens it from the router's blocker.
@@ -32,8 +33,13 @@ export type UnsavedChangesDialogProps = {
 	onDiscard: () => void;
 	/** Cancels the navigation (Stay, Escape). */
 	onStay: () => void;
-	/** The save is running: Save is pending, the others disabled. */
+	/**
+	 * The save is running: Stay and Discard are disabled at once, so a Discard cannot be reversed by the write landing
+	 * after it.
+	 */
 	saving?: boolean;
+	/** The save has run 300 ms (the shared pending timing): Save shows its pending state. */
+	pending?: boolean;
 	/** The save failed: shown under the body; the dialog stays open. */
 	error?: ErrorSlots;
 	strings?: Partial<UnsavedChangesStrings>;
@@ -47,6 +53,7 @@ export function UnsavedChangesDialog({
 	onDiscard,
 	onStay,
 	saving = false,
+	pending = false,
 	error,
 	strings,
 }: UnsavedChangesDialogProps) {
@@ -69,7 +76,13 @@ export function UnsavedChangesDialog({
 					<Button variant="secondary" isDisabled={saving} onPress={onDiscard}>
 						{text.discard}
 					</Button>
-					<Button variant="primary" isPending={saving} onPress={onSave}>
+					<Button
+						variant="primary"
+						isPending={pending}
+						onPress={() => {
+							if (!saving) onSave();
+						}}
+					>
 						{text.save}
 					</Button>
 				</>

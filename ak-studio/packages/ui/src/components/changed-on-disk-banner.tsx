@@ -8,8 +8,8 @@
 //   updated.").
 // - **A conflicting working copy** (`conflict` true): the person's edits are kept and flagged. The banner is
 //   **warning** and carries "Keep mine" (save the copy over the file), "Take theirs" (drop the copy) and "Compare".
-//   It is not dismissable: the conflict stays until one is chosen. While a "Keep mine" save runs, "Keep mine" is
-//   pending and the others are disabled.
+//   It is not dismissable: the conflict stays until one is chosen. While a "Keep mine" save runs the others are
+//   disabled (`saving`), and "Keep mine" shows its pending state once the save has run 300 ms (`pending`).
 // - **Compare** shows only when the caller gives `onCompare`: the compare view is settled when first used (the
 //   design leans to the Code tab opened on the file's diff), so no view offers it before then.
 //
@@ -44,6 +44,7 @@ export type ChangedOnDiskBannerProps = Common &
 				onTakeTheirs?: undefined;
 				onCompare?: undefined;
 				saving?: undefined;
+				pending?: undefined;
 		  }
 		| {
 				/** The person's working copy and the file on disk differ. */
@@ -54,8 +55,13 @@ export type ChangedOnDiskBannerProps = Common &
 				onTakeTheirs: () => void;
 				/** Opens the compare view; "Compare" shows only when given. */
 				onCompare?: () => void;
-				/** "Keep mine" is saving (past the 300 ms pending threshold): it is pending, the others disabled. */
+				/**
+				 * A "Keep mine" save is running: "Take theirs" and "Compare" are disabled at once, so a choice made
+				 * during the save cannot be reversed by the write landing after it.
+				 */
 				saving?: boolean;
+				/** The save has run 300 ms (the shared pending timing): "Keep mine" shows its pending state. */
+				pending?: boolean;
 				onDismiss?: undefined;
 		  }
 	);
@@ -63,8 +69,10 @@ export type ChangedOnDiskBannerProps = Common &
 export function ChangedOnDiskBanner(props: ChangedOnDiskBannerProps) {
 	const { file, placement = "inline", description, strings, className } = props;
 	const text = { ...uiStrings.changedOnDisk, ...strings };
-	const actions = props.conflict ? (
-		<>
+	// The conflict's three choices sit in a row under the words, so the words keep the banner's width; the info
+	// banner's one Dismiss sits at its end.
+	const choices = props.conflict ? (
+		<div className="flex flex-wrap items-center gap-2">
 			{props.onCompare ? (
 				<Button
 					variant="secondary"
@@ -83,19 +91,21 @@ export function ChangedOnDiskBanner(props: ChangedOnDiskBannerProps) {
 			</Button>
 			<Button
 				variant="secondary"
-				isPending={props.saving}
+				isPending={props.pending}
 				onPress={props.onKeepMine}
 			>
 				{text.keepMine}
 			</Button>
-		</>
-	) : props.onDismiss ? (
-		<IconButton
-			aria-label={text.dismiss}
-			icon={<IconX aria-hidden="true" />}
-			onPress={props.onDismiss}
-		/>
+		</div>
 	) : undefined;
+	const dismiss =
+		!props.conflict && props.onDismiss ? (
+			<IconButton
+				aria-label={text.dismiss}
+				icon={<IconX aria-hidden="true" />}
+				onPress={props.onDismiss}
+			/>
+		) : undefined;
 
 	return (
 		<InlineBanner
@@ -103,7 +113,7 @@ export function ChangedOnDiskBanner(props: ChangedOnDiskBannerProps) {
 			data-placement={placement}
 			tone={props.conflict ? "warning" : "info"}
 			title={props.conflict ? text.conflictTitle : text.updatedTitle}
-			actions={actions}
+			actions={dismiss}
 			className={cn(
 				placement === "floating" &&
 					"absolute inset-x-4 top-4 z-10 mx-auto max-w-dialog-l shadow-elevated",
@@ -113,6 +123,7 @@ export function ChangedOnDiskBanner(props: ChangedOnDiskBannerProps) {
 			<div className="flex flex-col items-start gap-2">
 				<PathChip path={file} />
 				<p>{description ?? (props.conflict ? text.conflict : text.updated)}</p>
+				{choices}
 			</div>
 		</InlineBanner>
 	);

@@ -141,10 +141,16 @@ describe("ErrorView", () => {
 			description: error.message,
 			action: { label: "Try again" },
 		});
-		// A new error is raised again.
+		// The same error as a new object (a parent's inline literal) is not raised again; a different one is.
 		rerender(
 			<StrictMode>
 				<ErrorView error={{ ...error }} />
+			</StrictMode>,
+		);
+		expect(notify).toHaveBeenCalledOnce();
+		rerender(
+			<StrictMode>
+				<ErrorView error={{ ...error, message: "Try again later." }} />
 			</StrictMode>,
 		);
 		expect(notify).toHaveBeenCalledTimes(2);

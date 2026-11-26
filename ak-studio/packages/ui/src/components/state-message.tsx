@@ -17,6 +17,7 @@
 import { IconChevronRight, IconCircleX } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import { Disclosure, DisclosurePanel } from "react-aria-components";
+import { cn } from "../lib/utils";
 import { type StateMessageStrings, uiStrings } from "../strings";
 import { Button } from "./button";
 import { CodeBlock } from "./code-block";
@@ -65,13 +66,22 @@ function Detail({
 	detail,
 	label,
 	caption,
+	centred,
 }: {
 	detail: string;
 	label: string;
 	caption: string;
+	/** In the centred frame the toggle is centred under the words; the opened output stays full width. */
+	centred: boolean;
 }) {
 	return (
-		<Disclosure data-slot="state-detail" className="group w-full text-start">
+		<Disclosure
+			data-slot="state-detail"
+			className={cn(
+				"group flex w-full flex-col text-start",
+				centred ? "items-center" : "items-start",
+			)}
+		>
 			<Button
 				slot="trigger"
 				variant="ghost"
@@ -81,11 +91,11 @@ function Detail({
 						className="group-data-expanded:rotate-90"
 					/>
 				}
-				className="-ms-3"
+				className={centred ? undefined : "-ms-3"}
 			>
 				{label}
 			</Button>
-			<DisclosurePanel>
+			<DisclosurePanel className="w-full">
 				<CodeBlock code={detail} label={caption} className="mt-2" />
 			</DisclosurePanel>
 		</Disclosure>
@@ -117,7 +127,12 @@ function Body({
 				</div>
 			) : null}
 			{detail ? (
-				<Detail detail={detail} label={text.details} caption={text.output} />
+				<Detail
+					detail={detail}
+					label={text.details}
+					caption={text.output}
+					centred={centred}
+				/>
 			) : null}
 		</>
 	);

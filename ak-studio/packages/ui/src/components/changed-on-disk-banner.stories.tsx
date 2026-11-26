@@ -110,6 +110,7 @@ export const Saving: Story = {
 		onTakeTheirs: fn(),
 		onCompare: fn(),
 		saving: true,
+		pending: true,
 		onDismiss: undefined,
 	},
 	play: async ({ canvasElement, args }) => {

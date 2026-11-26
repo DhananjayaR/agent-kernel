@@ -6,8 +6,8 @@
 // - **inline** and **banner**: the empty, cannot-read and error family (StateMessage) in its banner frame where the
 //   view puts it (beside the control, or at the top of the view). With `frame="centred"` (nothing is left to show)
 //   the centred frame instead. A file and line make it "cannot read" (the file as a PathChip with the line).
-// - **toast**: raised once per error through the failure notice the Shell binds (a danger toast, with the next
-//   action as its button); nothing renders in place.
+// - **toast**: raised once per error (by what it says) through the failure notice the Shell binds (a danger toast,
+//   with the next action as its button); nothing renders in place.
 //
 // The slots come from presentError: the catalogue's title (what happened), the error's message (what to do), its file
 // and line, its detail (raw output, masked by the service, collapsed), and its action, an app command run through
@@ -43,11 +43,20 @@ export function ErrorView({
 	const where = placement ?? errorPresentation(error.code).placement;
 	const slots = presentError(error);
 
-	// A toast is raised once per error (StrictMode's second effect run, and re-renders, do not raise it again).
-	const raised = useRef<StudioError | undefined>(undefined);
+	// A toast is raised once per error (StrictMode's second effect run, and re-renders, do not raise it again). The
+	// error is told apart by what it says, not by object identity, so a parent passing a new literal each render
+	// does not raise it again.
+	const raised = useRef<string | undefined>(undefined);
+	const said = JSON.stringify([
+		error.code,
+		error.message,
+		error.detail,
+		error.file,
+		error.line,
+	]);
 	useEffect(() => {
-		if (where !== "toast" || raised.current === error) return;
-		raised.current = error;
+		if (where !== "toast" || raised.current === said) return;
+		raised.current = said;
 		const { title, description, action } = presentError(error);
 		noticeFailure(
 			{
@@ -57,7 +66,7 @@ export function ErrorView({
 			},
 			`${error.code}: ${error.message}`,
 		);
-	}, [where, error]);
+	}, [where, error, said]);
 
 	if (where === "toast") return null;
 	return (

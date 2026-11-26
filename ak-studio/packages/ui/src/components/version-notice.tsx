@@ -124,7 +124,7 @@ function Upgrade({
 	text,
 	inPopover = false,
 }: {
-	props: Common;
+	props: Common & { size?: VersionNoticeProps["size"] };
 	text: VersionNoticeStrings;
 	/** In the popover the quiet button keeps its padding inside the popover's edge. */
 	inPopover?: boolean;
@@ -132,8 +132,15 @@ function Upgrade({
 	const command =
 		props.status === "needs-upgrade" ? props.upgradeCommand : undefined;
 	if (!command && !props.onOpenDocs) return null;
+	// The docs link alone (no command) in the tab's centred frame is centred with the words.
+	const alone = !command && !inPopover && props.size === "tab";
 	return (
-		<div className="flex w-full flex-col items-start gap-2 text-start">
+		<div
+			className={cn(
+				"flex w-full flex-col gap-2",
+				alone ? "items-center text-center" : "items-start text-start",
+			)}
+		>
 			{command ? (
 				<>
 					<CodeBlock
@@ -148,7 +155,7 @@ function Upgrade({
 			{props.onOpenDocs ? (
 				<Button
 					variant="ghost"
-					className={inPopover ? undefined : "-ms-3"}
+					className={inPopover || alone ? undefined : "-ms-3"}
 					onPress={props.onOpenDocs}
 				>
 					{text.docs}

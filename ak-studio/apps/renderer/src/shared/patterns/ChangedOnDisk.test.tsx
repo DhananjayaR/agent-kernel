@@ -76,6 +76,23 @@ describe("ChangedOnDisk", () => {
 		expect(screen.queryByRole("status")).toBeNull();
 	});
 
+	it("takes the conflict away while a Keep mine save runs, so no choice made then can be reversed by the write", async () => {
+		let answer: (value: { revision: Revision }) => void = () => {};
+		const write = vi.fn(
+			() =>
+				new Promise<{ revision: Revision }>((resolve) => {
+					answer = resolve;
+				}),
+		);
+		const { user } = await conflicted(write);
+		await user.click(screen.getByRole("button", { name: "Keep mine" }));
+		// The working copy clears its conflict as the write starts: the banner (and Take theirs) is gone at once.
+		expect(screen.queryByRole("button", { name: "Take theirs" })).toBeNull();
+		await act(async () => answer({ revision: R3 }));
+		expect(screen.queryByRole("status")).toBeNull();
+		expect(screen.getByText("Showing: mine")).toBeTruthy();
+	});
+
 	it("offers Compare once its app command exists, and runs it with the file", async () => {
 		const run = vi.fn();
 		setCommands([

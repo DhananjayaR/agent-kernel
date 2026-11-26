@@ -143,8 +143,16 @@ describe("UnsavedChangesGuard", () => {
 		const { user, router, dialog } = await leaveWithEdits(write);
 		await user.click(within(dialog).getByRole("button", { name: "Save" }));
 		expect(write).toHaveBeenCalledExactlyOnceWith("mine", R1);
-		// Not confirmed yet: still here.
+		// Not confirmed yet: still here, and Discard and Stay are disabled at once (well before the 300 ms pending
+		// look), so a Discard cannot be reversed by the write landing after it.
 		expect(router.state.location.pathname).toBe("/");
+		expect(
+			within(dialog).getByRole("button", { name: "Discard changes" }),
+		).toHaveProperty("disabled", true);
+		expect(within(dialog).getByRole("button", { name: "Stay" })).toHaveProperty(
+			"disabled",
+			true,
+		);
 		confirm({ revision: R2 });
 		expect(await screen.findByText("Other view")).toBeTruthy();
 	});

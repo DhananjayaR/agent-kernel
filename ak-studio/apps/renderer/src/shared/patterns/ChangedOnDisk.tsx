@@ -3,7 +3,9 @@
 //
 // - **The working copy conflicts** (`conflict`: the file changed underneath the person's edits, or a save found it
 //   stale): the warning banner. "Keep mine" saves the copy over the file (keepMine), "Take theirs" drops it
-//   (takeTheirs); "Keep mine" is pending once the save has run 300 ms.
+//   (takeTheirs). The working copy clears its conflict as the "Keep mine" write starts, so the banner goes while it
+//   runs (no choice made then could be reversed by the write) and comes back if the write finds the file changed
+//   again. `saving` and `pending` are passed through for a copy that keeps its conflict while saving.
 // - **No working copy, and the view re-read a file changed outside the app** (`changed`, which the view sets from
 //   the file's domain event; the working copy cannot tell it from the view's own save): the info banner, until
 //   dismissed.
@@ -25,7 +27,7 @@ export interface ChangedOnDiskProps {
 	/** The view's working copy, when it has one. */
 	workingCopy?: Pick<
 		WorkingCopy<unknown>,
-		"conflict" | "keepMine" | "takeTheirs" | "showPending"
+		"conflict" | "keepMine" | "takeTheirs" | "saving" | "showPending"
 	>;
 	/** The view re-read the file after a change made outside the app, with no working copy to keep. */
 	changed?: boolean;
@@ -65,7 +67,8 @@ export function ChangedOnDisk({
 				}}
 				onTakeTheirs={workingCopy.takeTheirs}
 				onCompare={onCompare}
-				saving={workingCopy.showPending}
+				saving={workingCopy.saving}
+				pending={workingCopy.showPending}
 			/>
 		);
 	}

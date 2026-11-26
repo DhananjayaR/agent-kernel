@@ -145,7 +145,7 @@ export const EscapeStays: Story = {
 
 /** A save on its way: Save is pending (presses ignored), Stay and Discard are disabled. */
 export const Saving: Story = {
-	args: { saving: true },
+	args: { saving: true, pending: true },
 	play: async ({ canvasElement, args }) => {
 		const dialog = await open(canvasElement);
 		const save = within(dialog).getByRole("button", { name: "Save" });

@@ -5,7 +5,8 @@
 //
 // - **Save** saves the working copy; once the save is confirmed (no longer dirty, no conflict, no error) the held
 //   navigation goes on. A save that fails (a conflict: the file changed on disk; or any other error) keeps the dialog
-//   open with what happened and what to do, and the navigation held. Save is pending once it has run 300 ms.
+//   open with what happened and what to do, and the navigation held. While it runs, Stay and Discard are disabled
+//   (a Discard then would be reversed by the write landing after it); Save is pending once it has run 300 ms.
 // - **Discard** drops the copy and goes on. **Stay** (and Escape) cancels the navigation; the copy stays.
 //
 // The answer always resolves the blocker explicitly (proceed or reset): once the copy is clean the blocker is no
@@ -80,7 +81,8 @@ export function UnsavedChangesGuard({
 			isOpen
 			what={what ?? label}
 			{...(file === undefined ? {} : { file })}
-			saving={workingCopy.showPending}
+			saving={workingCopy.saving}
+			pending={workingCopy.showPending}
 			{...(saveError === undefined ? {} : { error: saveError })}
 			onSave={() => {
 				setSaveError(undefined);
