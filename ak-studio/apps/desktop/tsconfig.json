@@ -12,5 +12,8 @@
 		"vite.renderer.config.ts",
 		"renderer.shared.ts"
 	],
-	"references": [{ "path": "../../packages/contract" }]
+	"references": [
+		{ "path": "../../packages/contract" },
+		{ "path": "../../packages/runtime" }
+	]
 }

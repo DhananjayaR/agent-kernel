@@ -61,6 +61,7 @@ describe("StudioError", () => {
 			"project.notOpen",
 			"file.changedOnDisk",
 			"file.outsideProject",
+			"file.notFound",
 			"kernel.capabilityUnavailable",
 			"job.notFound",
 			"job.notWaiting",
@@ -70,6 +71,7 @@ describe("StudioError", () => {
 			"session.unknownKind",
 			"session.alreadyRunning",
 			"session.failed",
+			"stream.notFound",
 		];
 		const codes: string[] = Object.values(ERROR_CODES);
 		for (const code of p1b) {

@@ -8,8 +8,13 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DEFAULT_SHELL_LAYOUT, ERROR_CODES } from "@ak-studio/contract";
+import {
+	EventBus,
+	SecretMasker,
+	ServiceRegistry,
+	StreamHub,
+} from "@ak-studio/runtime";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ServiceRegistry } from "../bridge/registry";
 import {
 	AppService,
 	PREFERENCES_FILE,
@@ -28,11 +33,13 @@ beforeEach(() => {
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
 function serve(service: AppService) {
-	// The window service serves the window operations, so the registry (which needs every handler) can start.
-	// TEMPORARY (P1b Task 3): PendingP1bService serves the job, session and event operations until Task 6.
+	// The window, event and stream services serve the rest, so the registry (which needs every handler) can
+	// start. TEMPORARY (P1b Task 3): PendingP1bService serves the job and session operations until Task 6.
 	const registry = new ServiceRegistry()
 		.register(service)
 		.register(new WindowService(() => null))
+		.register(new EventBus())
+		.register(new StreamHub({ masker: new SecretMasker() }))
 		.register(new PendingP1bService());
 	registry.start();
 	return registry;

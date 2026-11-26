@@ -1,7 +1,12 @@
 // Every service the app serves, registered against one ServiceRegistry. index.ts builds the app's registry with
-// this, and the contract test (bridge/registry.test.ts) uses the same function, so a service dropped here fails
-// the test and not only the app's start-up. No Electron import: index.ts passes Electron's values in.
-import type { ServiceRegistry } from "../bridge/registry";
+// this, and the contract test (registerServices.test.ts) uses the same function, so a service dropped here
+// fails the test and not only the app's start-up. No Electron import: index.ts passes Electron's values in.
+import {
+	EventBus,
+	SecretMasker,
+	type ServiceRegistry,
+	StreamHub,
+} from "@ak-studio/runtime";
 import { AppService, type AppServiceOptions } from "./AppService";
 import { PendingP1bService } from "./PendingP1bService";
 import { type ControlledWindow, WindowService } from "./WindowService";
@@ -11,12 +16,17 @@ export interface ServiceDeps {
 	app: AppServiceOptions;
 	/** The app's window, or null before it exists and after it closes. */
 	window: () => ControlledWindow | null;
+	/** The masker the registry masks errors with, so stream output is masked with the same known secrets. */
+	masker?: SecretMasker;
 }
 
 /** The registered services, for index.ts to read start-up state from (e.g. the stored theme). */
 export interface Services {
 	app: AppService;
 	window: WindowService;
+	masker: SecretMasker;
+	events: EventBus;
+	streams: StreamHub;
 }
 
 /** Registers every service on `registry` and returns them. Call before `registry.start()`. */
@@ -28,8 +38,13 @@ export function registerServices(
 	registry.register(app);
 	const window = new WindowService(deps.window);
 	registry.register(window);
-	// TEMPORARY (P1b Task 3): the job, session and event operations answer bridge.unavailable until their
-	// services exist (Tasks 4 and 5); Task 6 replaces this line with them.
+	const masker = deps.masker ?? new SecretMasker();
+	const events = new EventBus();
+	registry.register(events);
+	const streams = new StreamHub({ masker });
+	registry.register(streams);
+	// TEMPORARY (P1b Task 3): the job and session operations answer bridge.unavailable until their services
+	// exist (Task 5); Task 6 replaces this line with them.
 	registry.register(new PendingP1bService());
-	return { app, window };
+	return { app, window, masker, events, streams };
 }

@@ -3,7 +3,7 @@
 // No Electron import: it works on a small structural view of the window (`ControlledWindow`), and index.ts passes
 // a function that answers the current BrowserWindow. With no window, requests do nothing and answer normally, and
 // the stream reports not maximised.
-import type { Service, ServiceRegistry } from "../bridge/registry";
+import type { Service, ServiceRegistry } from "@ak-studio/runtime";
 
 /** The part of a BrowserWindow this service uses (Electron's BrowserWindow satisfies it). */
 export interface ControlledWindow {

@@ -1,6 +1,8 @@
+// ServiceRegistry tests (moved from apps/desktop in P1b Task 4): start-up, requests and streams over a
+// test-local contract, plus the P1b additions: capability refusal, masking of every error, and the log line for
+// a code an operation does not list. The desktop's registerServices.test.ts checks the real contract is served.
 import {
-	appInfo,
-	appSetTheme,
+	command,
 	contract,
 	defineOperation,
 	defineStream,
@@ -11,12 +13,8 @@ import {
 } from "@ak-studio/contract";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import {
-	PENDING_REQUESTS,
-	PENDING_STREAMS,
-} from "../services/PendingP1bService";
-import { registerServices } from "../services/registerServices";
-import { ServiceRegistry } from "./registry";
+import { type CapabilityChecker, ServiceRegistry } from "./registry";
+import { SecretMasker } from "./secrets";
 
 // A test-local contract: the real one declares no stream.
 const echo = defineOperation({
@@ -35,7 +33,7 @@ const testContract = {
 } as const;
 
 function testRegistry(log = vi.fn()) {
-	const registry = new ServiceRegistry(testContract, log);
+	const registry = new ServiceRegistry({ contract: testContract, log });
 	return { registry, log };
 }
 
@@ -85,74 +83,12 @@ describe("ServiceRegistry start-up", () => {
 		);
 	});
 
-	it("serves the real contract completely with the app's own services (registerServices, as index.ts)", () => {
+	it("defaults to the app's contract", () => {
 		const registry = new ServiceRegistry();
 		expect(registry.missingHandlers()).toEqual(
 			[...Object.keys(operations), ...Object.keys(contract.streams)].sort(),
 		);
-		const services = registerServices(registry, {
-			window: () => null,
-			app: {
-				version: "1.0.0",
-				platform: "linux",
-				preferencesFile: "/nonexistent/preferences.json",
-			},
-		});
-		expect(services.app.theme).toBe("system");
-		expect(registry.missingHandlers()).toEqual([]);
-		expect(() => registry.start()).not.toThrow();
-		expect(Object.keys(contract.operations)).toContain(appInfo.name);
-		expect(Object.keys(contract.operations)).toContain(appSetTheme.name);
-		expect(services.window).toBeDefined();
 	});
-
-	// TEMPORARY (P1b Task 3): PendingP1bService answers bridge.unavailable for the operations whose services come
-	// in Tasks 4 and 5. Task 6 deletes it and this test, and turns the todos below into real tests.
-	it("answers bridge.unavailable for the job, session and event operations until their services exist", async () => {
-		const registry = new ServiceRegistry();
-		registerServices(registry, {
-			window: () => null,
-			app: {
-				version: "1.0.0",
-				platform: "linux",
-				preferencesFile: "/nonexistent/preferences.json",
-			},
-		});
-		registry.start();
-		// A valid input for each, so the handler (not input parsing) answers.
-		const inputs: Record<(typeof PENDING_REQUESTS)[number], unknown> = {
-			"job.cancel": { jobId: "j1" },
-			"job.respond": { jobId: "j1", requestId: "r1", answer: {} },
-			"jobs.dismissInterrupted": { jobId: "j1" },
-			"jobs.interrupted": {},
-			"jobs.list": {},
-			"session.start": { kind: "t.kind", args: {} },
-			"session.stop": { sessionId: "s1" },
-			"sessions.list": {},
-		};
-		for (const name of PENDING_REQUESTS) {
-			expect(await registry.request(name, inputs[name]), name).toMatchObject({
-				ok: false,
-				error: { code: ERROR_CODES.unavailable },
-			});
-		}
-		for (const name of PENDING_STREAMS) {
-			const input = name === "stream.read" ? { streamId: "s1" } : {};
-			const send = vi.fn();
-			expect(registry.subscribe(name, input, send), name).toMatchObject({
-				ok: false,
-				error: { code: ERROR_CODES.unavailable },
-			});
-			expect(send).not.toHaveBeenCalled();
-		}
-	});
-
-	it.todo(
-		"serves events and stream.read from EventBus and StreamHub (P1b Task 4; wired in registerServices by Task 6)",
-	);
-	it.todo(
-		"serves the job and session operations from JobService and SessionService (P1b Task 5; wired in registerServices by Task 6)",
-	);
 });
 
 describe("ServiceRegistry.request", () => {
@@ -367,10 +303,10 @@ describe("ServiceRegistry validation that throws", () => {
 			}),
 		});
 		const log = vi.fn();
-		const registry = new ServiceRegistry(
-			{ operations: { "t.throws": throwing }, streams: {} },
+		const registry = new ServiceRegistry({
+			contract: { operations: { "t.throws": throwing }, streams: {} },
 			log,
-		);
+		});
 		registry.handle("t.throws", () => ({}));
 		registry.start();
 		await expect(registry.request("t.throws", {})).resolves.toMatchObject({
@@ -378,5 +314,268 @@ describe("ServiceRegistry validation that throws", () => {
 			error: { code: ERROR_CODES.invalidOutput },
 		});
 		expect(log).toHaveBeenCalledOnce();
+	});
+});
+
+// ---- P1b: capability refusal, masking, undeclared codes ----
+
+const gated = command({
+	name: "t.gated",
+	input: z.strictObject({ projectId: z.string().optional() }),
+	output: z.object({}),
+	capability: "t.capability",
+});
+const declared = command({
+	name: "t.declared",
+	input: z.strictObject({ code: z.string(), detail: z.string().optional() }),
+	output: z.object({}),
+	errors: [ERROR_CODES.jobNotFound],
+});
+const lines = defineStream({
+	name: "t.lines",
+	input: z.strictObject({}),
+	// A transform that throws repeats the bad value in the error's detail, as some zod messages do.
+	event: z.object({
+		text: z.string().transform((text) => {
+			if (text.startsWith("bad")) throw new Error(`cannot send ${text}`);
+			return text;
+		}),
+	}),
+});
+const p1bContract = {
+	operations: { "t.gated": gated, "t.declared": declared },
+	streams: { "t.lines": lines },
+} as const;
+
+const SECRET = "sk-live-0123456789";
+
+function p1bRegistry(
+	options: {
+		capabilities?: CapabilityChecker;
+		masker?: SecretMasker;
+		lines?: Parameters<
+			ServiceRegistry<
+				typeof p1bContract.operations,
+				typeof p1bContract.streams
+			>["handleStream"]
+		>[1];
+	} = {},
+) {
+	const log = vi.fn();
+	const gatedHandler = vi.fn(() => ({}));
+	const registry = new ServiceRegistry({
+		contract: p1bContract,
+		log,
+		capabilities: options.capabilities,
+		masker: options.masker,
+	});
+	registry
+		.handle("t.gated", gatedHandler)
+		.handle("t.declared", (input) => {
+			throw new StudioFailure({
+				code: input.code,
+				message: `It failed: ${input.detail ?? ""}`,
+				...(input.detail === undefined ? {} : { detail: input.detail }),
+			});
+		})
+		.handleStream("t.lines", options.lines ?? (() => () => {}));
+	registry.start();
+	return { registry, log, gatedHandler };
+}
+
+describe("ServiceRegistry capability refusal", () => {
+	it("refuses an operation whose capability is not available, without calling the handler", async () => {
+		for (const status of ["needs-upgrade", "removed"] as const) {
+			const status_ = vi.fn<CapabilityChecker["status"]>(() => status);
+			const { registry, gatedHandler, log } = p1bRegistry({
+				capabilities: { status: status_ },
+			});
+			const result = await registry.request("t.gated", { projectId: "p1" });
+			expect(result, status).toMatchObject({
+				ok: false,
+				error: {
+					code: ERROR_CODES.capabilityUnavailable,
+					detail: "t.capability",
+				},
+			});
+			expect(status_).toHaveBeenCalledWith("t.capability", "p1");
+			expect(gatedHandler).not.toHaveBeenCalled();
+			expect(log).not.toHaveBeenCalled();
+		}
+	});
+
+	it("says what to do: upgrade for needs-upgrade, a different message for removed", async () => {
+		const messages: string[] = [];
+		for (const status of ["needs-upgrade", "removed"] as const) {
+			const { registry } = p1bRegistry({
+				capabilities: { status: () => status },
+			});
+			const result = await registry.request("t.gated", {});
+			if (!result.ok) messages.push(result.error.message);
+		}
+		expect(messages).toHaveLength(2);
+		expect(messages[0]).not.toBe(messages[1]);
+		expect(messages[0]).toMatch(/upgrade/i);
+	});
+
+	it("serves the operation when the capability is available, asking without a project when none is given", async () => {
+		const status = vi.fn<CapabilityChecker["status"]>(() => "available");
+		const { registry, gatedHandler } = p1bRegistry({
+			capabilities: { status },
+		});
+		await expect(registry.request("t.gated", {})).resolves.toEqual({
+			ok: true,
+			value: {},
+		});
+		expect(status).toHaveBeenCalledWith("t.capability", undefined);
+		expect(gatedHandler).toHaveBeenCalledOnce();
+	});
+
+	it("parses the input before checking: invalid input is invalidInput and asks nothing", async () => {
+		const status = vi.fn<CapabilityChecker["status"]>(() => "removed");
+		const { registry } = p1bRegistry({ capabilities: { status } });
+		await expect(
+			registry.request("t.gated", { projectId: 5 }),
+		).resolves.toMatchObject({
+			ok: false,
+			error: { code: ERROR_CODES.invalidInput },
+		});
+		expect(status).not.toHaveBeenCalled();
+	});
+
+	it("never asks about an operation that names no capability", async () => {
+		const status = vi.fn<CapabilityChecker["status"]>(() => "removed");
+		const { registry } = p1bRegistry({ capabilities: { status } });
+		await registry.request("t.declared", { code: ERROR_CODES.jobNotFound });
+		expect(status).not.toHaveBeenCalled();
+	});
+
+	it("treats every capability as available when no checker is given", async () => {
+		const { registry, gatedHandler } = p1bRegistry();
+		await expect(registry.request("t.gated", {})).resolves.toMatchObject({
+			ok: true,
+		});
+		expect(gatedHandler).toHaveBeenCalledOnce();
+	});
+});
+
+describe("ServiceRegistry masking", () => {
+	function masked() {
+		const masker = new SecretMasker();
+		masker.add(SECRET);
+		return masker;
+	}
+
+	it("masks a StudioFailure's message and detail", async () => {
+		const { registry } = p1bRegistry({ masker: masked() });
+		const result = await registry.request("t.declared", {
+			code: ERROR_CODES.jobNotFound,
+			detail: `token=${SECRET} refused`,
+		});
+		expect(result).toEqual({
+			ok: false,
+			error: {
+				code: ERROR_CODES.jobNotFound,
+				message: "It failed: token=•••• refused",
+				detail: "token=•••• refused",
+			},
+		});
+	});
+
+	it("masks an unexpected exception's detail, in the answer and in the log", async () => {
+		const log = vi.fn();
+		const registry = new ServiceRegistry({
+			contract: testContract,
+			log,
+			masker: masked(),
+		});
+		registry
+			.handle("t.echo", () => {
+				throw new Error(`could not reach ${SECRET}`);
+			})
+			.handleStream("t.ticks", () => () => {});
+		registry.start();
+		const result = await registry.request("t.echo", { text: "a" });
+		expect(result).toMatchObject({
+			ok: false,
+			error: { code: ERROR_CODES.internal, detail: "could not reach ••••" },
+		});
+		expect(log).toHaveBeenCalledOnce();
+		expect(String(log.mock.calls[0]?.[0])).not.toContain(SECRET);
+	});
+
+	it("masks the unknown-operation answer, which repeats the caller's name", async () => {
+		const { registry } = p1bRegistry({ masker: masked() });
+		await expect(registry.request(`t.${SECRET}`, {})).resolves.toMatchObject({
+			ok: false,
+			error: { code: ERROR_CODES.unknownOperation, detail: "t.••••" },
+		});
+		expect(registry.subscribe(`t.${SECRET}`, {}, () => {})).toMatchObject({
+			ok: false,
+			error: { code: ERROR_CODES.unknownOperation, detail: "t.••••" },
+		});
+	});
+
+	it("masks the error of a stream that fails to start", () => {
+		const { registry } = p1bRegistry({
+			masker: masked(),
+			lines: () => {
+				throw new Error(`bad ${SECRET}`);
+			},
+		});
+		expect(registry.subscribe("t.lines", {}, () => {})).toMatchObject({
+			ok: false,
+			error: { code: ERROR_CODES.internal, detail: "bad ••••" },
+		});
+	});
+
+	it("masks the error message that ends a running stream", () => {
+		let emit: ((event: { text: string }) => void) | undefined;
+		const { registry } = p1bRegistry({
+			masker: masked(),
+			lines: (_input, e) => {
+				emit = e;
+				return () => {};
+			},
+		});
+		const sent: StreamMessage[] = [];
+		registry.subscribe("t.lines", {}, (m) => sent.push(m));
+		emit?.({ text: `bad ${SECRET}` });
+		expect(sent).toEqual([
+			{
+				ok: false,
+				error: expect.objectContaining({
+					code: ERROR_CODES.invalidOutput,
+					detail: expect.stringContaining("cannot send bad ••••"),
+				}),
+			},
+		]);
+		expect(JSON.stringify(sent)).not.toContain(SECRET);
+	});
+});
+
+describe("ServiceRegistry undeclared error codes", () => {
+	it("returns a code the operation does not list, and logs it as a bug", async () => {
+		const { registry, log } = p1bRegistry();
+		const result = await registry.request("t.declared", {
+			code: ERROR_CODES.jobNotWaiting,
+		});
+		expect(result).toMatchObject({
+			ok: false,
+			error: { code: ERROR_CODES.jobNotWaiting },
+		});
+		expect(log).toHaveBeenCalledOnce();
+		expect(log.mock.calls[0]?.[0]).toMatch(/t\.declared.*job\.notWaiting/);
+	});
+
+	it("does not log a listed code, the bridge's own codes or a capability refusal", async () => {
+		const { registry, log } = p1bRegistry({
+			capabilities: { status: () => "removed" },
+		});
+		await registry.request("t.declared", { code: ERROR_CODES.jobNotFound });
+		await registry.request("t.declared", { code: ERROR_CODES.unavailable });
+		await registry.request("t.declared", {});
+		await registry.request("t.gated", {});
+		expect(log).not.toHaveBeenCalled();
 	});
 });

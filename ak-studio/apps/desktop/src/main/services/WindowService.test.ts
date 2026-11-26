@@ -1,5 +1,10 @@
+import {
+	EventBus,
+	SecretMasker,
+	ServiceRegistry,
+	StreamHub,
+} from "@ak-studio/runtime";
 import { describe, expect, it, vi } from "vitest";
-import { ServiceRegistry } from "../bridge/registry";
 import { PendingP1bService } from "./PendingP1bService";
 import { type ControlledWindow, WindowService } from "./WindowService";
 
@@ -95,9 +100,11 @@ describe("WindowService", () => {
 	it("registers its three requests and its stream with the registry", async () => {
 		const { win } = fakeWindow();
 		const registry = new ServiceRegistry();
-		// TEMPORARY (P1b Task 3): PendingP1bService serves the job, session and event operations until Task 6.
+		// TEMPORARY (P1b Task 3): PendingP1bService serves the job and session operations until Task 6.
 		registry
 			.register(new WindowService(() => win))
+			.register(new EventBus())
+			.register(new StreamHub({ masker: new SecretMasker() }))
 			.register(new PendingP1bService());
 		expect(registry.missingHandlers()).toEqual([
 			"app.info",

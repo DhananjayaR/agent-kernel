@@ -26,8 +26,8 @@ export const studioErrorSchema = z.object({
 export type StudioError = z.infer<typeof studioErrorSchema>;
 
 /**
- * The error catalog. P1a holds the bridge's own codes and AppService's; P1b adds the project, file, kernel, job
- * and session codes; features add theirs in later phases. Every code an operation lists must be here (a test).
+ * The error catalog. P1a holds the bridge's own codes and AppService's; P1b adds the project, file, kernel, job,
+ * session and stream codes; features add theirs in later phases. Every code an operation lists must be here (a test).
  */
 export const ERROR_CODES = {
 	/** The operation name is not in the contract (or is not of the kind that was called). */
@@ -50,6 +50,8 @@ export const ERROR_CODES = {
 	fileChangedOnDisk: "file.changedOnDisk",
 	/** A path resolves outside the project folder. */
 	fileOutsideProject: "file.outsideProject",
+	/** The file does not exist in the project folder (a read of a missing file, or a write to a deleted one). */
+	fileNotFound: "file.notFound",
 	/** The project's OAK version lacks the capability the operation needs. */
 	capabilityUnavailable: "kernel.capabilityUnavailable",
 	/** No job has this id (it never existed, or its record was dismissed). */
@@ -68,6 +70,8 @@ export const ERROR_CODES = {
 	sessionAlreadyRunning: "session.alreadyRunning",
 	/** The session could not start, or stopped by itself. */
 	sessionFailed: "session.failed",
+	/** `stream.read` names a stream the app does not have (it never existed, or the app restarted since). */
+	streamNotFound: "stream.notFound",
 } as const;
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
 

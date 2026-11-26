@@ -45,11 +45,18 @@ touches the project's files, processes and OAK environment.
 |---|---|---|
 | `packages/ui` | React, shadcn/ui primitives, Tailwind | `contract`, `shared`, `features`, anything that fetches data |
 | `packages/contract` | zod | Anything with side effects; Node or Electron APIs |
+| `packages/runtime` | `contract`, zod | Node built-ins; `electron`; the renderer; `apps/desktop` |
 | `renderer/shared` | `contract`, `ui` | `features` |
 | `renderer/features/<a>` | `shared`, `ui`, `contract` | **Any other feature**; `electron`; Node built-ins |
 | `renderer/app` | Everything in the renderer | `electron`; Node built-ins |
-| `desktop/services` | `contract`, `desktop/infra` | The renderer; another service's internals (services talk through injected interfaces) |
+| `desktop/services` | `contract`, `runtime`, `desktop/infra` | The renderer; another service's internals (services talk through injected interfaces) |
 | `desktop/infra` | Node, Electron | Services; the renderer |
+
+**The runtime package.** `packages/runtime` holds the browser-safe services core (P1b ruling 9): the service
+registry, project scopes, secret masking, `EventBus`, `StreamHub`, the job and session services, and the
+interfaces of the ports (`CommandRunner`, `ProjectFs`, `Watcher`, `JobRecordStore`) with in-memory fakes. The
+desktop main process serves the contract from it with the Node implementations of the ports; the renderer's
+mock transport serves the same services over the fakes, so a feature behaves the same in the browser.
 
 **Presentational and connected components.** A component with no data access lives in `packages/ui`
 (`JobProgressView`, `ErrorMessage`, `VersionNotice`). Its connected wrapper, which reads a store or the

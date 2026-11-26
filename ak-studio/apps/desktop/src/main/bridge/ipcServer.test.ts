@@ -4,6 +4,7 @@ import {
 	defineStream,
 	ERROR_CODES,
 } from "@ak-studio/contract";
+import { ServiceRegistry } from "@ak-studio/runtime";
 import type { IpcMain, IpcMainEvent, WebContents } from "electron";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -15,7 +16,6 @@ import {
 	senderRefusal,
 	trustedOrigins,
 } from "./ipcServer";
-import { ServiceRegistry } from "./registry";
 
 // ---- Fakes: just enough of Electron's WebContents, WebFrameMain and ipcMain ----
 
@@ -63,10 +63,10 @@ function setup(
 ) {
 	const emitters: Array<(n: number) => void> = [];
 	const stops = vi.fn();
-	const registry = new ServiceRegistry(
-		{ operations: { "t.echo": echo }, streams: { "t.ticks": ticks } },
-		() => {},
-	);
+	const registry = new ServiceRegistry({
+		contract: { operations: { "t.echo": echo }, streams: { "t.ticks": ticks } },
+		log: () => {},
+	});
 	registry
 		.handle("t.echo", (input) => input)
 		.handleStream("t.ticks", (_input, emit) => {

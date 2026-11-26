@@ -20,9 +20,11 @@ export default defineConfig(({ command, mode }) => {
 			define: { __STUDIO_DEV__: JSON.stringify(studioDev) },
 			build: {
 				outDir: resolve(here, "out/main"),
-				// The contract is a workspace package whose entry is TypeScript source: bundle it (and its zod)
-				// into main rather than leave a runtime import that Node cannot load from the packaged app.
-				externalizeDeps: { exclude: ["@ak-studio/contract"] },
+				// The contract and the runtime are workspace packages whose entry is TypeScript source: bundle them
+				// (and their zod) into main rather than leave an import that Node cannot load from the packaged app.
+				externalizeDeps: {
+					exclude: ["@ak-studio/contract", "@ak-studio/runtime"],
+				},
 			},
 		},
 		preload: {

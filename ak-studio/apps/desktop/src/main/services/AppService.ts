@@ -13,7 +13,7 @@ import {
 	type ThemePreference,
 	themePreferenceSchema,
 } from "@ak-studio/contract";
-import type { Service, ServiceRegistry } from "../bridge/registry";
+import type { Service, ServiceRegistry } from "@ak-studio/runtime";
 
 export const PREFERENCES_FILE = "preferences.json";
 export const DEFAULT_THEME: ThemePreference = "system";
