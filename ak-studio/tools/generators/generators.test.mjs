@@ -22,6 +22,7 @@ import {
 	readlinkSync,
 	realpathSync,
 	rmSync,
+	statSync,
 	symlinkSync,
 	writeFileSync,
 } from "node:fs";
@@ -201,10 +202,7 @@ beforeAll(() => {
 }, 120_000);
 
 afterAll(() => {
-	if (parent) {
-		chmodSync(join(parent, "ak-studio/packages/ui/src"), 0o755);
-		rmSync(parent, { recursive: true, force: true });
-	}
+	if (parent) rmSync(parent, { recursive: true, force: true });
 });
 
 describe("the generators, run in a copy of the workspace", () => {
@@ -496,23 +494,112 @@ describe("the generators, run in a copy of the workspace", () => {
 		);
 	}, 60_000);
 
-	it("put every file back when writing fails part way: a folder it cannot write in", () => {
-		const before = snapshot(copy);
+	it("put every file back when writing fails part way (on every OS)", () => {
 		const src = join(copy, "packages/ui/src");
-		// The component and its stories are written into components/; the index edit then fails in src/.
-		chmodSync(src, 0o555);
-		try {
-			refused(
-				/writing failed, so nothing was changed/,
-				"new-component",
-				"toolbar-row",
-			);
-		} finally {
-			chmodSync(src, 0o755);
-		}
+		// A folder where the index's temporary file must go: the component and its stories are written first, then
+		// writing the index fails (a file cannot be written over a folder on any OS), and all must be undone.
+		const blocker = join(src, ".index.ts.generator-tmp");
+		mkdirSync(blocker);
+		const before = snapshot(copy);
+		refused(
+			/writing failed, so nothing was changed/,
+			"new-component",
+			"toolbar-row",
+		);
 		expect(snapshot(copy)).toEqual(before);
 		expect(existsSync(join(src, "components/toolbar-row.tsx"))).toBe(false);
+		expect(existsSync(join(src, "components/toolbar-row.stories.tsx"))).toBe(
+			false,
+		);
+		// The folder it did not make is left alone.
+		expect(existsSync(blocker)).toBe(true);
+		rmSync(blocker, { recursive: true });
 	}, 60_000);
+
+	it("remove the folders it made when a new feature fails part way", () => {
+		const features = join(copy, "apps/renderer/src/app");
+		const blocker = join(features, ".features.ts.generator-tmp");
+		mkdirSync(blocker);
+		const before = snapshot(copy);
+		refused(
+			/writing failed, so nothing was changed/,
+			"new-feature",
+			"changelog",
+		);
+		expect(snapshot(copy)).toEqual(before);
+		expect(existsSync(join(copy, "apps/renderer/src/features/changelog"))).toBe(
+			false,
+		);
+		rmSync(blocker, { recursive: true });
+	}, 60_000);
+
+	it("keep a comment on register with register, and add a fixture inside its object when code follows it", () => {
+		const service = join(
+			copy,
+			"apps/desktop/src/main/services/ReleaseNotesService.ts",
+		);
+		const fixtures = join(
+			copy,
+			"apps/renderer/src/shared/bridge/desktopFixtures.ts",
+		);
+		writeFileSync(
+			service,
+			readFileSync(service, "utf8").replace(
+				"\tregister(registry:",
+				"\t/**\n\t * Serves the feature's desktop-only operations.\n\t */\n\tregister(registry:",
+			),
+		);
+		const trailing =
+			"\n/** Answers the tests reuse. */\nexport const sampleAnswers = {\n\tempty: {},\n};\n";
+		writeFileSync(fixtures, `${readFileSync(fixtures, "utf8")}${trailing}`);
+		generated(
+			"new-operation",
+			FEATURE,
+			"read-disk-label",
+			"--shape",
+			"query",
+			"--desktop",
+		);
+		const text = readFileSync(service, "utf8");
+		expect(text).toMatch(
+			/\t\/\*\*\n\t \* Serves the feature's desktop-only operations\.\n\t \*\/\n\tregister\(registry:/,
+		);
+		expect(text.indexOf("readDiskLabel(")).toBeLessThan(
+			text.indexOf("Serves the feature's desktop-only operations"),
+		);
+		const after = readFileSync(fixtures, "utf8");
+		expect(after.endsWith(trailing)).toBe(true);
+		expect(after.indexOf('"release-notes.readDiskLabel"')).toBeLessThan(
+			after.indexOf("export const sampleAnswers"),
+		);
+		// A desktop-only, project-scoped operation's fixture checks the scope, as its service does.
+		expect(after).toMatch(
+			/"release-notes\.readDiskPath": \(\{ projectId \}, \{ scopes \}\) => \{\n\t\tscopes\.require\(projectId\);/,
+		);
+	}, 60_000);
+
+	it.skipIf(process.platform === "win32")(
+		"refuse to edit a file that is a symbolic link, and keep a file's mode",
+		() => {
+			const index = join(copy, "packages/ui/src/index.ts");
+			const real = join(copy, "packages/ui/src/index.real.ts");
+			const original = readFileSync(index, "utf8");
+			writeFileSync(real, original);
+			rmSync(index);
+			symlinkSync("index.real.ts", index);
+			const before = snapshot(copy);
+			refused(/is a symbolic link/, "new-component", "toolbar-row");
+			expect(snapshot(copy)).toEqual(before);
+			rmSync(index);
+			rmSync(real);
+			writeFileSync(index, original);
+			chmodSync(index, 0o600);
+			generated("new-component", "toolbar-row");
+			expect(statSync(index).mode & 0o777).toBe(0o600);
+			chmodSync(index, 0o644);
+		},
+		60_000,
+	);
 
 	it("put every file back when Biome cannot fix what it wrote", () => {
 		const features = join(copy, "apps/renderer/src/app/features.ts");

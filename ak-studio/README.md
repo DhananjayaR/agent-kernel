@@ -111,10 +111,13 @@ from one, so the skeleton is never hand-written and passes every check as genera
 refuses to overwrite anything, and a refused run writes nothing. It then runs Biome (`check --write`) on what it
 wrote, which sorts the imports and exports it added.
 
-Writing is all or nothing: each file goes to a temporary file and is renamed into place, and if a write or the
-Biome step fails, every edited file gets its original text back and every created file and folder is removed. Edit
-points are found by structure (`register` must be the service's last member; a case goes at the end of the
-service test's `describe`); one that is missing or ambiguous is refused, never guessed.
+Writing is all or nothing: each file goes to a temporary file beside it (`.<name>.generator-tmp`, keeping the mode
+of the file it replaces) and is renamed into place, and if a write or the Biome step fails, every edited file gets
+its original text back and every created file and folder is removed. A file that is a symbolic link is never
+edited (the run is refused). Edit
+points are found by structure (`register` must be the service's last member, and a comment on it stays with it; a
+case goes at the end of the service test's `describe`; a fixture at the end of the `desktopFixtureHandlers`
+object); one that is missing or ambiguous is refused, never guessed.
 
 - `pnpm new:feature release-notes` creates `apps/renderer/src/features/release-notes/`: `manifest.ts` (id, a route
   at `/release-notes`, no commands, no capabilities; no tab: add one by hand with its `order`) and

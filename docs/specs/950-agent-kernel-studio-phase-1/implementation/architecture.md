@@ -444,8 +444,8 @@ features/config/
 - Dependencies are passed to the constructor (`CommandRunner`, `ProjectFs`, `Watcher`, `SecretStore`, the agent adapter), so
   services are tested with fakes and no real process.
 - The browser-safe feature services are listed once, as factories `(deps) => service`, in
-  `packages/runtime/src/features.ts`; the desktop app builds them with the real ports and the mock transport with the
-  fakes (P1b).
+  `packages/runtime/src/features.ts`; the desktop app builds them with the real ports (from P2) and the mock
+  transport with the fakes (P1b).
 - A service registers its handlers against the contract; the registry fails start-up if any operation has no
   handler.
 - Only `CommandRunner` starts processes. Only `ProjectFs` touches the working directory, and it refuses paths

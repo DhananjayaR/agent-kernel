@@ -44,7 +44,7 @@ import {
 	SessionService,
 	StreamHub,
 } from "@ak-studio/runtime";
-import { desktopFixtureHandlers } from "./desktopFixtures";
+import { desktopFixtureHandlers, type FixtureDeps } from "./desktopFixtures";
 import { FIXTURE_FILES } from "./fixtures";
 import { logStreamError, type StreamErrorHandler } from "./ipcTransport";
 
@@ -162,6 +162,10 @@ export interface MockBackend {
 	jobs: JobService;
 	sessions: SessionService;
 	window: MockWindow;
+	/** The ports' fakes the features' runtime services are built with, for tests to script and inspect. */
+	commandRunner: FakeCommandRunner;
+	projectFs: FakeProjectFs;
+	watcher: FakeWatcher;
 }
 
 type AnyRequestHandler = (input: unknown) => unknown;
@@ -225,10 +229,13 @@ export function createMockBackend(
 	}
 	// The features' runtime services, over the ports' fakes: commands run nothing, the project folder is the
 	// support-triage fixture in memory, and the watcher reports only what a test announces.
+	const commandRunner = new FakeCommandRunner();
+	const projectFs = new FakeProjectFs(MOCK_PROJECT_ROOT, FIXTURE_FILES);
+	const watcher = new FakeWatcher();
 	registerFeatureServices(collected, {
-		commandRunner: new FakeCommandRunner(),
-		projectFs: new FakeProjectFs(MOCK_PROJECT_ROOT, FIXTURE_FILES),
-		watcher: new FakeWatcher(),
+		commandRunner,
+		projectFs,
+		watcher,
 		jobs,
 		sessions,
 		streams,
@@ -244,7 +251,15 @@ export function createMockBackend(
 			DEFAULT_SHELL_LAYOUT,
 			mockWindow,
 		) as Record<string, AnyRequestHandler>),
-		...(desktopFixtureHandlers as Record<string, AnyRequestHandler>),
+		...Object.fromEntries(
+			Object.entries(desktopFixtureHandlers).map(([name, answer]) => [
+				name,
+				(input: unknown) =>
+					(answer as (input: unknown, deps: FixtureDeps) => unknown)(input, {
+						scopes,
+					}),
+			]),
+		),
 		...(options.handlers as Record<string, AnyRequestHandler> | undefined),
 	};
 	const streamHandlers: Record<string, AnyStreamHandler> = {
@@ -277,6 +292,9 @@ export function createMockBackend(
 		jobs,
 		sessions,
 		window: mockWindow,
+		commandRunner,
+		projectFs,
+		watcher,
 	};
 }
 

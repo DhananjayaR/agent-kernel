@@ -7,16 +7,19 @@
 // and every created file and folder is removed.
 import { execFileSync } from "node:child_process";
 import {
+	chmodSync,
 	existsSync,
+	lstatSync,
 	mkdirSync,
 	readFileSync,
 	realpathSync,
 	renameSync,
 	rmdirSync,
 	rmSync,
+	statSync,
 	writeFileSync,
 } from "node:fs";
-import { dirname, join, resolve, sep } from "node:path";
+import { basename, dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /** The ak-studio/ workspace the generators write into (the one this file is in). */
@@ -139,8 +142,12 @@ export class Plan {
 		return full;
 	}
 
+	/** True when the path is planned or anything is there (a file, a folder, or a link, even a broken one). */
 	exists(path) {
-		return this.files.has(path) || existsSync(this.abs(path));
+		return (
+			this.files.has(path) ||
+			lstatSync(this.abs(path), { throwIfNoEntry: false }) !== undefined
+		);
 	}
 
 	/** The file's text as planned so far (an earlier edit included), or as it is on disk. */
@@ -164,8 +171,18 @@ export class Plan {
 		this.dirs.add(path);
 	}
 
-	/** Plans an edit: `change(text)` answers the new text, or throws a GeneratorError naming what it missed. */
+	/**
+	 * Plans an edit: `change(text)` answers the new text, or throws a GeneratorError naming what it missed. A file
+	 * that is a symbolic link is refused: the generator neither replaces a link nor writes through one.
+	 */
 	edit(path, change) {
+		if (
+			!this.files.has(path) &&
+			lstatSync(this.abs(path), { throwIfNoEntry: false })?.isSymbolicLink()
+		)
+			throw new GeneratorError(
+				`${path} is a symbolic link: the generator does not replace or write through links; edit it by hand`,
+			);
 		const before = this.read(path);
 		const after = change(before);
 		if (after === before)
@@ -174,53 +191,104 @@ export class Plan {
 	}
 
 	/**
-	 * Writes every planned file (to a temporary file beside it, then renamed into place), then formats them with the
-	 * workspace's Biome. All or nothing: if a write, a rename or Biome fails, the edited files get their original
-	 * text back, the created files and the folders made for them are removed, and the error is thrown again.
+	 * Writes every planned file, then formats them with the workspace's Biome. All or nothing:
+	 * - each file is written to a temporary file beside it (`.<name>.generator-tmp`), given the mode of the file it
+	 *   replaces, and renamed into place;
+	 * - each missing folder is made one level at a time and recorded;
+	 * - if a write, a rename or Biome fails, every edited file gets its original text back (again through a
+	 *   temporary file and a rename), every created file, temporary file and folder is removed, and the original
+	 *   error is thrown as a refusal. A step of that rollback that fails does not stop the others; its error is
+	 *   listed with the original one.
 	 * Answers the paths written.
 	 */
 	write() {
+		/** Edited files' original text and mode, by path. */
 		const originals = new Map();
-		const written = [];
+		/** Paths renamed into place (a path whose write failed before its rename still holds its original). */
+		const placed = [];
+		/** Temporary files this run created and has not renamed yet. */
+		const temps = new Set();
 		const madeDirs = [];
-		const tmp = (path) => `${this.abs(path)}.new-${process.pid}`;
 		const makeDir = (dir) => {
 			const missing = [];
-			for (let d = dir; !existsSync(d); d = dirname(d)) missing.unshift(d);
-			mkdirSync(dir, { recursive: true });
-			madeDirs.push(...missing);
+			for (
+				let d = dir;
+				lstatSync(d, { throwIfNoEntry: false }) === undefined;
+				d = dirname(d)
+			)
+				missing.unshift(d);
+			for (const d of missing) {
+				mkdirSync(d);
+				madeDirs.push(d);
+			}
+		};
+		/** Writes `text` to `full` through a temporary file and a rename, keeping `mode` when given. */
+		const replace = (full, text, mode) => {
+			const tmp = tempPath(full);
+			writeFileSync(tmp, text, "utf8");
+			temps.add(tmp);
+			if (mode !== undefined) chmodSync(tmp, mode);
+			renameSync(tmp, full);
+			temps.delete(tmp);
 		};
 		try {
 			for (const dir of this.dirs) makeDir(this.abs(dir));
 			for (const [path, text] of this.files) {
+				const full = this.abs(path);
 				if (!this.created.has(path))
-					originals.set(path, readFileSync(this.abs(path), "utf8"));
-				makeDir(dirname(this.abs(path)));
-				written.push(path);
-				writeFileSync(tmp(path), text, "utf8");
-				renameSync(tmp(path), this.abs(path));
+					originals.set(path, {
+						text: readFileSync(full, "utf8"),
+						mode: statSync(full).mode & 0o7777,
+					});
+				makeDir(dirname(full));
+				replace(full, text, originals.get(path)?.mode);
+				placed.push(path);
 			}
 			const paths = [...this.files.keys()];
 			formatWithBiome(this.root, paths);
 			return paths;
 		} catch (err) {
-			for (const path of written) {
-				rmSync(tmp(path), { force: true });
-				if (originals.has(path))
-					writeFileSync(this.abs(path), originals.get(path), "utf8");
-				else rmSync(this.abs(path), { force: true });
+			const failures = [];
+			const attempt = (what, step) => {
+				try {
+					step();
+				} catch (cause) {
+					failures.push(
+						`${what}: ${cause instanceof Error ? cause.message : String(cause)}`,
+					);
+				}
+			};
+			for (const tmp of temps)
+				attempt(`remove ${tmp}`, () => rmSync(tmp, { force: true }));
+			for (const path of placed) {
+				const original = originals.get(path);
+				if (original)
+					attempt(`restore ${path}`, () =>
+						replace(this.abs(path), original.text, original.mode),
+					);
+				else
+					attempt(`remove ${path}`, () =>
+						rmSync(this.abs(path), { force: true }),
+					);
 			}
 			for (const dir of madeDirs.reverse())
-				try {
-					rmdirSync(dir);
-				} catch {
-					// Not empty (something else was put there meanwhile): keep it.
-				}
-			throw new GeneratorError(
-				`writing failed, so nothing was changed (every file is as it was): ${err instanceof Error ? err.message : String(err)}`,
+				attempt(`remove the folder ${dir}`, () => rmdirSync(dir));
+			const message = err instanceof Error ? err.message : String(err);
+			const error = new GeneratorError(
+				failures.length === 0
+					? `writing failed, so nothing was changed (every file is as it was): ${message}`
+					: `writing failed (${message}), and putting the files back failed too; check these by hand:\n  ${failures.join("\n  ")}`,
 			);
+			error.cause = err;
+			error.rollbackErrors = failures;
+			throw error;
 		}
 	}
+}
+
+/** The temporary file a write goes through: beside the file, hidden, the same name each run. */
+export function tempPath(full) {
+	return join(dirname(full), `.${basename(full)}.generator-tmp`);
 }
 
 /** `biome check --write` over the written files: formatting, sorted imports and exports, safe fixes. */
@@ -355,7 +423,11 @@ export function isMain(url) {
 	if (!process.argv[1]) return false;
 	try {
 		return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(url));
-	} catch {
-		return false;
+	} catch (err) {
+		// Never a silent no-op: a generator that cannot tell whether it was run says so and fails.
+		console.error(
+			`generator: cannot resolve the script's path (${err instanceof Error ? err.message : String(err)})`,
+		);
+		process.exit(1);
 	}
 }

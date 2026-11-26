@@ -102,7 +102,55 @@ function addToService(text, path, method, lines) {
 	}
 	if (!/^\t\}\n\n*\}(?:\n|$)/.test(text.slice(close)))
 		refuse("`register` is not the class's last member");
-	return `${text.slice(0, head.index)}${method.replace(/^\n/, "")}\n${text.slice(head.index, close)}${lines}${text.slice(close)}`;
+	// The new method goes above `register` and above any comment that sits directly on it (a JSDoc block or `//`
+	// lines), so that comment stays with `register`.
+	let at = head.index;
+	for (;;) {
+		const start = text.lastIndexOf("\n", at - 2) + 1;
+		const line = text.slice(start, at - 1);
+		if (!/^\t(?:\/\*\*| ?\*|\/\/)/.test(line)) break;
+		at = start;
+	}
+	return `${text.slice(0, at)}${method.replace(/^\n/, "")}\n${text.slice(at, close)}${lines}${text.slice(close)}`;
+}
+
+/**
+ * Adds a fixture answer to `desktopFixtureHandlers`, found by structure like the service's edit points: exactly one
+ * `export const desktopFixtureHandlers: FixtureHandlers = {` line (or the empty `= {};`), and its own `};`.
+ * Whatever follows the object is left alone.
+ */
+function addFixture(text, entry) {
+	const refuse = (what) => {
+		throw new GeneratorError(
+			`${DESKTOP_FIXTURES}: ${what}. The generator adds each answer at the end of the \`desktopFixtureHandlers\` object; restore it, or add the answer by hand.`,
+		);
+	};
+	const heads = [
+		...text.matchAll(
+			/^export const desktopFixtureHandlers: FixtureHandlers = \{(\};)?\n/gm,
+		),
+	];
+	if (heads.length !== 1)
+		refuse(
+			heads.length === 0
+				? "cannot find `export const desktopFixtureHandlers: FixtureHandlers = {`"
+				: "declares `desktopFixtureHandlers` more than once",
+		);
+	const head = heads[0];
+	if (head[1])
+		return `${text.slice(0, head.index)}export const desktopFixtureHandlers: FixtureHandlers = {\n${entry}};\n${text.slice(head.index + head[0].length)}`;
+	let close = head.index + head[0].length;
+	for (;;) {
+		const end = text.indexOf("\n", close);
+		const line = text.slice(close, end < 0 ? undefined : end);
+		if (end >= 0 && (line === "" || line.startsWith("\t"))) {
+			close = end + 1;
+			continue;
+		}
+		if (line !== "};") refuse("cannot find the `};` that closes the object");
+		break;
+	}
+	return `${text.slice(0, close)}${entry}${text.slice(close)}`;
 }
 
 /**
@@ -338,18 +386,7 @@ export function planOperation(plan, featureName, operationName, options) {
 		);
 	}
 	if (options.desktop)
-		plan.edit(DESKTOP_FIXTURES, (text) => {
-			const m = find(
-				text,
-				/(export const desktopFixtureHandlers: FixtureHandlers = \{)([\s\S]*)(\};\s*)$/,
-				DESKTOP_FIXTURES,
-				"the `desktopFixtureHandlers` object at the end of the file",
-			);
-			return text.replace(
-				m[0],
-				() => `${m[1]}${m[2].trimEnd()}\n\t"${op}": () => ({}),\n};\n`,
-			);
-		});
+		plan.edit(DESKTOP_FIXTURES, (text) => addFixture(text, t.fixture(x)));
 
 	// The hook and its test.
 	plan.create(`${featureDir}/api/${hookName}.ts`, t.hook(x));

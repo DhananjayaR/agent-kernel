@@ -290,6 +290,18 @@ export function serviceCase(x) {
 `;
 }
 
+/** The mock's fixture answer for a desktop-only operation (desktopFixtures.ts); a project-scoped one checks the scope. */
+export function fixture(x) {
+	return x.project
+		? `\t"${x.op}": ({ projectId }, { scopes }) => {
+		scopes.require(projectId);
+		return {};
+	},
+`
+		: `\t"${x.op}": () => ({}),
+`;
+}
+
 // ---- The feature's hook: apps/renderer/src/features/<feature>/api/use<Feature><Name>.ts ----
 
 export function hook(x) {
@@ -406,7 +418,20 @@ ${backend}
 		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 		expect(result.current.data).toEqual({});
-	});
+	});${
+		project
+			? `
+
+	it("refuses ${op} for a project that is not open", async () => {
+		setTransport(createMockBackend().transport);
+		const { result } = renderHook(() => ${name}(${JSON.stringify(PROJECT)}), {
+			wrapper: withQueries(),
+		});
+		await waitFor(() => expect(result.current.isError).toBe(true));
+		expect(result.current.error?.error.code).toBe("project.notOpen");
+	});`
+			: ""
+	}
 });
 `;
 	return `${header}${imports}
