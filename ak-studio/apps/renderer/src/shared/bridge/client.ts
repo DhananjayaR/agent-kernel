@@ -29,8 +29,9 @@ export const BRIDGE_MISSING_ERROR: StudioError = {
 export function createUnavailableTransport(error: StudioError): Transport {
 	return {
 		request: () => Promise.reject(new StudioFailure(error)),
-		subscribe: (name) => {
+		subscribe: (name, _input, _onEvent, onError) => {
 			logStreamError(name, error);
+			onError?.(error);
 			return () => {};
 		},
 	};

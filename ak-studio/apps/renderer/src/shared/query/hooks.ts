@@ -15,6 +15,7 @@ import {
 	type UseQueryResult,
 	useMutation,
 	useQuery,
+	useQueryClient,
 } from "@tanstack/react-query";
 import { getTransport, isStudioFailure, StudioFailure } from "../bridge/client";
 import { errorStrings } from "../errors/strings";
@@ -83,7 +84,12 @@ export function useStudioQuery<N extends QueryOperationName>(
 		queryFn: () => requestStudio(name, input),
 		enabled: options.enabled,
 	});
-	const showPending = usePendingAfter(query.isFetching);
+	// The fetch in flight, read from the cache (not through the result, which would track it): each fetch, a
+	// refetch that replaces a cancelled one included, has its own promise, so each gets its own 300 ms.
+	const fetch = useQueryClient()
+		.getQueryCache()
+		.find({ queryKey: options.key, exact: true })?.promise;
+	const showPending = usePendingAfter(query.isFetching, fetch);
 	// TanStack's result is a Proxy that records which fields a render reads, so it re-renders only when those
 	// change. A spread would read them all, and assigning onto it would change TanStack's own object: wrap it.
 	return new Proxy(query, {
@@ -103,6 +109,7 @@ export function useStudioMutation<N extends CommandOperationName>(
 		onSuccess: (output, input) => options.onSuccess?.(output, input),
 		onError: (error, input) => options.onError?.(error, input),
 	});
-	const showPending = usePendingAfter(mutation.isPending);
+	// Each `mutate` is a new submission: its own 300 ms, even when it follows the last one with no idle render.
+	const showPending = usePendingAfter(mutation.isPending, mutation.submittedAt);
 	return { ...mutation, showPending };
 }

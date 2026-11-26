@@ -1,7 +1,8 @@
 // The domain types the services and the renderer share: ids, file revisions, jobs and their user requests,
 // sessions, stream chunks, recorded commands and the event union the `events` stream carries. One zod schema
 // each, so the main process, the mock and the renderer's types all come from the same declaration. The Job,
-// UserRequest and Session fields are those in architecture.md (Jobs, Sessions), with `projectId` added.
+// UserRequest and Session fields are those in architecture.md (Jobs, Sessions), with `projectId` and `seq` added
+// (`seq` counts the service's changes to one job or session, so the renderer keeps the newest after a reload).
 // All are output schemas: plain objects, so undeclared fields are stripped before they cross the bridge.
 import "./zodConfig";
 import { z } from "zod";
@@ -99,6 +100,11 @@ export const jobSchema = z.object({
 	/** See the quit rule: a job that survives quit blocks it until it ends. */
 	survivesQuit: z.boolean(),
 	projectId: ProjectId.optional(),
+	/**
+	 * Counts this job's announced changes: JobService adds one before each `job.updated`, so a higher `seq` is a
+	 * newer state of the same job (the renderer's store keeps the newest, whichever arrives first).
+	 */
+	seq: z.int().nonnegative(),
 });
 export type Job = z.infer<typeof jobSchema>;
 
@@ -138,6 +144,8 @@ export const sessionSchema = z.object({
 	commandIds: z.array(z.string()),
 	error: studioErrorSchema.optional(),
 	projectId: ProjectId.optional(),
+	/** Counts this session's announced changes, as Job's `seq` does (SessionService adds one before each event). */
+	seq: z.int().nonnegative(),
 });
 export type Session = z.infer<typeof sessionSchema>;
 

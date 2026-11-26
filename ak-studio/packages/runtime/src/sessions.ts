@@ -3,8 +3,9 @@
 // its starter with `define`. SessionService serves `session.start`, `session.stop` and `sessions.list`, keeps
 // one session per kind per project, parses the kind's `args` and `info` at the boundary, owns each session's
 // state (starting, running, stopping, then stopped or failed) and output stream, stops a project's sessions when
-// its scope is disposed, and announces every change as a `session.updated` event. Browser-safe, like the rest of
-// the runtime: the desktop and the browser's mock transport both serve from it.
+// its scope is disposed, and announces every change as a `session.updated` event, each one adding to the
+// session's `seq`. Browser-safe, like the rest of the runtime: the desktop and the browser's mock transport both
+// serve from it.
 import {
 	ERROR_CODES,
 	isStudioFailure,
@@ -229,6 +230,7 @@ export class SessionService<Kinds extends SessionKindMap = SessionKinds> {
 				streamId: this.#streams.create(),
 				commandIds: [],
 				...(projectId === undefined ? {} : { projectId }),
+				seq: 0,
 			},
 			kind,
 			slot,
@@ -441,7 +443,9 @@ export class SessionService<Kinds extends SessionKindMap = SessionKinds> {
 		return this.#masker.maskError(toStudioError(new Error(detail)));
 	}
 
+	/** Announces a change: every change to a session passes here, so its `seq` counts them (the newest is highest). */
 	#emit(entry: Entry): void {
+		entry.session.seq += 1;
 		try {
 			this.#events.emit({
 				type: "session.updated",

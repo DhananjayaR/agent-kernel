@@ -16,7 +16,9 @@ import type {
  * Typed calls against the contract.
  * - `request` resolves with the operation's output, or rejects with a `StudioFailure` carrying the StudioError.
  * - `subscribe` delivers each event to `onEvent` until the returned function is called. A stream that fails
- *   (unknown name, invalid input, a failing handler) ends; the transport logs its StudioError.
+ *   (unknown name, invalid input, a failing handler) ends; the transport logs its StudioError and then calls
+ *   `onError` with it, once (possibly before `subscribe` returns). Nothing more arrives after that: a caller that
+ *   wants the stream again subscribes again (the app's `events` subscription does, with a backoff).
  */
 export interface Transport {
 	request<N extends OperationName>(
@@ -27,6 +29,7 @@ export interface Transport {
 		name: N,
 		input: StreamInputOf<N>,
 		onEvent: (event: StreamEventOf<N>) => void,
+		onError?: (error: StudioError) => void,
 	): () => void;
 }
 

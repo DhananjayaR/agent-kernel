@@ -33,6 +33,8 @@ export class UnsavedWork {
 	readonly #delayMs: number;
 	#listening: Pick<Window, "removeEventListener"> | undefined;
 	#timer: ReturnType<typeof setTimeout> | undefined;
+	/** The first item's report is due at the end of this task. */
+	#firstPending = false;
 	/** What main was last told; it starts empty (main clears its list when the page loads). Unknown after a failure. */
 	#reported: string[] | undefined = [];
 
@@ -49,10 +51,11 @@ export class UnsavedWork {
 	/** Marks `label` as unsaved; the answer clears it. The same label from two views is listed once. */
 	add(label: string): () => void {
 		const id = Symbol(label);
+		const first = this.#entries.size === 0;
 		this.#entries.set(id, label);
-		this.#changed();
+		this.#changed(first);
 		return () => {
-			if (this.#entries.delete(id)) this.#changed();
+			if (this.#entries.delete(id)) this.#changed(false);
 		};
 	}
 
@@ -61,7 +64,8 @@ export class UnsavedWork {
 		return [...new Set(this.#entries.values())];
 	}
 
-	#changed(): void {
+	/** `first`: the list was empty before this change (the first unsaved item). */
+	#changed(first: boolean): void {
 		const empty = this.#entries.size === 0;
 		if (!empty && !this.#listening) {
 			const target = this.#target();
@@ -73,13 +77,29 @@ export class UnsavedWork {
 		}
 		if (this.#timer !== undefined) clearTimeout(this.#timer);
 		this.#timer = undefined;
-		// The last item clearing is told at once: a quit right after a save must not ask about it.
-		if (empty) this.#send();
-		else this.#timer = setTimeout(() => this.#send(), this.#delayMs);
+		if (empty) {
+			// The last item clearing is told at once: a quit right after a save must not ask about it.
+			this.#send();
+		} else if (first) {
+			// The first item is told at once too, so a quit right after the first edit asks about it before any job
+			// is cancelled. "At once" is the end of this task: an add and a clear in one go (React's StrictMode
+			// mounts effects twice) still tell main nothing.
+			this.#firstPending = true;
+			queueMicrotask(() => {
+				if (!this.#firstPending) return;
+				this.#firstPending = false;
+				this.#send();
+			});
+		} else {
+			// Later changes wait for a pause, so typing does not flood the bridge.
+			this.#timer = setTimeout(() => this.#send(), this.#delayMs);
+		}
 	}
 
 	#send(): void {
+		if (this.#timer !== undefined) clearTimeout(this.#timer);
 		this.#timer = undefined;
+		this.#firstPending = false;
 		const items = this.items();
 		if (sameList(items, this.#reported)) return;
 		this.#reported = items;

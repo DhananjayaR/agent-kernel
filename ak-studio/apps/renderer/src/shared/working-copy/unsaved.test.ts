@@ -53,15 +53,18 @@ describe("UnsavedWork", () => {
 		expect(work.items()).toEqual(["Rules: refunds"]);
 	});
 
-	it("tells main the list after a pause, and at once when the last item clears", async () => {
+	it("tells main the first item at once, later changes after a pause, and the last item clearing at once", async () => {
 		const { work, report } = setup();
 		const clearA = work.add("Config: session section");
+		// No timer runs: the first item goes at the end of this task, so a quit right after the first edit knows.
+		await Promise.resolve();
+		expect(report).toHaveBeenCalledExactlyOnceWith(["Config: session section"]);
 		await vi.advanceTimersByTimeAsync(UNSAVED_REPORT_DELAY_MS / 2);
 		const clearB = work.add("Rules: refunds");
 		await vi.advanceTimersByTimeAsync(UNSAVED_REPORT_DELAY_MS - 1);
-		expect(report).not.toHaveBeenCalled();
+		expect(report).toHaveBeenCalledOnce();
 		await vi.advanceTimersByTimeAsync(1);
-		expect(report).toHaveBeenCalledExactlyOnceWith([
+		expect(report).toHaveBeenLastCalledWith([
 			"Config: session section",
 			"Rules: refunds",
 		]);
@@ -70,15 +73,38 @@ describe("UnsavedWork", () => {
 		expect(report).toHaveBeenLastCalledWith(["Rules: refunds"]);
 		clearB();
 		expect(report).toHaveBeenLastCalledWith([]);
-		expect(report).toHaveBeenCalledTimes(3);
+		expect(report).toHaveBeenCalledTimes(4);
+		// Unsaved again after a clear: that is a first item again, told at once.
+		work.add("Rules: refunds");
+		await Promise.resolve();
+		expect(report).toHaveBeenLastCalledWith(["Rules: refunds"]);
+	});
+
+	it("sends one report when a second item follows the first before it is told", async () => {
+		const { work, report } = setup();
+		work.add("Config: session section");
+		work.add("Rules: refunds");
+		await Promise.resolve();
+		expect(report).toHaveBeenCalledExactlyOnceWith([
+			"Config: session section",
+			"Rules: refunds",
+		]);
+		// The pause timer the second add started finds main up to date.
+		await vi.advanceTimersByTimeAsync(UNSAVED_REPORT_DELAY_MS);
+		expect(report).toHaveBeenCalledOnce();
 	});
 
 	it("does not tell main a list it already has", async () => {
 		const { work, report } = setup();
-		// Added and cleared within the pause: main, which has nothing, is told nothing.
+		// Added and cleared in one go: main, which has nothing, is told nothing.
 		work.add("Config: session section")();
 		await vi.advanceTimersByTimeAsync(UNSAVED_REPORT_DELAY_MS);
 		expect(report).not.toHaveBeenCalled();
+		// Added, cleared and added again in one go (StrictMode's double mount): told once.
+		work.add("Rules: refunds")();
+		work.add("Rules: refunds");
+		await vi.advanceTimersByTimeAsync(UNSAVED_REPORT_DELAY_MS);
+		expect(report).toHaveBeenCalledExactlyOnceWith(["Rules: refunds"]);
 	});
 
 	it("logs a failed report and sends the list again on the next change", async () => {

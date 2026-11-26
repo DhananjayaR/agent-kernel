@@ -96,6 +96,7 @@ type AnySubscribe = (
 	name: string,
 	input: unknown,
 	onEvent: (event: unknown) => void,
+	onError?: (error: unknown) => void,
 ) => () => void;
 
 describe("ipcTransport.subscribe", () => {
@@ -121,13 +122,21 @@ describe("ipcTransport.subscribe", () => {
 		const onStreamError = vi.fn();
 		const transport = createIpcTransport(studio, onStreamError);
 		const onEvent = vi.fn();
-		const stop = (transport.subscribe as AnySubscribe)("t.ticks", {}, onEvent);
+		const onError = vi.fn();
+		const stop = (transport.subscribe as AnySubscribe)(
+			"t.ticks",
+			{},
+			onEvent,
+			onError,
+		);
 		const error = { code: ERROR_CODES.unknownOperation, message: "No." };
 		listeners.get("s0")?.({ ok: false, error });
 		listeners.get("s0")?.({ ok: true, event: 1 });
 		stop();
 		expect(onEvent).not.toHaveBeenCalled();
 		expect(onStreamError).toHaveBeenCalledExactlyOnceWith("t.ticks", error);
+		// The subscriber hears of the end too, once, so it can subscribe again.
+		expect(onError).toHaveBeenCalledExactlyOnceWith(error);
 		expect(unsubscribed).toEqual(["s0"]);
 	});
 
@@ -135,11 +144,14 @@ describe("ipcTransport.subscribe", () => {
 		const { studio, listeners } = fakeStudio(async () => null);
 		const onStreamError = vi.fn();
 		const onEvent = vi.fn();
+		const onError = vi.fn();
 		const transport = createIpcTransport(studio, onStreamError);
-		(transport.subscribe as AnySubscribe)("t.ticks", {}, onEvent);
+		(transport.subscribe as AnySubscribe)("t.ticks", {}, onEvent, onError);
 		listeners.get("s0")?.("garbage");
 		listeners.get("s0")?.({ ok: true, event: 2 });
 		expect(onStreamError).toHaveBeenCalledOnce();
+		// Not an end: the subscriber is not told to subscribe again.
+		expect(onError).not.toHaveBeenCalled();
 		expect(onEvent).toHaveBeenCalledExactlyOnceWith(2);
 	});
 
@@ -151,10 +163,19 @@ describe("ipcTransport.subscribe", () => {
 			},
 		};
 		const onStreamError = vi.fn();
+		const onError = vi.fn();
 		const transport = createIpcTransport(studio, onStreamError);
-		const stop = (transport.subscribe as AnySubscribe)("t.ticks", {}, () => {});
+		const stop = (transport.subscribe as AnySubscribe)(
+			"t.ticks",
+			{},
+			() => {},
+			onError,
+		);
 		expect(() => stop()).not.toThrow();
 		expect(onStreamError.mock.calls[0]?.[1]).toMatchObject({
+			code: ERROR_CODES.unavailable,
+		});
+		expect(onError.mock.calls[0]?.[0]).toMatchObject({
 			code: ERROR_CODES.unavailable,
 		});
 	});

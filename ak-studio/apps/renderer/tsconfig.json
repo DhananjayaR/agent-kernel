@@ -11,6 +11,7 @@
 	"include": ["src"],
 	"references": [
 		{ "path": "../../packages/contract" },
+		{ "path": "../../packages/kernel-catalog" },
 		{ "path": "../../packages/runtime" },
 		{ "path": "../../packages/ui" }
 	]

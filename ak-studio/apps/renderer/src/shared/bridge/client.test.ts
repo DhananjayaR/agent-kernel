@@ -87,10 +87,13 @@ describe("client", () => {
 			name: string,
 			input: unknown,
 			onEvent: (event: unknown) => void,
+			onError?: (error: unknown) => void,
 		) => () => void;
 		const onEvent = vi.fn();
-		expect(() => subscribe("t.ticks", {}, onEvent)()).not.toThrow();
+		const onError = vi.fn();
+		expect(() => subscribe("t.ticks", {}, onEvent, onError)()).not.toThrow();
 		expect(onEvent).not.toHaveBeenCalled();
+		expect(onError).toHaveBeenCalledExactlyOnceWith(BRIDGE_MISSING_ERROR);
 		expect(console.error).toHaveBeenCalledOnce();
 	});
 

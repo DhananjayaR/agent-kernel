@@ -244,9 +244,14 @@ describe("mockTransport", () => {
 		const onStreamError = vi.fn();
 		const transport = createMockTransport({ onStreamError });
 		const onEvent = vi.fn();
-		transport.subscribe("stream.read", { streamId: "s1" }, onEvent)();
+		const onError = vi.fn();
+		transport.subscribe("stream.read", { streamId: "s1" }, onEvent, onError)();
 		expect(onEvent).not.toHaveBeenCalled();
 		expect(onStreamError.mock.calls[0]?.[1]).toMatchObject({
+			code: ERROR_CODES.streamNotFound,
+		});
+		expect(onError).toHaveBeenCalledOnce();
+		expect(onError.mock.calls[0]?.[0]).toMatchObject({
 			code: ERROR_CODES.streamNotFound,
 		});
 	});
@@ -343,6 +348,7 @@ describe("mockTransport", () => {
 			name: string,
 			input: unknown,
 			onEvent: (event: unknown) => void,
+			onError?: (error: unknown) => void,
 		) => () => void;
 		const onEvent = vi.fn();
 		expect(subscribe("t.ticks", { extra: 1 }, onEvent)).toBeTypeOf("function");
@@ -350,13 +356,18 @@ describe("mockTransport", () => {
 			code: ERROR_CODES.invalidInput,
 		});
 
-		const unsubscribe = subscribe("t.ticks", {}, onEvent);
+		const onError = vi.fn();
+		const unsubscribe = subscribe("t.ticks", {}, onEvent, onError);
 		emit({ theme: "dark", secret: "x" });
 		emit({ theme: "purple" });
 		emit({ theme: "light" });
 		unsubscribe();
 		expect(onEvent).toHaveBeenCalledExactlyOnceWith({ theme: "dark" });
 		expect(onStreamError.mock.calls[1]?.[1]).toMatchObject({
+			code: ERROR_CODES.invalidOutput,
+		});
+		expect(onError).toHaveBeenCalledOnce();
+		expect(onError.mock.calls[0]?.[0]).toMatchObject({
 			code: ERROR_CODES.invalidOutput,
 		});
 		expect(stop).toHaveBeenCalledOnce();

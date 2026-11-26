@@ -2,10 +2,11 @@
 // the contract with `job()`, gives JobService its runner with `define`, and serves the kind's operation with
 // `handler`, which starts a job and answers `{ jobId }` at once. JobService owns the job's state (queued,
 // running, waiting-for-user, then succeeded, failed or cancelled), its one open question to the user, its
-// output stream and its crash record, and announces every change as a `job.updated` event. Jobs of one kind on
-// one project run one at a time, in order. It also serves the operations every job shares: `job.respond`,
-// `job.cancel`, `jobs.list`, `jobs.interrupted` and `jobs.dismissInterrupted`. Browser-safe, like the rest of
-// the runtime: the desktop runs it over NodeJobRecordStore, the mock transport over InMemoryJobRecordStore.
+// output stream and its crash record, and announces every change as a `job.updated` event, each one adding to
+// the job's `seq`. Jobs of one kind on one project run one at a time, in order. It also serves the operations
+// every job shares: `job.respond`, `job.cancel`, `jobs.list`, `jobs.interrupted` and `jobs.dismissInterrupted`.
+// Browser-safe, like the rest of the runtime: the desktop runs it over NodeJobRecordStore, the mock transport
+// over InMemoryJobRecordStore.
 import {
 	ERROR_CODES,
 	type Job,
@@ -294,6 +295,7 @@ export class JobService<Kinds extends JobKindMap = JobKinds> {
 				cancellable: op.cancellable,
 				survivesQuit: op.survivesQuit,
 				...(projectId === undefined ? {} : { projectId }),
+				seq: 0,
 			},
 			op,
 			input,
@@ -631,7 +633,9 @@ export class JobService<Kinds extends JobKindMap = JobKinds> {
 		return this.#recordWrites;
 	}
 
+	/** Announces a change: every change to a job passes here, so its `seq` counts them (the newest is highest). */
 	#emit(entry: Entry): void {
+		entry.job.seq += 1;
 		try {
 			this.#events.emit({ type: "job.updated", job: snapshot(entry.job) });
 		} catch (err) {

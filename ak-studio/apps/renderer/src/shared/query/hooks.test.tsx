@@ -133,6 +133,42 @@ describe("useStudioQuery", () => {
 		expect(renders).toBe(rendersAfterData);
 	});
 
+	it("gives a refetch that replaces a cancelled one its own 300 ms", async () => {
+		// The first read answers at once; then a slow refetch, replaced 200 ms in by a 250 ms one.
+		const delays = [0, 1000, 250];
+		setTransport(
+			createMockTransport({
+				handlers: { "app.info": () => answerAfter(delays.shift() ?? 0, info) },
+			}),
+		);
+		const { client, wrapper: Wrapper } = wrapper();
+		const seen: boolean[] = [];
+		const { result } = renderHook(
+			() => {
+				const query = useStudioQuery("app.info", {}, { key: keys("app").all });
+				seen.push(query.showPending);
+				return query;
+			},
+			{ wrapper: Wrapper },
+		);
+		await advance(2);
+		expect(result.current.data).toEqual(info);
+		act(() => {
+			void client.invalidateQueries({ queryKey: keys("app").all });
+		});
+		await advance(200);
+		expect(result.current.isFetching).toBe(true);
+		// With data in the cache, invalidating cancels the fetch in flight and starts another: a new call.
+		act(() => {
+			void client.invalidateQueries({ queryKey: keys("app").all });
+		});
+		await advance(PENDING_DELAY_MS);
+		expect(result.current.isFetching).toBe(false);
+		expect(delays).toEqual([]);
+		// 500 ms of fetching in all, but neither call ran for 300 ms.
+		expect(seen).not.toContain(true);
+	});
+
 	it("reads under the key it is given, and waits while not enabled", async () => {
 		const handler = vi.fn(() => info);
 		setTransport(createMockTransport({ handlers: { "app.info": handler } }));
@@ -208,6 +244,40 @@ describe("useStudioMutation", () => {
 			{ theme: "dark" },
 			{ theme: "dark" },
 		);
+	});
+
+	it("gives a second write its own 300 ms, even when it starts as the first one settles", async () => {
+		setTransport(
+			createMockTransport({
+				handlers: {
+					"app.setTheme": (input) => answerAfter(250, { theme: input.theme }),
+				},
+			}),
+		);
+		const { wrapper: Wrapper } = wrapper();
+		const seen: boolean[] = [];
+		let again = true;
+		const { result } = renderHook(
+			() => {
+				const mutation = useStudioMutation("app.setTheme", {
+					// The second write starts inside the first one's success: no render between them sees it idle.
+					onSuccess: () => {
+						if (!again) return;
+						again = false;
+						mutation.mutate({ theme: "light" });
+					},
+				});
+				seen.push(mutation.showPending);
+				return mutation;
+			},
+			{ wrapper: Wrapper },
+		);
+		act(() => result.current.mutate({ theme: "dark" }));
+		await advance(250 + PENDING_DELAY_MS);
+		expect(again).toBe(false);
+		expect(result.current.data).toEqual({ theme: "light" });
+		// 500 ms of writing in all, but neither write ran for 300 ms.
+		expect(seen).not.toContain(true);
 	});
 
 	it("never shows pending for a 200 ms write, and reports a failure through onError", async () => {

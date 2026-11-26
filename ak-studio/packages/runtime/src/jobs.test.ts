@@ -1043,6 +1043,25 @@ describe("JobService: the list of jobs", () => {
 		expect(sent[2]?.commandIds).toEqual(["cmd-1"]);
 	});
 
+	it("counts each announced change in seq, and the list carries the latest", async () => {
+		const s = setup();
+		const { runner, calls } = parked();
+		s.jobs.define("t.demo", runner);
+		serve(s);
+		const jobId = await start(s, "t.demo");
+		const ctx = calls[0]?.ctx as JobContext;
+		ctx.step(1, 2, "Checking");
+		ctx.addCommand("cmd-1");
+		calls[0]?.finish.resolve({ total: 1 });
+		await settle();
+		const seqs = s.emitted.flatMap((e) =>
+			e.type === "job.updated" && e.job.id === jobId ? [e.job.seq] : [],
+		);
+		// queued, running, the step, the command, succeeded.
+		expect(seqs).toEqual([1, 2, 3, 4, 5]);
+		expect(current(s, jobId)?.seq).toBe(5);
+	});
+
 	it("ignores context calls after the job has ended", async () => {
 		const s = setup();
 		const { runner, calls } = parked();

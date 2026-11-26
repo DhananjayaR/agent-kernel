@@ -63,6 +63,7 @@ export function createIpcTransport(
 			name: N,
 			input: StreamInputOf<N>,
 			onEvent: (event: StreamEventOf<N>) => void,
+			onError?: (error: StudioError) => void,
 		): () => void {
 			let closed = false;
 			let unsubscribe: (() => void) | undefined;
@@ -85,14 +86,16 @@ export function createIpcTransport(
 						// The main process ended the stream; also drop the preload's entry for it.
 						stop();
 						onStreamError(name, parsed.data.error);
+						onError?.(parsed.data.error);
 					}
 				});
 			} catch (err) {
 				closed = true;
-				onStreamError(
-					name,
-					unavailable(err instanceof Error ? err.message : String(err)),
+				const error = unavailable(
+					err instanceof Error ? err.message : String(err),
 				);
+				onStreamError(name, error);
+				onError?.(error);
 				return () => {};
 			}
 			// The stream may have ended while `studio.subscribe` was still running.

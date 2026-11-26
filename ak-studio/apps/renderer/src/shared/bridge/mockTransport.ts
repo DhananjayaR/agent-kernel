@@ -23,6 +23,7 @@ import {
 	type StreamMap,
 	type StreamName,
 	type Streams,
+	type StudioError,
 	StudioFailure,
 	type ThemePreference,
 	type Transport,
@@ -297,15 +298,24 @@ function createRegistryTransport(
 			name: N,
 			input: StreamInputOf<N>,
 			onEvent: (event: StreamEventOf<N>) => void,
+			onError?: (error: StudioError) => void,
 		): () => void {
 			const deliver = guarded(`${name}: a subscriber`, onEvent);
-			const report = guarded(`${name}: the error handler`, onStreamError);
+			const logError = guarded(`${name}: the error handler`, onStreamError);
+			const tell = guarded(
+				`${name}: the subscriber's error handler`,
+				(error: StudioError) => onError?.(error),
+			);
+			const report = (error: StudioError): void => {
+				logError(name, error);
+				tell(error);
+			};
 			const result = registry.subscribe(name, input, (message) => {
 				if (message.ok) deliver(message.event as StreamEventOf<N>);
-				else report(name, message.error);
+				else report(message.error);
 			});
 			if (!result.ok) {
-				report(name, result.error);
+				report(result.error);
 				return () => {};
 			}
 			return result.value;

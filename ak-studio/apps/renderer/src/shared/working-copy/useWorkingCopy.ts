@@ -61,6 +61,8 @@ interface State<T> {
 	copy: Copy<T> | undefined;
 	conflict: boolean;
 	saving: boolean;
+	/** Counts the writes started, so each save gets its own 300 ms before its pending state shows. */
+	saves: number;
 	error: StudioFailure | undefined;
 }
 
@@ -72,6 +74,7 @@ export function useWorkingCopy<T>(
 		copy: undefined,
 		conflict: false,
 		saving: false,
+		saves: 0,
 		error: undefined,
 	});
 	const latest = useRef(options);
@@ -96,6 +99,7 @@ export function useWorkingCopy<T>(
 			throw new Error("useWorkingCopy: no revision to save against");
 		const edits = copy.edits;
 		s.saving = true;
+		s.saves += 1;
 		s.conflict = false;
 		s.error = undefined;
 		rerender();
@@ -133,7 +137,7 @@ export function useWorkingCopy<T>(
 	};
 
 	const s = state.current;
-	const showPending = usePendingAfter(s.saving);
+	const showPending = usePendingAfter(s.saving, s.saves);
 	return {
 		draft: s.copy ? s.copy.draft : options.value,
 		dirty: s.copy !== undefined && !s.copy.written,

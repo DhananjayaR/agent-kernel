@@ -20,6 +20,7 @@ const job = (id: string, title: string, extra: Partial<Job> = {}): Job => ({
 	commandIds: [],
 	cancellable: true,
 	survivesQuit: false,
+	seq: 1,
 	...extra,
 });
 const session = (id: string, state: Session["state"]): Session => ({
@@ -27,6 +28,7 @@ const session = (id: string, state: Session["state"]): Session => ({
 	kind: "run.server",
 	state,
 	commandIds: [],
+	seq: 1,
 });
 
 interface Deferred<T> {

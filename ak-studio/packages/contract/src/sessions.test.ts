@@ -55,6 +55,7 @@ describe("session operations", () => {
 			kind: "run.server",
 			state: "running",
 			commandIds: [],
+			seq: 1,
 		};
 		expect(sessionsList.input.safeParse({ extra: 1 }).success).toBe(false);
 		expect(sessionsList.output.parse({ sessions: [session] })).toEqual({

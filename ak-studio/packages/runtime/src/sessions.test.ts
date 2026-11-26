@@ -262,6 +262,26 @@ describe("SessionService: start and stop", () => {
 		});
 	});
 
+	it("counts each announced change in seq, and the list carries the latest", async () => {
+		const s = setup();
+		const { starter, calls, run } = parked();
+		s.sessions.define("t.server", starter);
+		const id = await s.startSession({ kind: "t.server", args: { port: 1 } });
+		calls[0]?.ctx.addCommand("cmd-1");
+		run(0, { url: "u" });
+		await settle();
+		await s.registry.request("session.stop", { sessionId: id });
+		await settle();
+		const seqs = s.emitted.flatMap((e) =>
+			e.type === "session.updated" && e.session.id === id
+				? [e.session.seq]
+				: [],
+		);
+		// starting, the command, running, stopping, stopped.
+		expect(seqs).toEqual([1, 2, 3, 4, 5]);
+		expect(s.current(id)?.seq).toBe(5);
+	});
+
 	it("writes the session's output to its stream, masked", async () => {
 		const s = setup();
 		const { starter, calls, run } = parked();

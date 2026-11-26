@@ -17,6 +17,7 @@ const job = {
 	commandIds: [],
 	cancellable: true,
 	survivesQuit: false,
+	seq: 1,
 };
 
 describe("job operations", () => {

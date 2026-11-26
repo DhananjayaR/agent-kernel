@@ -229,6 +229,9 @@ importers:
       '@ak-studio/contract':
         specifier: workspace:*
         version: link:../../packages/contract
+      '@ak-studio/kernel-catalog':
+        specifier: workspace:*
+        version: link:../../packages/kernel-catalog
       '@ak-studio/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
@@ -295,7 +298,11 @@ importers:
         specifier: 5.1.1
         version: 5.1.1(@types/node@24.19.2)(@vitest/browser-playwright@5.1.1)(@vitest/ui@5.1.1)(happy-dom@21.0.4)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0))
 
-  packages/kernel-catalog: {}
+  packages/kernel-catalog:
+    devDependencies:
+      vitest:
+        specifier: 5.1.1
+        version: 5.1.1(@types/node@24.19.2)(@vitest/browser-playwright@5.1.1)(@vitest/ui@5.1.1)(happy-dom@21.0.4)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0))
 
   packages/runtime:
     dependencies:

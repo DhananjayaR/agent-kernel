@@ -24,6 +24,7 @@ const job = {
 	commandIds: [],
 	cancellable: true,
 	survivesQuit: false,
+	seq: 3,
 } as const;
 
 const request = {
@@ -41,6 +42,7 @@ const session = {
 	kind: "run.server",
 	state: "running",
 	commandIds: ["c1"],
+	seq: 2,
 } as const;
 
 describe("ids and revisions", () => {
@@ -103,6 +105,11 @@ describe("jobSchema", () => {
 		expect(jobSchema.parse({ ...job, secret: "x" })).toEqual(job);
 		const { commandIds: _, ...noCommands } = job;
 		expect(jobSchema.safeParse(noCommands).success).toBe(false);
+		const { seq: _seq, ...noSeq } = job;
+		expect(jobSchema.safeParse(noSeq).success).toBe(false);
+		for (const seq of [-1, 1.5]) {
+			expect(jobSchema.safeParse({ ...job, seq }).success).toBe(false);
+		}
 		expect(
 			jobSchema.safeParse({
 				...job,
@@ -151,6 +158,15 @@ describe("sessionSchema", () => {
 		expect(
 			sessionSchema.safeParse({ ...session, state: "paused" }).success,
 		).toBe(false);
+	});
+
+	it("needs seq, a whole number of at least 0", () => {
+		const { seq: _seq, ...noSeq } = session;
+		expect(sessionSchema.safeParse(noSeq).success).toBe(false);
+		expect(sessionSchema.safeParse({ ...session, seq: -1 }).success).toBe(
+			false,
+		);
+		expect(sessionSchema.parse({ ...session, seq: 0 }).seq).toBe(0);
 	});
 });
 

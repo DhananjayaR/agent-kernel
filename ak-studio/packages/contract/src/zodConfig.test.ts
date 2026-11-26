@@ -54,6 +54,7 @@ describe("zod configuration", () => {
 			commandIds: [],
 			cancellable: true,
 			survivesQuit: false,
+			seq: 1,
 		};
 		jobSchema.parse(job);
 		studioEventSchema.parse({ type: "job.updated", job });
