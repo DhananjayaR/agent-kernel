@@ -85,7 +85,7 @@ From the PRD (section 2), brief 02 and P2's scope and work packages 2.2, 2.3 and
 | W2 | See recent projects: name, path, frameworks, last opened | Brief 02 |
 | W3 | See each recent project's OAK version | P2 2.6 |
 | W4 | A recent project whose folder is gone or cannot be read | UX checklist ("cannot read") |
-| W5 | Toolchain check: each tool with what it is needed for, version, path, state (found, missing, wrong version) and an install link | Brief 02, brief 01 `ToolchainRow`, P2 2.2 |
+| W5 | Toolchain check: each tool with what it is needed for, version, path, state (found, missing, wrong version) and an install link where action is needed (missing or wrong version; owner, 26 Nov 2026) | Brief 02, brief 01 `ToolchainRow`, P2 2.2 |
 | W6 | Tools: Python 3.12 or 3.13, `uv`, git, Claude Code, Terraform, Docker, and the AWS, Azure and Google Cloud command-line tools | P2 2.2 |
 | W7 | Python and `uv` are required for everything; every other tool only by the feature that uses it | P2 2.2 |
 | W8 | "Recheck" and a link to app settings | Brief 02 |

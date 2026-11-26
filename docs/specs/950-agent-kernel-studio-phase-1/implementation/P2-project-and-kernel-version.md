@@ -77,7 +77,8 @@ skill: features `welcome`, `commands`, `status`; services `ToolchainService`,
 
 - [ ] Detect, with path and version: Python (3.12 or 3.13), `uv`, git, Claude Code, Terraform, Docker, and the
       AWS, Azure and Google Cloud command-line tools.
-- [ ] Three states per tool: found, missing, wrong version. Each has an install link.
+- [ ] Three states per tool: found, missing, wrong version. A missing or wrong-version tool shows an install
+      link; a found tool does not (decided 26 Nov 2026).
 - [ ] Required for everything: Python and `uv`. All others are required only by the feature that uses them.
       Docker is needed only by targets that ship a container image: both containerized targets and Google
       Cloud serverless; AWS serverless needs it only when the Lambda is packaged as an image.
