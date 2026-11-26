@@ -551,12 +551,21 @@ export class JobService<Kinds extends JobKindMap = JobKinds> {
 			if (outcome.result !== undefined) job.result = outcome.result;
 			if (outcome.error !== undefined) job.error = outcome.error;
 			this.#denyAsks(entry, new Error(`job ${job.id} has ended`));
-			if (job.streamId !== undefined) this.#streams.end(job.streamId);
-			this.#emit(entry);
 		} catch (err) {
 			this.#log(`ending job ${job.id} went wrong: ${describe(err)}`);
 		} finally {
-			// Whatever happened above, the end is recorded and the lane moves on.
+			// Whatever happened above, the end is announced (its seq moves on, so a list never carries a terminal
+			// state at an old seq), then the stream ends, then the end is recorded and the lane moves on.
+			this.#emit(entry);
+			if (job.streamId !== undefined) {
+				try {
+					this.#streams.end(job.streamId);
+				} catch (err) {
+					this.#log(
+						`ending the stream of job ${job.id} went wrong: ${describe(err)}`,
+					);
+				}
+			}
 			const recorded = entry.started
 				? this.#queueRecordWrite(() => this.#records.ended(job.id, state))
 				: Promise.resolve();

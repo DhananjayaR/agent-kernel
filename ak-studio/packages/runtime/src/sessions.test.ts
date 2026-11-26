@@ -282,6 +282,30 @@ describe("SessionService: start and stop", () => {
 		expect(s.current(id)?.seq).toBe(5);
 	});
 
+	it("announces the end with a new seq even when ending its stream throws", async () => {
+		const s = setup();
+		const { starter, run } = parked();
+		s.sessions.define("t.server", starter);
+		const id = await s.startSession({ kind: "t.server", args: { port: 1 } });
+		run(0, { url: "u" });
+		await settle();
+		vi.spyOn(s.streams, "end").mockImplementation(() => {
+			throw new Error("stream end failed");
+		});
+		await s.registry.request("session.stop", { sessionId: id });
+		await settle();
+		const sent = s.emitted.flatMap((e) =>
+			e.type === "session.updated" && e.session.id === id ? [e.session] : [],
+		);
+		const last = sent[sent.length - 1];
+		expect(last?.state).toBe("stopped");
+		expect(last?.seq).toBe((sent[sent.length - 2]?.seq ?? 0) + 1);
+		expect(s.current(id)).toMatchObject({ state: "stopped", seq: last?.seq });
+		expect(s.log).toHaveBeenCalledWith(
+			expect.stringContaining("stream end failed"),
+		);
+	});
+
 	it("writes the session's output to its stream, masked", async () => {
 		const s = setup();
 		const { starter, calls, run } = parked();

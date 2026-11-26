@@ -36,6 +36,20 @@ import { cn } from "../lib/utils";
 import { type ModalStrings, uiStrings } from "../strings";
 import { IconButton } from "./button";
 
+/**
+ * What marks an open modal in the page: every `Modal` (and ConfirmModal, SettingsModal) renders its overlay with
+ * data-slot="modal-overlay" while open, and any other dialog marked aria-modal counts too. React Aria sets no
+ * aria-modal itself, and how it hides the page behind (inert or aria-hidden) differs between browsers and test
+ * DOMs, so this is the signal the app reads.
+ */
+export const MODAL_OPEN_SELECTOR =
+	'[data-slot="modal-overlay"], [aria-modal="true"]';
+
+/** True while a modal is open in `root` (the app's shortcuts do not act then, P1b-plan ruling 13). */
+export function isModalOpen(root: ParentNode = document): boolean {
+	return root.querySelector(MODAL_OPEN_SELECTOR) !== null;
+}
+
 /** The scrim: the page behind a modal, dimmed. Fades in and out (none under reduced motion). */
 export const modalOverlay = [
 	"fixed inset-0 z-40 flex items-center justify-center bg-scrim p-6",

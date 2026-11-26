@@ -1062,6 +1062,33 @@ describe("JobService: the list of jobs", () => {
 		expect(current(s, jobId)?.seq).toBe(5);
 	});
 
+	it("announces the end with a new seq even when ending its stream throws", async () => {
+		const s = setup();
+		const { runner, calls } = parked();
+		s.jobs.define("t.demo", runner);
+		serve(s);
+		const jobId = await start(s, "t.demo");
+		vi.spyOn(s.streams, "end").mockImplementation(() => {
+			throw new Error("stream end failed");
+		});
+		calls[0]?.finish.resolve({ total: 1 });
+		await settle();
+		const sent = s.emitted.flatMap((e) =>
+			e.type === "job.updated" && e.job.id === jobId ? [e.job] : [],
+		);
+		const last = sent[sent.length - 1];
+		expect(last?.state).toBe("succeeded");
+		expect(last?.seq).toBe((sent[sent.length - 2]?.seq ?? 0) + 1);
+		// The list carries the same end at the same seq, so a reattaching window sees it.
+		expect(current(s, jobId)).toMatchObject({
+			state: "succeeded",
+			seq: last?.seq,
+		});
+		expect(s.log).toHaveBeenCalledWith(
+			expect.stringContaining("stream end failed"),
+		);
+	});
+
 	it("ignores context calls after the job has ended", async () => {
 		const s = setup();
 		const { runner, calls } = parked();

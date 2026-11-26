@@ -1,10 +1,11 @@
 // The stream store, against the mock's real StreamHub (batches every 16 ms of fake time, a 5,000-line backlog,
 // 500 lines a batch): one `stream.read` subscription however many views show a stream, closed with the last view;
 // the bounded buffer and its `dropped` count; a 10,000-line burst applied a batch at a time, never a line at a
-// time; and a stream that fails.
+// time; a stream that fails; and StrictMode's double mount.
 import { ERROR_CODES, type StreamBatch } from "@ak-studio/contract";
 import { DEFAULT_BATCH_LINES, DEFAULT_FLUSH_MS } from "@ak-studio/runtime";
 import { act, render, renderHook, screen } from "@testing-library/react";
+import { StrictMode } from "react";
 import {
 	afterEach,
 	beforeEach,
@@ -105,6 +106,31 @@ describe("useStream: one subscription per stream", () => {
 		await flushAll();
 		expect(subscribe).toHaveBeenCalledTimes(2);
 		expect(screen.getByTestId("c").textContent).toBe("7 0 false");
+	});
+
+	it("keeps one live subscription under StrictMode's double mount, shows the backlog once, and closes on the last unmount", async () => {
+		const { backend, subscribe, closes, streamId } = setup();
+		backend.streams.write(streamId, "stdout", lines(0, 4));
+		const view = render(
+			<StrictMode>
+				<Output id={streamId} label="strict" />
+			</StrictMode>,
+		);
+		await flushAll();
+		// StrictMode mounts, unmounts and mounts again: every subscription but the last is closed.
+		expect(closes.length).toBeGreaterThan(1);
+		const live = closes.filter((close) => close.mock.calls.length === 0);
+		expect(live).toHaveLength(1);
+		expect(subscribe.mock.calls.length).toBe(closes.length);
+		// The backlog shows once, not once per mount.
+		expect(screen.getByTestId("strict").textContent).toBe("4 0 false");
+		backend.streams.write(streamId, "stdout", lines(4, 1));
+		await flushAll();
+		expect(screen.getByTestId("strict").textContent).toBe("5 0 false");
+		view.unmount();
+		expect(live[0]).toHaveBeenCalledOnce();
+		expect(closes.every((close) => close.mock.calls.length === 1)).toBe(true);
+		expect(useStreamStore.getState().streams).toEqual({});
 	});
 
 	it("subscribes to nothing for no stream id", () => {

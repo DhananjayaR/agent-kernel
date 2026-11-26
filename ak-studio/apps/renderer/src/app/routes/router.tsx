@@ -1,6 +1,7 @@
-// The app's routes: one per app tab under the shell (`#/canvas`, `#/code`, ...); `#/` and any unknown tab open the
-// canvas. Hash history, because the app is served from app://studio/ and has no server to resolve other paths.
-import { isAppTabId } from "@ak-studio/ui";
+// The app's routes, from the registry (the feature manifests): each feature's routes under the shell (`#/canvas`,
+// `#/code`, ...). `#/` and any unknown path open the first tab, the canvas. Hash history, because the app is served
+// from app://studio/ and has no server to resolve other paths. Matching is case-sensitive, so `#/Canvas` is
+// unknown, as before the manifests.
 import {
 	createHashHistory,
 	createRootRoute,
@@ -8,44 +9,44 @@ import {
 	createRouter,
 	redirect,
 } from "@tanstack/react-router";
-import { DEFAULT_TAB } from "../shell/routes";
+import { registry } from "../registry";
 import { Shell } from "../shell/Shell";
-import { TabEmptyState } from "../shell/TabEmptyState";
 
 const rootRoute = createRootRoute({ component: Shell });
+
+const toDefaultTab = () => {
+	throw redirect({ to: registry.defaultTab.path });
+};
 
 const indexRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/",
-	beforeLoad: () => {
-		throw redirect({ to: "/$tab", params: { tab: DEFAULT_TAB } });
-	},
+	beforeLoad: toDefaultTab,
 });
 
-const tabRoute = createRoute({
+const featureRoutes = registry.routes.map((route) =>
+	createRoute({
+		getParentRoute: () => rootRoute,
+		path: route.path,
+		component: route.component,
+	}),
+);
+
+/** Anything no feature has a route for. */
+const unknownRoute = createRoute({
 	getParentRoute: () => rootRoute,
-	path: "/$tab",
-	beforeLoad: ({ params }) => {
-		if (!isAppTabId(params.tab))
-			throw redirect({ to: "/$tab", params: { tab: DEFAULT_TAB } });
-	},
-	component: TabView,
+	path: "$",
+	beforeLoad: toDefaultTab,
 });
-
-function TabView() {
-	const { tab } = tabRoute.useParams();
-	return isAppTabId(tab) ? <TabEmptyState tab={tab} /> : null;
-}
 
 export function createAppRouter() {
 	return createRouter({
-		routeTree: rootRoute.addChildren([indexRoute, tabRoute]),
+		routeTree: rootRoute.addChildren([
+			indexRoute,
+			...featureRoutes,
+			unknownRoute,
+		]),
 		history: createHashHistory(),
+		caseSensitive: true,
 	});
-}
-
-declare module "@tanstack/react-router" {
-	interface Register {
-		router: ReturnType<typeof createAppRouter>;
-	}
 }

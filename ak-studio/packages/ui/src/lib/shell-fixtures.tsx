@@ -7,7 +7,7 @@ import {
 	IconPackages,
 	IconRocket,
 } from "@tabler/icons-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { expect } from "storybook/test";
 import { Badge } from "../components/badge";
 import { BottomPanel, type BottomPanelTabId } from "../components/bottom-panel";
@@ -197,6 +197,12 @@ export type FixtureShellProps = {
 	windowControls?: boolean;
 	/** Space (px) at the top bar's left, for the macOS traffic lights. */
 	leadingInset?: number;
+	/**
+	 * Ctrl+J (or Cmd+J) shows or hides the panel: a stand-in for the app's shell.toggleBottomPanel command (the
+	 * renderer's registry owns the real shortcut; BottomPanel has none of its own), so a story can change the
+	 * panel's open state from outside it.
+	 */
+	panelShortcut?: boolean;
 };
 
 /**
@@ -222,6 +228,7 @@ export function FixtureShell({
 	settings,
 	windowControls = true,
 	leadingInset,
+	panelShortcut = false,
 }: FixtureShellProps) {
 	const [maximized, setMaximized] = useState(false);
 	const [selected, setSelected] = useState<AppTabId>(tab);
@@ -231,6 +238,19 @@ export function FixtureShell({
 		setStored(next);
 		onLayoutChange?.(next);
 	};
+	useEffect(() => {
+		if (!panelShortcut) return;
+		const onKeyDown = (e: KeyboardEvent) => {
+			const mod = e.ctrlKey !== e.metaKey; // one of them, not both
+			if (e.key.toLowerCase() !== "j" || !mod || e.altKey || e.shiftKey) return;
+			e.preventDefault();
+			const next = { ...stored, open: !stored.open };
+			setStored(next);
+			onLayoutChange?.(next);
+		};
+		document.addEventListener("keydown", onKeyDown);
+		return () => document.removeEventListener("keydown", onKeyDown);
+	}, [panelShortcut, stored, onLayoutChange]);
 	return (
 		<DesktopShell
 			selectedTab={selected}

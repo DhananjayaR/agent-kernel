@@ -97,7 +97,7 @@ export const uiStrings = {
 		hide: "Hide the panel",
 		show: "Show the panel",
 		resize: "Resize the panel",
-		/** The shortcut that shows or hides the panel, as shown (Mod+J: Ctrl+J, or Cmd+J on macOS). */
+		/** The app's show/hide shortcut as shown (Mod+J: Ctrl+J, or ⌘J on macOS); the app passes its own. */
 		shortcut: "Ctrl+J",
 	},
 	windowControls: {

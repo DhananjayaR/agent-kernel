@@ -4,7 +4,10 @@
 // `app.setLayout`). No project can be opened before P2, so everything else shows
 // its not-yet state: the project switcher "No project open", the run control "No project to run" (no start
 // control), the deploy status "Not deployed", the coding agent "not set up" (P6), and each tab and panel view the
-// empty state that names the phase that fills it.
+// empty state that names the phase that fills it. Its tabs come from the feature manifests (the registry), and it
+// mounts the app's one shortcut listener, for the platform app.info reports; it binds the shell's actions for its
+// app commands (shellActions.ts), so Mod+J (shell.toggleBottomPanel) goes through the same layout save as the
+// panel's own toggle.
 import {
 	DEFAULT_SHELL_LAYOUT,
 	type OutputOf,
@@ -35,18 +38,34 @@ import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
 import { getTransport, isStudioFailure } from "../../shared/bridge/client";
 import {
+	describeShortcut,
+	shortcutPlatform,
+} from "../../shared/commands/shortcuts";
+import { useAppShortcuts } from "../../shared/commands/useAppShortcuts";
+import {
 	cacheStoredLayout,
 	cacheStoredTheme,
 	useAppInfo,
 } from "../../shared/queries";
 import { useStudioMutation } from "../../shared/query/hooks";
+import { registry } from "../registry";
 import { useWindowMaximized } from "../useWindowMaximized";
-import { tabFromPath } from "./routes";
+import { TOGGLE_BOTTOM_PANEL } from "./manifest";
+import { PanelEmptyState } from "./PanelEmptyState";
+import { pathOfTab, tabFromPath } from "./routes";
+import { useBindShellActions } from "./shellActions";
 import { shellStrings } from "./strings";
-import { PanelEmptyState } from "./TabEmptyState";
 
 /** Room kept at the top bar's left for the macOS traffic lights (px): the three lights and their margin. */
 const MAC_TRAFFIC_LIGHTS_INSET = 76;
+
+/** The top bar's tabs, from the feature manifests. */
+const SHELL_TABS = registry.tabs.map(({ id, label }) => ({ id, label }));
+
+/** The bottom panel's show/hide shortcut, as its manifest declares it. */
+const PANEL_SHORTCUT =
+	registry.commands.find((command) => command.id === TOGGLE_BOTTOM_PANEL)
+		?.shortcut ?? "Mod+J";
 
 /** A window control press. A failure is not shown: the window simply does not change, and the next press tries again. */
 function requestWindow(
@@ -110,6 +129,14 @@ function LoadedShell({
 		saveLayout.mutate({ layout: next });
 	};
 
+	useBindShellActions({
+		toggleBottomPanel: () =>
+			rememberPanel({ ...layout.bottomPanel, open: !layout.bottomPanel.open }),
+	});
+	const platform = shortcutPlatform(info?.platform);
+	useAppShortcuts(registry.commands, platform);
+	const panelShortcut = describeShortcut(PANEL_SHORTCUT, platform);
+
 	const theme: ThemePreference = info?.theme ?? "system";
 	const mac = info?.platform === "darwin";
 	const maximized = useWindowMaximized();
@@ -117,9 +144,10 @@ function LoadedShell({
 	return (
 		<>
 			<DesktopShell
+				tabs={SHELL_TABS}
 				selectedTab={tab}
 				onTabChange={(next) => {
-					void navigate({ to: "/$tab", params: { tab: next } });
+					void navigate({ to: pathOfTab(next) });
 				}}
 				// The window has no system title bar: the top bar is its drag region. Linux and Windows (and the
 				// browser) get our controls; macOS keeps its own traffic lights, so only room is kept for them.
@@ -168,7 +196,8 @@ function LoadedShell({
 						problems={<PanelEmptyState tab="problems" />}
 						runLog={<PanelEmptyState tab="run-log" />}
 						commands={<PanelEmptyState tab="commands" />}
-						strings={mac ? { shortcut: shellStrings.macShortcut } : undefined}
+						strings={{ shortcut: panelShortcut.label }}
+						keyShortcuts={panelShortcut.aria}
 					/>
 				}
 				bottomPanelLayout={layout.bottomPanel}

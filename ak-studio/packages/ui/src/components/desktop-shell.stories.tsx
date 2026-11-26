@@ -517,12 +517,14 @@ export const BottomPanelToggle: Story = {
 };
 
 /**
- * Mod+J shows or hides the panel from anywhere. With focus inside a view, hiding moves focus to the toggle (never
- * lost to the page); showing again leaves it there.
+ * The panel shown or hidden from outside it: in the app, the shell.toggleBottomPanel command on Mod+J (here the
+ * fixture's stand-in, `panelShortcut`). With focus inside a view, hiding moves focus to the toggle (never lost to
+ * the page); showing again leaves it there.
  */
 export const BottomPanelShortcut: Story = {
 	...atViewport("studio1100"),
 	args: {
+		panelShortcut: true,
 		problems: (
 			<div className="p-4">
 				<button type="button">Open config.yaml</button>

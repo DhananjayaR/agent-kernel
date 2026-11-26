@@ -7,12 +7,10 @@ export const name = "@ak-studio/ui";
 
 export { Badge, type BadgeProps } from "./components/badge";
 export {
-	BOTTOM_PANEL_SHORTCUT,
 	BOTTOM_PANEL_TABS,
 	BottomPanel,
 	type BottomPanelProps,
 	type BottomPanelTabId,
-	isBottomPanelShortcut,
 } from "./components/bottom-panel";
 
 export {
@@ -70,6 +68,7 @@ export {
 	type BottomPanelLayout,
 	DesktopShell,
 	type DesktopShellProps,
+	type DesktopShellTab,
 	isAppTabId,
 	MAIN_MIN_HEIGHT,
 	TOP_BAR_COMPACT_BELOW,
@@ -92,7 +91,13 @@ export {
 	MenuSection,
 	MenuSeparator,
 } from "./components/menu";
-export { Modal, type ModalOpening, type ModalProps } from "./components/modal";
+export {
+	isModalOpen,
+	MODAL_OPEN_SELECTOR,
+	Modal,
+	type ModalOpening,
+	type ModalProps,
+} from "./components/modal";
 export { PathChip, type PathChipProps } from "./components/path-chip";
 export { Popover, type PopoverProps } from "./components/popover";
 export {

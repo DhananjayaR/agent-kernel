@@ -11,6 +11,7 @@ import { useJobStore } from "../jobs/jobStore";
 import { useSessionStore } from "../sessions/sessionStore";
 import { connectEvents } from "./connectEvents";
 import {
+	REATTACH_HOLD_MS,
 	reattach,
 	receiveJob,
 	receiveSession,
@@ -73,6 +74,7 @@ beforeEach(() => {
 	useSessionStore.setState({ sessions: {} });
 });
 afterEach(() => {
+	vi.useRealTimers();
 	vi.restoreAllMocks();
 });
 
@@ -163,6 +165,62 @@ describe("reattach", () => {
 		sessionsList.resolve({ sessions: [] });
 		await Promise.all([first, second]);
 		expect(jobs().j1).toEqual(job(6, "cancelled"));
+	});
+});
+
+describe("reattach, when a list never answers", () => {
+	it(`stops holding events after ${REATTACH_HOLD_MS} ms, and the late list cannot roll them back`, async () => {
+		vi.useFakeTimers();
+		const { backend, jobsList, sessionsList } = setup();
+		const log = vi.fn();
+		const done = reattach(backend.transport, log);
+		backend.events.emit({ type: "job.updated", job: job(6, "running") });
+		await vi.advanceTimersByTimeAsync(REATTACH_HOLD_MS - 1);
+		expect(jobs().j1).toBeUndefined();
+		await vi.advanceTimersByTimeAsync(1);
+		expect(jobs().j1).toEqual(job(6, "running"));
+		expect(log).toHaveBeenCalledExactlyOnceWith(
+			`reattaching did not answer in ${REATTACH_HOLD_MS} ms; applying the events held meanwhile`,
+		);
+		// No longer held: a later event applies at once.
+		backend.events.emit({ type: "job.updated", job: job(7, "succeeded") });
+		expect(jobs().j1).toEqual(job(7, "succeeded"));
+		// The list answers late, with an older state: the newest stays.
+		jobsList.resolve({ jobs: [job(4, "running")] });
+		sessionsList.resolve({ sessions: [] });
+		await done;
+		expect(jobs().j1).toEqual(job(7, "succeeded"));
+	});
+
+	it("releases its hold once: a later reattach still holds the events that race it", async () => {
+		vi.useFakeTimers();
+		const first = setup();
+		const late = reattach(first.backend.transport, vi.fn());
+		await vi.advanceTimersByTimeAsync(REATTACH_HOLD_MS);
+		first.jobsList.resolve({ jobs: [] });
+		first.sessionsList.resolve({ sessions: [] });
+		await late;
+
+		const second = setup();
+		const done = reattach(second.backend.transport);
+		second.backend.events.emit({ type: "job.updated", job: job(3, "running") });
+		expect(jobs().j1).toBeUndefined();
+		second.jobsList.resolve({ jobs: [job(2, "queued")] });
+		second.sessionsList.resolve({ sessions: [] });
+		await done;
+		expect(jobs().j1).toEqual(job(3, "running"));
+	});
+
+	it("clears its timer when the lists answer in time", async () => {
+		vi.useFakeTimers();
+		const { backend, jobsList, sessionsList } = setup();
+		const log = vi.fn();
+		const done = reattach(backend.transport, log);
+		jobsList.resolve({ jobs: [] });
+		sessionsList.resolve({ sessions: [] });
+		await done;
+		await vi.advanceTimersByTimeAsync(REATTACH_HOLD_MS * 2);
+		expect(log).not.toHaveBeenCalled();
 	});
 });
 

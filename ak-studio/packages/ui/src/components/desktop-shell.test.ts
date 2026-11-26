@@ -1,25 +1,9 @@
-// The shell's pure parts: the app tab ids, the bottom panel shortcut and the copy placeholders.
+// The shell's pure parts: the app tab ids and the copy placeholders. (The bottom panel's Mod+J is the app's command
+// shell.toggleBottomPanel now; its key matching is tested in the renderer, shared/commands.)
 import { describe, expect, it } from "vitest";
 import { fillString, uiStrings } from "../strings";
-import { BOTTOM_PANEL_TABS, isBottomPanelShortcut } from "./bottom-panel";
+import { BOTTOM_PANEL_TABS } from "./bottom-panel";
 import { APP_TABS, isAppTabId } from "./desktop-shell";
-
-const key = (
-	k: string,
-	mods: Partial<{
-		ctrlKey: boolean;
-		metaKey: boolean;
-		altKey: boolean;
-		shiftKey: boolean;
-	}>,
-) => ({
-	key: k,
-	ctrlKey: false,
-	metaKey: false,
-	altKey: false,
-	shiftKey: false,
-	...mods,
-});
 
 describe("app tabs", () => {
 	it("are the five areas, in order", () => {
@@ -37,24 +21,6 @@ describe("app tabs", () => {
 		for (const id of APP_TABS) expect(isAppTabId(id)).toBe(true);
 		for (const other of ["", "Canvas", "problems", 1, null, undefined])
 			expect(isAppTabId(other)).toBe(false);
-	});
-});
-
-describe("the bottom panel shortcut (Mod+J)", () => {
-	it("matches Ctrl+J and Cmd+J, either case", () => {
-		expect(isBottomPanelShortcut(key("j", { ctrlKey: true }))).toBe(true);
-		expect(isBottomPanelShortcut(key("J", { metaKey: true }))).toBe(true);
-	});
-
-	it("does not match J alone or with Shift or Alt", () => {
-		expect(isBottomPanelShortcut(key("j", {}))).toBe(false);
-		expect(
-			isBottomPanelShortcut(key("j", { ctrlKey: true, shiftKey: true })),
-		).toBe(false);
-		expect(
-			isBottomPanelShortcut(key("j", { ctrlKey: true, altKey: true })),
-		).toBe(false);
-		expect(isBottomPanelShortcut(key("k", { ctrlKey: true }))).toBe(false);
 	});
 });
 

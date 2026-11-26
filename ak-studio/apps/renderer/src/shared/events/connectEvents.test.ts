@@ -1,13 +1,18 @@
 // The app's one `events` subscription, against the mock's real EventBus: a domain event invalidates only its own
 // domain's keys (by project, or the whole domain), and job, session and recorded-command events reach the
 // callbacks the stores give it. When the stream ends with an error it subscribes again after a backoff (fake
-// timers), invalidates every query and calls onConnect again, so the stores re-list.
+// timers), invalidates every query and calls onConnect again, so the stores re-list. The backoff starts again
+// once a subscription has stayed open for a while, not on its first event.
 import type { CommandRecord, Job, Session } from "@ak-studio/contract";
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createMockBackend } from "../bridge/mockTransport";
 import { keys } from "../query/keys";
-import { connectEvents, EVENTS_RETRY_MS } from "./connectEvents";
+import {
+	connectEvents,
+	EVENTS_HEALTHY_MS,
+	EVENTS_RETRY_MS,
+} from "./connectEvents";
 
 function cacheWith(...queryKeys: (readonly unknown[])[]) {
 	const client = new QueryClient();
@@ -191,26 +196,46 @@ describe("connectEvents: reconnecting", () => {
 		expect(onJob).toHaveBeenCalledExactlyOnceWith(job);
 	});
 
-	it("doubles the wait after each failure, up to 5 s, and starts again from 250 ms once an event arrives", async () => {
-		const { backend, subscribe } = setup();
-		const waits: number[] = [];
-		for (let failure = 0; failure < 7; failure++) {
-			const before = subscribe.mock.calls.length;
-			breakStream(backend);
-			let waited = 0;
-			while (subscribe.mock.calls.length === before) {
-				await vi.advanceTimersByTimeAsync(EVENTS_RETRY_MS.first);
-				waited += EVENTS_RETRY_MS.first;
-			}
-			waits.push(waited);
-		}
-		expect(waits).toEqual([250, 500, 1000, 2000, 4000, 5000, 5000]);
-		// An event proves the stream works: the next failure waits the first 250 ms again.
-		backend.events.emit({ type: "domain.changed", domain: "graph" });
+	/** Breaks the stream and answers how long it waited before subscribing again (ms, to the nearest 250). */
+	async function failAndWait(
+		backend: ReturnType<typeof createMockBackend>,
+		subscribe: { mock: { calls: unknown[] } },
+	): Promise<number> {
 		const before = subscribe.mock.calls.length;
 		breakStream(backend);
-		await vi.advanceTimersByTimeAsync(EVENTS_RETRY_MS.first);
-		expect(subscribe.mock.calls.length).toBe(before + 1);
+		let waited = 0;
+		while (subscribe.mock.calls.length === before) {
+			await vi.advanceTimersByTimeAsync(EVENTS_RETRY_MS.first);
+			waited += EVENTS_RETRY_MS.first;
+		}
+		return waited;
+	}
+
+	it("doubles the wait after each failure of a stream that fails just after opening, up to 5 s", async () => {
+		const { backend, subscribe } = setup();
+		const waits: number[] = [];
+		for (let failure = 0; failure < 7; failure++)
+			waits.push(await failAndWait(backend, subscribe));
+		expect(waits).toEqual([250, 500, 1000, 2000, 4000, 5000, 5000]);
+	});
+
+	it(`starts again from 250 ms once a subscription has stayed open for ${EVENTS_HEALTHY_MS} ms, with or without events`, async () => {
+		const { backend, subscribe } = setup();
+		for (let failure = 0; failure < 4; failure++)
+			await failAndWait(backend, subscribe);
+		// Open, and quiet (the stream sends nothing when nothing changes), for long enough: the next outage, even
+		// hours later, waits the first 250 ms again.
+		await vi.advanceTimersByTimeAsync(EVENTS_HEALTHY_MS);
+		expect(await failAndWait(backend, subscribe)).toBe(EVENTS_RETRY_MS.first);
+	});
+
+	it("does not start again from 250 ms on an event alone, if the stream fails at once after it", async () => {
+		const { backend, subscribe } = setup();
+		for (let failure = 0; failure < 3; failure++)
+			await failAndWait(backend, subscribe);
+		backend.events.emit({ type: "domain.changed", domain: "graph" });
+		await vi.advanceTimersByTimeAsync(EVENTS_HEALTHY_MS - 1);
+		expect(await failAndWait(backend, subscribe)).toBe(2000);
 	});
 
 	it("does not call onConnect for a subscription that failed while opening, and keeps trying", async () => {

@@ -112,6 +112,27 @@ test("the bottom panel hides and shows with Ctrl+J and its toggle, keeping focus
 	).toBeFocused();
 });
 
+test("Ctrl+J does nothing while a modal is open, and acts again once it closes", async ({
+	page,
+}) => {
+	await page.goto("/");
+	const panel = page.locator('[data-panel][id="bottom-panel"]');
+	await expect(panel).toHaveJSProperty("offsetHeight", 240);
+	await page.getByRole("button", { name: "Settings" }).click();
+	const dialog = page.getByRole("dialog", { name: "Settings" });
+	await expect(dialog).toBeVisible();
+	await page.keyboard.press("Control+j");
+	await expect(dialog).toBeVisible();
+	await expect(panel).toHaveJSProperty("offsetHeight", 240);
+	await page.keyboard.press("Escape");
+	await expect(dialog).toBeHidden();
+	await page.keyboard.press("Control+j");
+	await expect(panel).toHaveJSProperty("offsetHeight", 48);
+	await expect(
+		page.getByRole("button", { name: "Show the panel" }),
+	).toHaveAttribute("aria-keyshortcuts", "Control+J");
+});
+
 test("holds at 1100 px: one row in the top bar (compact, with the window controls), no horizontal scroll", async ({
 	page,
 }) => {

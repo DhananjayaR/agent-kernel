@@ -22,7 +22,8 @@
 // macOS: about 76 for the traffic lights) reserves room at its left. The controls' 120 px count in the widths above.
 //
 // Tabs: React Aria tabs (the Tabs keyboard model: arrows move and select, Home and End, Tab leaves the list to the
-// panel). The panel area is the `main` landmark. Panel sizes: the bottom panel's height is in pixels, restored from
+// panel). `tabs` gives their ids and labels (the app builds them from its feature manifests); omitted, they are the
+// five app tabs, `APP_TABS`, with the default labels. The panel area is the `main` landmark. Panel sizes: the bottom panel's height is in pixels, restored from
 // `bottomPanelLayout` when the shell mounts (mount it once the stored layout is known) and reported through
 // `onBottomPanelLayoutChange` after the person drags the handle, uses its keys, or toggles the panel. Collapsing
 // keeps the panel's tab strip in place, so its toggle never moves and focus has somewhere to stay.
@@ -71,6 +72,17 @@ const TAB_LABELS: Record<AppTabId, keyof ShellStrings> = {
 
 export function isAppTabId(value: unknown): value is AppTabId {
 	return (APP_TABS as readonly unknown[]).includes(value);
+}
+
+/** One app tab: its id (React Aria's key, so the tab and its panel's ids) and its label. */
+export type DesktopShellTab<T extends string = string> = {
+	id: T;
+	label: string;
+};
+
+/** The five app tabs with the default labels (strings.ts), in order. */
+function defaultTabs(text: ShellStrings): DesktopShellTab<AppTabId>[] {
+	return APP_TABS.map((id) => ({ id, label: text[TAB_LABELS[id]] }));
 }
 
 /**
@@ -218,14 +230,16 @@ export function TopBar({
 }
 
 export type AppTabListProps = {
-	/** A Badge after a tab's label (the background job notice), by tab. */
-	badges?: Partial<Record<AppTabId, ReactNode>>;
+	/** The tabs, in order; omitted, the five app tabs (Canvas, Code, Config, Test & trace, Deploy). */
+	tabs?: readonly DesktopShellTab[];
+	/** A Badge after a tab's label (the background job notice), by tab id. */
+	badges?: Partial<Record<string, ReactNode>>;
 	/** Overrides of the default copy (strings.ts). */
 	strings?: Partial<ShellStrings>;
 };
 
-/** Canvas, Code, Config, Test & trace and Deploy, as tabs that fill the top bar's height. */
-export function AppTabList({ badges, strings }: AppTabListProps) {
+/** The app tabs (by default Canvas, Code, Config, Test & trace and Deploy), filling the top bar's height. */
+export function AppTabList({ tabs, badges, strings }: AppTabListProps) {
 	const text = { ...uiStrings.shell, ...strings };
 	const compact = useTopBarCompact();
 	return (
@@ -233,9 +247,9 @@ export function AppTabList({ badges, strings }: AppTabListProps) {
 			aria-label={text.tabsLabel}
 			className={cn("h-full border-b-0", compact && "gap-4")}
 		>
-			{APP_TABS.map((id) => (
+			{(tabs ?? defaultTabs(text)).map(({ id, label }) => (
 				<Tab key={id} id={id}>
-					{text[TAB_LABELS[id]]}
+					{label}
 					{badges?.[id] ?? null}
 				</Tab>
 			))}
@@ -347,10 +361,12 @@ function InWindow({
 	);
 }
 
-export type DesktopShellProps = {
+export type DesktopShellProps<T extends string = AppTabId> = {
+	/** The app tabs, in order (ids and labels); omitted, the five app tabs with the default labels. */
+	tabs?: readonly DesktopShellTab<T>[];
 	/** The selected app tab (from the route). */
-	selectedTab: AppTabId;
-	onTabChange: (tab: AppTabId) => void;
+	selectedTab: T;
+	onTabChange: (tab: T) => void;
 	/** The ProjectSwitcher. */
 	project: ReactNode;
 	/** The top bar's controls after the tabs: RunControl, DeployStatus, Build with AI, the settings control. */
@@ -360,7 +376,7 @@ export type DesktopShellProps = {
 	/** Space (px) kept free at the top bar's left for the macOS traffic lights (about 76); default none. */
 	leadingInset?: number;
 	/** A Badge after a tab's label, by tab. */
-	tabBadges?: Partial<Record<AppTabId, ReactNode>>;
+	tabBadges?: Partial<Record<T, ReactNode>>;
 	/** The BottomPanel; omitted, the tab content takes the whole height. */
 	bottomPanel?: ReactNode;
 	/** The bottom panel's open state and height, read when the shell mounts and kept in step after. */
@@ -377,7 +393,8 @@ export type DesktopShellProps = {
 	className?: string;
 };
 
-export function DesktopShell({
+export function DesktopShell<T extends string = AppTabId>({
+	tabs,
 	selectedTab,
 	onTabChange,
 	project,
@@ -393,7 +410,13 @@ export function DesktopShell({
 	strings,
 	bottomPanelStrings,
 	className,
-}: DesktopShellProps) {
+}: DesktopShellProps<T>) {
+	const shellTabs =
+		tabs ??
+		(defaultTabs({
+			...uiStrings.shell,
+			...strings,
+		}) as unknown as readonly DesktopShellTab<T>[]);
 	const main = (
 		<main className="size-full min-h-0">
 			{/* One panel, for the selected tab; keyed so React Aria gives it that tab's id and label. */}
@@ -417,14 +440,21 @@ export function DesktopShell({
 			<Tabs
 				selectedKey={selectedTab}
 				onSelectionChange={(key: Key) => {
-					if (isAppTabId(key)) onTabChange(key);
+					const tab = shellTabs.find((t) => t.id === key);
+					if (tab) onTabChange(tab.id);
 				}}
 				className="min-h-0 flex-1"
 			>
 				<TopBar
 					project={project}
 					strings={strings}
-					tabs={<AppTabList badges={tabBadges} strings={strings} />}
+					tabs={
+						<AppTabList
+							tabs={shellTabs}
+							badges={tabBadges as Partial<Record<string, ReactNode>>}
+							strings={strings}
+						/>
+					}
 					actions={actions}
 					windowControls={windowControls}
 					leadingInset={leadingInset}

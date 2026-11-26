@@ -4,9 +4,11 @@
 // the renderer never reasons about paths). Job, session and recorded-command events go to the stores through the
 // callbacks (events/reattach.ts gives the stores' ones).
 //
-// If the stream ends with an error, it subscribes again after a backoff (250 ms, doubling to 5 s, back to 250 ms
-// once an event arrives). Events sent while it was away are lost, so a reconnect invalidates every query and
-// calls `onConnect` again, which re-lists the jobs and sessions (reattach): nothing missed stays stale.
+// If the stream ends with an error, it subscribes again after a backoff (250 ms, doubling to 5 s). The backoff
+// starts again from 250 ms once a subscription has opened and stayed open for EVENTS_HEALTHY_MS, events or not
+// (the stream is quiet when nothing changes); a stream that fails just after it opens keeps backing off instead of
+// looping. Events sent while it was away are lost, so a reconnect invalidates every query and calls `onConnect`
+// again, which re-lists the jobs and sessions (reattach): nothing missed stays stale.
 import type {
 	CommandRecord,
 	Job,
@@ -30,6 +32,9 @@ export interface EventHandlers {
 /** The backoff between attempts to subscribe again: the first wait, doubled after each failure up to the last. */
 export const EVENTS_RETRY_MS = { first: 250, max: 5000 } as const;
 
+/** How long a subscription must stay open before the backoff starts again from its first wait (ms). */
+export const EVENTS_HEALTHY_MS = 1000;
+
 /** Subscribes to `events` (and again after a failure) and routes each event; answers the function that stops it. */
 export function connectEvents(
 	queryClient: QueryClient,
@@ -41,6 +46,11 @@ export function connectEvents(
 	let delay: number = EVENTS_RETRY_MS.first;
 	let unsubscribe: (() => void) | undefined;
 	let retry: ReturnType<typeof setTimeout> | undefined;
+	let healthy: ReturnType<typeof setTimeout> | undefined;
+	const clearHealthy = (): void => {
+		if (healthy !== undefined) clearTimeout(healthy);
+		healthy = undefined;
+	};
 
 	const route = (event: StudioEvent): void => {
 		switch (event.type) {
@@ -68,21 +78,17 @@ export function connectEvents(
 		attempt += 1;
 		const mine = attempt;
 		let failed = false;
-		let heard = false;
 		unsubscribe = transport.subscribe(
 			"events",
 			{},
 			(event) => {
 				if (stopped || mine !== attempt) return;
-				if (!heard) {
-					heard = true;
-					delay = EVENTS_RETRY_MS.first;
-				}
 				route(event);
 			},
 			() => {
 				if (stopped || mine !== attempt || failed) return;
 				failed = true;
+				clearHealthy();
 				// The transport has already closed it. Never subscribe again from inside its callback: wait.
 				retry = setTimeout(() => {
 					retry = undefined;
@@ -92,6 +98,11 @@ export function connectEvents(
 			},
 		);
 		if (failed) return;
+		// Opened: once it has stayed open a while, the next outage starts the backoff again.
+		healthy = setTimeout(() => {
+			healthy = undefined;
+			delay = EVENTS_RETRY_MS.first;
+		}, EVENTS_HEALTHY_MS);
 		if (reconnect) void queryClient.invalidateQueries();
 		handlers.onConnect?.();
 	};
@@ -101,6 +112,7 @@ export function connectEvents(
 		stopped = true;
 		if (retry !== undefined) clearTimeout(retry);
 		retry = undefined;
+		clearHealthy();
 		unsubscribe?.();
 	};
 }

@@ -1,5 +1,6 @@
-// The shell's wiring that needs no DOM: tab routes, the copy that names each phase, and the panel bounds the
-// design system and the contract must agree on.
+// The shell's wiring that needs no DOM: tab routes (from the registry's tabs), the panel copy that names each phase,
+// and the panel bounds the design system and the contract must agree on. The tabs' own copy is their features'
+// (app/features.test.tsx).
 import { BOTTOM_PANEL_HEIGHT, DEFAULT_SHELL_LAYOUT } from "@ak-studio/contract";
 import {
 	APP_TABS,
@@ -9,7 +10,7 @@ import {
 } from "@ak-studio/ui";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_TAB, tabFromPath } from "./routes";
-import { panelEmptyStates, tabEmptyStates } from "./strings";
+import { panelEmptyStates } from "./strings";
 
 describe("tab routes", () => {
 	it("maps each tab's path to the tab", () => {
@@ -27,20 +28,6 @@ describe("tab routes", () => {
 });
 
 describe("empty states", () => {
-	it("name the phase that fills each tab (P4-P12.md, P3.md)", () => {
-		const phases = {
-			canvas: ["P3"],
-			code: ["P3"],
-			config: ["P3"],
-			"test-trace": ["P8", "P9"],
-			deploy: ["P10"],
-		} as const;
-		for (const tab of APP_TABS) {
-			for (const phase of phases[tab])
-				expect(tabEmptyStates[tab].description).toContain(phase);
-		}
-	});
-
 	it("name the phase that fills each bottom panel view", () => {
 		const phases = { problems: "P3", "run-log": "P8", commands: "P2" } as const;
 		for (const tab of BOTTOM_PANEL_TABS)
@@ -48,10 +35,7 @@ describe("empty states", () => {
 	});
 
 	it("have final copy: sentence case titles, no placeholder text", () => {
-		const copy = [
-			...Object.values(tabEmptyStates),
-			...Object.values(panelEmptyStates),
-		];
+		const copy = Object.values(panelEmptyStates);
 		for (const { title, description } of copy) {
 			expect(title.slice(1)).toBe(title.slice(1).toLowerCase());
 			expect(`${title} ${description}`).not.toMatch(

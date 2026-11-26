@@ -396,11 +396,21 @@ export class SessionService<Kinds extends SessionKindMap = SessionKinds> {
 		try {
 			session.state = state;
 			if (error) session.error = error;
-			if (session.streamId !== undefined) this.#streams.end(session.streamId);
-			this.#emit(entry);
 		} catch (err) {
 			this.#log(`ending session ${session.id} went wrong: ${describe(err)}`);
 		} finally {
+			// Whatever happened above, the end is announced (its seq moves on), then the stream ends; a failure to
+			// end the stream is only logged.
+			this.#emit(entry);
+			if (session.streamId !== undefined) {
+				try {
+					this.#streams.end(session.streamId);
+				} catch (err) {
+					this.#log(
+						`ending the stream of session ${session.id} went wrong: ${describe(err)}`,
+					);
+				}
+			}
 			// Whatever happened above, the slot is freed (once its starter has settled) and waiters resume.
 			this.#releaseSlot(entry);
 			entry.markDone();

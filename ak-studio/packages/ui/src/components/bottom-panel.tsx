@@ -5,22 +5,15 @@
 // was and the views remain one press away.
 //
 // Keyboard: the panel's tabs follow the Tabs model (arrows move and select, Home and End, Tab moves on to the view).
-// Selecting a tab while the panel is collapsed opens it. Mod+J (Ctrl+J; Cmd+J on macOS) shows or hides the panel
-// from anywhere in the window (`BOTTOM_PANEL_SHORTCUT`); the toggle's tooltip shows it. While collapsed the views
-// are inert (out of the tab order and hidden from assistive technology). Hiding the panel never loses focus: if
-// focus was inside a view, it moves to the toggle first.
+// Selecting a tab while the panel is collapsed opens it. While collapsed the views are inert (out of the tab order
+// and hidden from assistive technology). Hiding the panel never loses focus: if focus was inside a view, it moves
+// to the toggle first, whether the toggle hid it or the open state changed from outside.
 //
-// Declared shortcut (P1a has no shortcut registry or clash test yet; P1b's feature manifests take it over):
-//   Mod+J  Show or hide the bottom panel. Not used by the app menu (reload, zoom, full screen, edit roles),
-//          React Aria (F6, Shift+F10) or the browser in Electron.
+// Presentational: the panel has no shortcut of its own. The app's command shell.toggleBottomPanel (Mod+J, declared
+// in the shell's manifest, P1b-plan ruling 13) changes `isOpen` from outside; the app passes that shortcut as shown
+// (`strings.shortcut`, for the toggle's tooltip) and in aria-keyshortcuts form (`keyShortcuts`).
 import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
-import {
-	type ReactNode,
-	useCallback,
-	useEffect,
-	useLayoutEffect,
-	useRef,
-} from "react";
+import { type ReactNode, useCallback, useLayoutEffect, useRef } from "react";
 import {
 	type Key,
 	Provider,
@@ -42,21 +35,6 @@ const TAB_LABELS: Record<BottomPanelTabId, keyof BottomPanelStrings> = {
 	commands: "commands",
 };
 
-/** The panel's show/hide shortcut: Mod+J (Ctrl or Cmd, no Shift or Alt). */
-export const BOTTOM_PANEL_SHORTCUT = { key: "j", mod: true } as const;
-
-/** True for the keydown of `BOTTOM_PANEL_SHORTCUT`. */
-export function isBottomPanelShortcut(
-	e: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey" | "shiftKey">,
-): boolean {
-	return (
-		e.key.toLowerCase() === BOTTOM_PANEL_SHORTCUT.key &&
-		(e.ctrlKey || e.metaKey) &&
-		!e.altKey &&
-		!e.shiftKey
-	);
-}
-
 export type BottomPanelProps = {
 	/** Open (its view shows) or collapsed (only the tab strip). */
 	isOpen: boolean;
@@ -69,8 +47,13 @@ export type BottomPanelProps = {
 	commands: ReactNode;
 	/** A Badge after a tab's label (the number of problems), by tab. */
 	badges?: Partial<Record<BottomPanelTabId, ReactNode>>;
-	/** Overrides of the default copy (strings.ts); `shortcut` is the shortcut as shown ("⌘J" on macOS). */
+	/** Overrides of the default copy (strings.ts); `shortcut` is the app's show/hide shortcut as shown ("⌘J" on macOS). */
 	strings?: Partial<BottomPanelStrings>;
+	/**
+	 * That shortcut in aria-keyshortcuts form ("Meta+J" on macOS, "Control+J" elsewhere), set on the toggle. React
+	 * Aria's Button does not pass aria-keyshortcuts through, so it is set on the element directly.
+	 */
+	keyShortcuts?: string;
 	className?: string;
 };
 
@@ -84,6 +67,7 @@ export function BottomPanel({
 	commands,
 	badges,
 	strings,
+	keyShortcuts,
 	className,
 }: BottomPanelProps) {
 	const text = { ...uiStrings.bottomPanel, ...strings };
@@ -107,15 +91,13 @@ export function BottomPanel({
 			toggleRef.current?.focus();
 	}, [isOpen]);
 
-	useEffect(() => {
-		const onKeyDown = (e: KeyboardEvent) => {
-			if (e.defaultPrevented || e.repeat || !isBottomPanelShortcut(e)) return;
-			e.preventDefault();
-			setOpen(!isOpen);
-		};
-		document.addEventListener("keydown", onKeyDown);
-		return () => document.removeEventListener("keydown", onKeyDown);
-	}, [isOpen, setOpen]);
+	// After every render: the toggle element is React Aria's, and nothing else keeps the attribute on it.
+	useLayoutEffect(() => {
+		const toggle = toggleRef.current;
+		if (!toggle) return;
+		if (keyShortcuts) toggle.setAttribute("aria-keyshortcuts", keyShortcuts);
+		else toggle.removeAttribute("aria-keyshortcuts");
+	});
 
 	const content: Record<BottomPanelTabId, ReactNode> = {
 		problems,
@@ -168,7 +150,6 @@ export function BottomPanel({
 								ref={toggleRef}
 								data-slot="bottom-panel-toggle"
 								aria-label={toggleLabel}
-								aria-keyshortcuts="Control+J Meta+J"
 								aria-expanded={isOpen}
 								icon={
 									isOpen ? (

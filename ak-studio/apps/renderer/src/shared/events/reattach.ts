@@ -3,7 +3,9 @@
 // `jobs.list` and `sessions.list` to learn what is running. The lists fill the stores first; the events that
 // arrive while they are fetched are held and applied after them. Every write goes through the stores' newest-wins
 // rule (by `seq`), so neither a late list nor an early event can roll a job or a session back, whatever the
-// order. connectEvents calls `reattach` each time its subscription opens (storeEventHandlers wires this).
+// order. connectEvents calls `reattach` each time its subscription opens (storeEventHandlers wires this). Neither
+// transport times a request out, so a list that never answers holds events for at most REATTACH_HOLD_MS; its late
+// answer still goes through the same rule.
 import type { Job, Session, Transport } from "@ak-studio/contract";
 import { isStudioFailure } from "../bridge/client";
 import { applyJobs } from "../jobs/jobStore";
@@ -14,7 +16,10 @@ type Log = (message: string) => void;
 
 const consoleLog: Log = (message) => console.error(`[studio] ${message}`);
 
-/** How many reattaches are fetching; while any is, events are held. */
+/** How long a reattach holds events while its lists have not answered (ms); after that it applies them. */
+export const REATTACH_HOLD_MS = 5000;
+
+/** How many reattaches are holding events; while any is, events are held. */
 let fetching = 0;
 let heldJobs: Job[] = [];
 let heldSessions: Session[] = [];
@@ -38,13 +43,29 @@ function reasonOf(err: unknown): string {
 
 /**
  * Fills the stores from `jobs.list` and `sessions.list`, then applies the events held meanwhile. Never rejects: a
- * list that fails is logged, and the held events are applied all the same (the next reconnect lists again).
+ * list that fails is logged, and the held events are applied all the same (the next reconnect lists again). A
+ * list that has not answered after REATTACH_HOLD_MS stops holding events (logged); its late answer is applied.
  */
 export async function reattach(
 	transport: Transport,
 	log: Log = consoleLog,
 ): Promise<void> {
 	fetching += 1;
+	let holding = true;
+	/** Ends this reattach's hold, once: the last hold to end applies the held events. */
+	const release = (): void => {
+		if (!holding) return;
+		holding = false;
+		fetching -= 1;
+		if (fetching === 0) flushHeld();
+	};
+	const bound = setTimeout(() => {
+		if (!holding) return;
+		log(
+			`reattaching did not answer in ${REATTACH_HOLD_MS} ms; applying the events held meanwhile`,
+		);
+		release();
+	}, REATTACH_HOLD_MS);
 	try {
 		// Async wrappers, so a transport that throws instead of rejecting is still a settled failure.
 		const [jobs, sessions] = await Promise.allSettled([
@@ -56,16 +77,18 @@ export async function reattach(
 		if (sessions.status === "fulfilled") applySessions(sessions.value.sessions);
 		else log(`reattaching sessions failed: ${reasonOf(sessions.reason)}`);
 	} finally {
-		fetching -= 1;
-		if (fetching === 0) {
-			const jobs = heldJobs;
-			const sessions = heldSessions;
-			heldJobs = [];
-			heldSessions = [];
-			applyJobs(jobs);
-			applySessions(sessions);
-		}
+		clearTimeout(bound);
+		release();
 	}
+}
+
+function flushHeld(): void {
+	const jobs = heldJobs;
+	const sessions = heldSessions;
+	heldJobs = [];
+	heldSessions = [];
+	applyJobs(jobs);
+	applySessions(sessions);
 }
 
 /** The stores' side of connectEvents: events go to the stores, and each (re)connect reattaches. */
