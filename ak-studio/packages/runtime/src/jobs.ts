@@ -329,8 +329,10 @@ export class JobService<Kinds extends JobKindMap = JobKinds> {
 	}
 
 	#start(entry: Entry): void {
+		// Started only once the clock has answered: a throwing clock leaves the job queued, still cancellable.
+		const startedAt = this.#now();
 		entry.started = true;
-		entry.startedAt = this.#now();
+		entry.startedAt = startedAt;
 		entry.job.state = "running";
 		this.#emit(entry);
 		void this.#run(entry);

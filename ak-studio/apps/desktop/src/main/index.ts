@@ -1,10 +1,12 @@
-// Electron main process: one window serving the renderer from app://studio/, with the security baseline.
+// Electron main process: one window serving the renderer from app://studio/, with the security baseline, and the
+// native quit and unload prompts (P1b ruling 11; their logic is in quit.ts).
 // The only file in src/main that imports Electron values; the others take Electron objects as arguments.
 import { join } from "node:path";
-import { ServiceRegistry } from "@ak-studio/runtime";
+import { type Log, ServiceRegistry } from "@ak-studio/runtime";
 import {
 	app,
 	BrowserWindow,
+	dialog,
 	ipcMain,
 	Menu,
 	nativeTheme,
@@ -14,8 +16,10 @@ import {
 	type WebContents,
 } from "electron";
 import { BridgeServer, trustedOrigins } from "./bridge/ipcServer";
+import { JOB_RECORDS_FOLDER } from "./infra/NodeJobRecordStore";
 import { buildMenuTemplate } from "./menu";
 import { createAppProtocolHandler } from "./protocol";
+import { confirmUnload, type PromptDialog, QuitGate } from "./quit";
 import {
 	APP_SCHEME,
 	APP_URL,
@@ -122,6 +126,21 @@ const TRAFFIC_LIGHTS = { x: 16, y: 18 };
 let mainWindow: BrowserWindow | null = null;
 /** The web contents of every window the app created: the only senders the bridge accepts. */
 const appContents = new WeakSet<WebContents>();
+/** Decides every quit (startBridge creates it); unset only if the bridge failed to start, and the app exits. */
+let quitGate: QuitGate | undefined;
+
+/** The main process's log: the registry, the services and the quit rule report here (masked where it matters). */
+const log: Log = (message) => console.error(`[studio] ${message}`);
+
+/** The native message box for the quit rule, on the app's window when there is one. Answers the button index. */
+async function askQuit(prompt: PromptDialog): Promise<number> {
+	const options = { ...prompt, noLink: true };
+	const win = mainWindow;
+	const { response } = await (win && !win.isDestroyed()
+		? dialog.showMessageBox(win, options)
+		: dialog.showMessageBox(options));
+	return response;
+}
 
 function createWindow(): BrowserWindow {
 	const stateFile = join(app.getPath("userData"), WINDOW_STATE_FILE);
@@ -177,6 +196,26 @@ function createWindow(): BrowserWindow {
 	win.on("closed", () => {
 		if (mainWindow === win) mainWindow = null;
 	});
+	// Closing the last window quits on Linux and Windows (window-all-closed, below), so the quit rule decides
+	// first, while the window is still there to come back to. macOS keeps its convention: the app stays open.
+	win.on("close", (event) => {
+		if (process.platform === "darwin" || !quitGate) return;
+		const others = BrowserWindow.getAllWindows().filter(
+			(other) => other !== win && !other.isDestroyed(),
+		);
+		if (others.length > 0 || quitGate.request()) return;
+		event.preventDefault();
+	});
+	// The renderer's beforeunload refused (unsaved changes, P1b Task 7): ask natively, so it works even when the
+	// renderer is busy. preventDefault is what lets the unload go on, and only works synchronously. Staying also
+	// cancels a quit in progress, so the next quit is decided afresh.
+	win.webContents.on("will-prevent-unload", (event) => {
+		const leave = confirmUnload((prompt) =>
+			dialog.showMessageBoxSync(win, { ...prompt, noLink: true }),
+		);
+		if (leave) event.preventDefault();
+		else quitGate?.aborted();
+	});
 	persistWindowState(win, stateFile);
 	const url = devServerUrl ?? APP_URL;
 	win.loadURL(url).catch((err: unknown) => {
@@ -190,10 +229,13 @@ function createWindow(): BrowserWindow {
  * handler, so the app refuses to start.
  */
 function startBridge(): void {
-	// registerServices hands the registry's masker to the services, so errors and stream output share it.
-	const registry = new ServiceRegistry();
+	// registerServices hands the registry's masker to the services, so errors and stream output share it, and
+	// the registry's log, so every service reports to the same place.
+	const registry = new ServiceRegistry({ log });
 	const services = registerServices(registry, {
 		window: () => mainWindow,
+		jobRecordsDir: join(app.getPath("userData"), JOB_RECORDS_FOLDER),
+		log,
 		app: {
 			version: app.getVersion(),
 			platform: process.platform,
@@ -206,6 +248,15 @@ function startBridge(): void {
 	});
 	nativeTheme.themeSource = services.app.theme;
 	registry.start();
+	quitGate = new QuitGate({
+		jobs: services.jobs,
+		sessions: services.sessions,
+		ask: askQuit,
+		// Once allowed, this quit passes before-quit (the gate answers true) and closes the window.
+		quit: () => app.quit(),
+		// Its lines can carry an exception's text: masked like the services' lines.
+		log: (message) => log(services.masker.mask(message)),
+	});
 	new BridgeServer({
 		registry,
 		isAppContents: (contents) => appContents.has(contents),
@@ -236,6 +287,12 @@ function start(): void {
 		hardenWebContents(contents, devServerUrl),
 	);
 	app.on("second-instance", focusMainWindow);
+	// Every quit (the menu, Cmd+Q, the OS, app.quit) goes through the quit rule: with jobs or sessions running it is
+	// stopped here and the gate quits again once it may.
+	app.on("before-quit", (event) => {
+		if (!quitGate || quitGate.request()) return;
+		event.preventDefault();
+	});
 	nativeTheme.on("updated", syncWindowBackground);
 
 	void app.whenReady().then(() => {

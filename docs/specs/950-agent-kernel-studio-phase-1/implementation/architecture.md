@@ -50,7 +50,7 @@ touches the project's files, processes and OAK environment.
 | `renderer/features/<a>` | `shared`, `ui`, `contract` | **Any other feature**; `electron`; Node built-ins |
 | `renderer/app` | Everything in the renderer | `electron`; Node built-ins |
 | `desktop/services` | `contract`, `runtime`, `desktop/infra` | The renderer; another service's internals (services talk through injected interfaces) |
-| `desktop/infra` | Node, Electron | Services; the renderer |
+| `desktop/infra` | `contract`, `runtime` (ports and schemas), Node, Electron | Services; the renderer |
 
 **The runtime package.** `packages/runtime` holds the browser-safe services core (P1b ruling 9): the service
 registry, project scopes, secret masking, `EventBus`, `StreamHub`, the job and session services, and the

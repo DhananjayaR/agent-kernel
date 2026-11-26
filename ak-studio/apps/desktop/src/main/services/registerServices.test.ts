@@ -1,5 +1,16 @@
 // The registry's contract test: registerServices (as index.ts calls it) serves every operation and stream the
-// contract declares. The registry's own tests moved with it to packages/runtime (P1b Task 4).
+// contract declares, each from its real service (the job and session operations from JobService and
+// SessionService, with crash records in a temporary folder), and its services share the registry's masker and
+// the app's log. The registry's own tests moved with it to packages/runtime (P1b Task 4).
+import {
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
 	appInfo,
 	appSetTheme,
@@ -8,22 +19,44 @@ import {
 	operations,
 	type StreamMessage,
 } from "@ak-studio/contract";
-import { SecretMasker, ServiceRegistry } from "@ak-studio/runtime";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { PENDING_REQUESTS } from "./PendingP1bService";
+import {
+	type Log,
+	ProjectScopes,
+	SecretMasker,
+	ServiceRegistry,
+} from "@ak-studio/runtime";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { registerServices, type ServiceDeps } from "./registerServices";
 
-const deps: ServiceDeps = {
-	window: () => null,
-	app: {
-		version: "1.0.0",
-		platform: "linux",
-		preferencesFile: "/nonexistent/preferences.json",
-	},
-};
+let root: string;
+let log: ReturnType<typeof vi.fn<Log>>;
+let deps: ServiceDeps;
+beforeEach(() => {
+	root = mkdtempSync(join(tmpdir(), "ak-studio-services-"));
+	log = vi.fn<Log>();
+	deps = {
+		window: () => null,
+		app: {
+			version: "1.0.0",
+			platform: "linux",
+			preferencesFile: "/nonexistent/preferences.json",
+		},
+		jobRecordsDir: join(root, "jobs"),
+		log,
+	};
+});
 
 afterEach(() => {
 	vi.useRealTimers();
+	rmSync(root, { recursive: true, force: true });
+});
+
+const record = (jobId: string) => ({
+	jobId,
+	kind: "project.create",
+	title: "Create project",
+	startedAt: 1000,
+	commandIds: [],
 });
 
 describe("registerServices", () => {
@@ -41,30 +74,88 @@ describe("registerServices", () => {
 		expect(services.window).toBeDefined();
 	});
 
-	// TEMPORARY (P1b Task 3): PendingP1bService answers bridge.unavailable for the job and session operations.
-	// JobService and SessionService serve them from P1b Task 5 (tested over a registry in
-	// packages/runtime/src/services.test.ts); Task 6 wires them in here, deletes PendingP1bService and this test.
-	it("answers bridge.unavailable for the job and session operations until their services exist", async () => {
+	it("serves the job and session operations from JobService and SessionService, with records in the jobs folder", async () => {
+		// A job that never ended in an earlier run: its record is in the folder the app passes.
+		mkdirSync(deps.jobRecordsDir, { recursive: true });
+		writeFileSync(
+			join(deps.jobRecordsDir, "job-old-1.json"),
+			JSON.stringify(record("job-old-1")),
+		);
 		const registry = new ServiceRegistry();
-		registerServices(registry, deps);
+		const services = registerServices(registry, deps);
 		registry.start();
-		// A valid input for each, so the handler (not input parsing) answers.
-		const inputs: Record<(typeof PENDING_REQUESTS)[number], unknown> = {
-			"job.cancel": { jobId: "j1" },
-			"job.respond": { jobId: "j1", requestId: "r1", answer: {} },
-			"jobs.dismissInterrupted": { jobId: "j1" },
-			"jobs.interrupted": {},
-			"jobs.list": {},
-			"session.start": { kind: "t.kind", args: {} },
-			"session.stop": { sessionId: "s1" },
-			"sessions.list": {},
-		};
-		for (const name of PENDING_REQUESTS) {
-			expect(await registry.request(name, inputs[name]), name).toMatchObject({
-				ok: false,
-				error: { code: ERROR_CODES.unavailable },
-			});
-		}
+
+		await expect(registry.request("jobs.list", {})).resolves.toEqual({
+			ok: true,
+			value: { jobs: [] },
+		});
+		await expect(registry.request("jobs.interrupted", {})).resolves.toEqual({
+			ok: true,
+			value: { records: [record("job-old-1")] },
+		});
+		await expect(
+			registry.request("jobs.dismissInterrupted", { jobId: "job-old-1" }),
+		).resolves.toEqual({ ok: true, value: {} });
+		expect(readdirSync(deps.jobRecordsDir)).toEqual([]);
+		await expect(
+			registry.request("jobs.dismissInterrupted", { jobId: "job-old-1" }),
+		).resolves.toMatchObject({
+			ok: false,
+			error: { code: ERROR_CODES.jobNotFound },
+		});
+		await expect(
+			registry.request("job.cancel", { jobId: "j1" }),
+		).resolves.toMatchObject({
+			ok: false,
+			error: { code: ERROR_CODES.jobNotFound },
+		});
+		await expect(
+			registry.request("job.respond", {
+				jobId: "j1",
+				requestId: "r1",
+				answer: {},
+			}),
+		).resolves.toMatchObject({
+			ok: false,
+			error: { code: ERROR_CODES.jobNotFound },
+		});
+		await expect(registry.request("sessions.list", {})).resolves.toEqual({
+			ok: true,
+			value: { sessions: [] },
+		});
+		await expect(
+			registry.request("session.start", { kind: "t.kind", args: {} }),
+		).resolves.toMatchObject({
+			ok: false,
+			error: { code: ERROR_CODES.sessionUnknownKind },
+		});
+		await expect(
+			registry.request("session.stop", { sessionId: "s1" }),
+		).resolves.toMatchObject({
+			ok: false,
+			error: { code: ERROR_CODES.sessionNotFound },
+		});
+		// What index.ts's quit rule reads: nothing running.
+		expect(services.jobs.quitPlan()).toEqual({ toCancel: [], blocking: [] });
+		expect(services.sessions.list()).toEqual([]);
+		expect(services.scopes).toBeInstanceOf(ProjectScopes);
+	});
+
+	it("logs a corrupt job record through the app's log, masked with the registry's masker", async () => {
+		mkdirSync(deps.jobRecordsDir, { recursive: true });
+		writeFileSync(join(deps.jobRecordsDir, "job-tok-123456.json"), "{ nope");
+		const registry = new ServiceRegistry();
+		const services = registerServices(registry, deps);
+		registry.start();
+		services.masker.add("tok-123456");
+		await expect(registry.request("jobs.interrupted", {})).resolves.toEqual({
+			ok: true,
+			value: { records: [] },
+		});
+		expect(log).toHaveBeenCalledWith(
+			expect.stringContaining("skipping job record job-••••.json"),
+		);
+		expect(JSON.stringify(log.mock.calls)).not.toContain("tok-123456");
 	});
 
 	it("serves events and stream.read from EventBus and StreamHub", () => {

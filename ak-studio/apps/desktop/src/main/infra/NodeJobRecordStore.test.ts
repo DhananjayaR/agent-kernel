@@ -1,6 +1,7 @@
 // NodeJobRecordStore tests, in a temporary folder: one JSON file per job, replaced atomically; ended and
 // dismissed records go; a new store on the same folder (a restart) still sees the unfinished ones; corrupt or
-// stray files are skipped and logged; a job id can never name a file outside the folder.
+// stray files are skipped and logged; temporary files a crash left are removed on first use; a job id can never
+// name a file outside the folder.
 import {
 	existsSync,
 	mkdirSync,
@@ -118,6 +119,45 @@ describe("NodeJobRecordStore", () => {
 		for (const name of ["job-bad-1", "job-bad-2", "job-bad-3", "folder.json"]) {
 			expect(log).toHaveBeenCalledWith(expect.stringContaining(name));
 		}
+	});
+
+	it("removes the temporary files a crash left behind on its first use, and nothing else", async () => {
+		mkdirSync(dir, { recursive: true });
+		writeFileSync(join(dir, "job-a-1.json"), JSON.stringify(record("job-a-1")));
+		writeFileSync(join(dir, ".job-a-4.0123.tmp"), "{");
+		writeFileSync(join(dir, ".job-a-5.4567.tmp"), "");
+		writeFileSync(join(dir, ".keep"), "");
+		writeFileSync(join(dir, "notes.txt"), "not a record");
+		const store = new NodeJobRecordStore(dir);
+		await expect(store.unfinished()).resolves.toEqual([record("job-a-1")]);
+		expect(readdirSync(dir).sort()).toEqual([
+			".keep",
+			"job-a-1.json",
+			"notes.txt",
+		]);
+		// Once per store: a temporary file that appears later is another write's, and is left alone.
+		writeFileSync(join(dir, ".job-a-6.89ab.tmp"), "");
+		await store.unfinished();
+		expect(readdirSync(dir)).toContain(".job-a-6.89ab.tmp");
+	});
+
+	it("removes stray temporary files before its first write too", async () => {
+		mkdirSync(dir, { recursive: true });
+		writeFileSync(join(dir, ".job-a-4.0123.tmp"), "{");
+		const store = new NodeJobRecordStore(dir);
+		await store.started(record("job-a-1"));
+		expect(readdirSync(dir)).toEqual(["job-a-1.json"]);
+	});
+
+	it("logs a records folder it cannot clean up, and still answers", async () => {
+		const log = vi.fn<Log>();
+		// A file where the folder should be.
+		writeFileSync(join(root, "not-a-folder"), "");
+		const store = new NodeJobRecordStore(join(root, "not-a-folder"), { log });
+		await expect(store.unfinished()).resolves.toEqual([]);
+		expect(log).toHaveBeenCalledWith(
+			expect.stringContaining("temporary files"),
+		);
 	});
 
 	it("never touches a file outside its folder, whatever the job id", async () => {

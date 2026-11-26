@@ -10,8 +10,12 @@ import { join } from "node:path";
 import { DEFAULT_SHELL_LAYOUT, ERROR_CODES } from "@ak-studio/contract";
 import {
 	EventBus,
+	InMemoryJobRecordStore,
+	JobService,
+	ProjectScopes,
 	SecretMasker,
 	ServiceRegistry,
+	SessionService,
 	StreamHub,
 } from "@ak-studio/runtime";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -21,7 +25,6 @@ import {
 	readPreferences,
 	toPlatform,
 } from "./AppService";
-import { PendingP1bService } from "./PendingP1bService";
 import { WindowService } from "./WindowService";
 
 let dir: string;
@@ -33,14 +36,27 @@ beforeEach(() => {
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
 function serve(service: AppService) {
-	// The window, event and stream services serve the rest, so the registry (which needs every handler) can
-	// start. TEMPORARY (P1b Task 3): PendingP1bService serves the job and session operations until Task 6.
-	const registry = new ServiceRegistry()
+	// The window, event, stream, job and session services serve the rest, so the registry (which needs every
+	// handler) can start.
+	const masker = new SecretMasker();
+	const events = new EventBus({ masker });
+	const streams = new StreamHub({ masker });
+	const scopes = new ProjectScopes({ masker });
+	const registry = new ServiceRegistry({ masker })
 		.register(service)
 		.register(new WindowService(() => null))
-		.register(new EventBus())
-		.register(new StreamHub({ masker: new SecretMasker() }))
-		.register(new PendingP1bService());
+		.register(events)
+		.register(streams)
+		.register(
+			new JobService({
+				events,
+				streams,
+				scopes,
+				records: new InMemoryJobRecordStore(),
+				masker,
+			}),
+		)
+		.register(new SessionService({ events, streams, scopes, masker }));
 	registry.start();
 	return registry;
 }

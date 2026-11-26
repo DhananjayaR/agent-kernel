@@ -119,7 +119,7 @@ function deferred<T = void>(): Deferred<T> {
 /** Lets every pending promise (and StreamHub flush) run. */
 const settle = () => vi.runAllTimersAsync();
 
-function setup(options: { records?: JobRecordStore } = {}) {
+function setup(options: { records?: JobRecordStore; now?: () => number } = {}) {
 	const masker = new SecretMasker();
 	masker.add(SECRET);
 	const log = vi.fn<Log>();
@@ -139,7 +139,7 @@ function setup(options: { records?: JobRecordStore } = {}) {
 		records,
 		masker,
 		jobKinds: kinds,
-		now: () => 1000,
+		now: options.now ?? (() => 1000),
 		log,
 	});
 	const registry = new ServiceRegistry({ contract, log, masker });
@@ -1195,5 +1195,40 @@ describe("JobService: nothing after the runner can wedge a job", () => {
 		const ctx = calls[0]?.ctx as JobContext;
 		expect(() => ctx.addCommand("")).toThrow(TypeError);
 		expect(() => ctx.addCommand(42 as unknown as string)).toThrow(TypeError);
+	});
+});
+
+describe("JobService: a clock that throws", () => {
+	it("leaves a job whose start failed on the clock not started, so cancelling ends it at once", async () => {
+		let calls = 0;
+		const s = serve(
+			setup({
+				now: () => {
+					calls += 1;
+					if (calls === 1) throw new Error("clock boom");
+					return 1000;
+				},
+			}),
+		);
+		// A kind that survives quit: started, it would block the quit; never started, it is cancelled.
+		const answer = await s.registry.request("t.apply", {});
+		expect(answer).toMatchObject({
+			ok: false,
+			error: { code: ERROR_CODES.internal },
+		});
+		const [stuck] = s.jobs.list();
+		expect(stuck).toMatchObject({ state: "queued" });
+		// Not started: it is in toCancel, and cancelling it ends it now, with no record.
+		expect(s.jobs.quitPlan().toCancel.map((j) => j.id)).toEqual([stuck?.id]);
+		let cancelled = false;
+		void s.jobs.cancelAll(s.jobs.list()).then(() => {
+			cancelled = true;
+		});
+		await settle();
+		expect(cancelled).toBe(true);
+		expect(current(s, stuck?.id as string)).toMatchObject({
+			state: "cancelled",
+		});
+		expect((s.records as InMemoryJobRecordStore).data.size).toBe(0);
 	});
 });

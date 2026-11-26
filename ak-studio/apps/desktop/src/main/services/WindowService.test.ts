@@ -1,11 +1,14 @@
 import {
 	EventBus,
+	InMemoryJobRecordStore,
+	JobService,
+	ProjectScopes,
 	SecretMasker,
 	ServiceRegistry,
+	SessionService,
 	StreamHub,
 } from "@ak-studio/runtime";
 import { describe, expect, it, vi } from "vitest";
-import { PendingP1bService } from "./PendingP1bService";
 import { type ControlledWindow, WindowService } from "./WindowService";
 
 type Listener = () => void;
@@ -99,13 +102,25 @@ describe("WindowService", () => {
 
 	it("registers its three requests and its stream with the registry", async () => {
 		const { win } = fakeWindow();
-		const registry = new ServiceRegistry();
-		// TEMPORARY (P1b Task 3): PendingP1bService serves the job and session operations until Task 6.
+		const masker = new SecretMasker();
+		const events = new EventBus({ masker });
+		const streams = new StreamHub({ masker });
+		const scopes = new ProjectScopes({ masker });
+		const registry = new ServiceRegistry({ masker });
 		registry
 			.register(new WindowService(() => win))
-			.register(new EventBus())
-			.register(new StreamHub({ masker: new SecretMasker() }))
-			.register(new PendingP1bService());
+			.register(events)
+			.register(streams)
+			.register(
+				new JobService({
+					events,
+					streams,
+					scopes,
+					records: new InMemoryJobRecordStore(),
+					masker,
+				}),
+			)
+			.register(new SessionService({ events, streams, scopes, masker }));
 		expect(registry.missingHandlers()).toEqual([
 			"app.info",
 			"app.setLayout",

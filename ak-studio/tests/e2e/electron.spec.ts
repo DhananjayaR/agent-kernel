@@ -367,6 +367,28 @@ test("the window is frameless and its Maximise and Restore buttons work", async 
 	});
 });
 
+// Closing the last window quits on Linux and Windows, and goes through the quit rule first (P1b ruling 11): with no
+// job or session running, the rule lets it go on at once. The prompt for a running job is Task 18's test (the
+// About job). macOS keeps its convention: closing the window does not quit.
+test("closing the window with nothing running quits the app at once", async () => {
+	test.skip(
+		process.platform === "darwin",
+		"macOS keeps the app open when its window closes",
+	);
+	await withStudio(async ({ app, page }) => {
+		await expect(appVersion(page)).not.toBeEmpty();
+		const exited = new Promise<number | null>((resolve) =>
+			app.process().once("exit", (code) => resolve(code)),
+		);
+		const close = page
+			.getByRole("group", { name: "Window controls" })
+			.getByRole("button", { name: "Close" });
+		// The page goes away with the window, so the click may not see its own end.
+		await close.click().catch(() => {});
+		expect(await exited).toBe(0);
+	});
+});
+
 test("makes no network request (Chromium requests only; Node networking in main is not covered)", async () => {
 	await withStudio(async ({ app, page }) => {
 		await expect(appVersion(page)).not.toBeEmpty();
