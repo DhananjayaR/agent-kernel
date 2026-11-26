@@ -300,7 +300,7 @@ export const ConfirmByName: Story = {
 		defaultOpen: true,
 		trigger: <Button>Create backend</Button>,
 	},
-	play: async ({ args }) => {
+	play: async ({ canvasElement, args }) => {
 		const el = await alertDialog();
 		const field = within(el).getByRole("textbox", {
 			name: "Type support-triage to confirm",
@@ -318,6 +318,43 @@ export const ConfirmByName: Story = {
 		await expect(action).toBeEnabled();
 		await userEvent.click(action);
 		await expect(args.onConfirm).toHaveBeenCalledWith("support-triage");
+		await waitFor(() => expect(el).not.toBeInTheDocument());
+		// Opened again, it asks for the name afresh (what the screenshot shows).
+		await userEvent.click(
+			within(canvasElement).getByRole("button", { name: "Create backend" }),
+		);
+		const again = await alertDialog();
+		await expect(within(again).getByRole("textbox")).toHaveValue("");
+		await expect(
+			within(again).getByRole("button", { name: "Create backend" }),
+		).toBeDisabled();
+	},
+};
+
+/** A job's answer refused: said inline in the modal, which stays open so the person can answer again. */
+export const AnswerRefused: Story = {
+	args: {
+		title: "Run the last step?",
+		children: "The demo job has run two of its three steps.",
+		confirmLabel: "Run the last step",
+		strings: { cancel: "Stop the job" },
+		error: {
+			title: "The job is now asking something else",
+			description: "Read the new question, then answer it.",
+		},
+		defaultOpen: true,
+	},
+	play: async () => {
+		const el = await alertDialog();
+		await expect(within(el).getByRole("alert")).toHaveTextContent(
+			"The job is now asking something else",
+		);
+		await expect(
+			within(el).getByRole("button", { name: "Run the last step" }),
+		).toBeEnabled();
+		await expect(
+			within(el).getByRole("button", { name: "Stop the job" }),
+		).toBeEnabled();
 	},
 };
 
@@ -376,7 +413,8 @@ function AnsweringJob({
 export const AnswersAJob: Story = {
 	// React Aria announces a focused button's pending state through its live announcer, pointing at the button;
 	// answering removes the button, and the announcer keeps the stale pointer for 7 s. axe checks after the play
-	// function, inside those 7 s, so the announcer's node (not the story) is left out of the check.
+	// function, inside those 7 s, so the announcer's node (not the story) is left out of the check. The announcer
+	// lives as long as the page, so this story stays the file's last.
 	parameters: { a11y: { context: { exclude: ["[data-live-announcer]"] } } },
 	args: { onCancel: fn() },
 	render: (args) => (

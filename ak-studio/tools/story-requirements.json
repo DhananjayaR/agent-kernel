@@ -42,7 +42,8 @@
 				"DestructiveCancel",
 				"Controlled",
 				"ConfirmByName",
-				"AnswersAJob"
+				"AnswersAJob",
+				"AnswerRefused"
 			]
 		},
 		{

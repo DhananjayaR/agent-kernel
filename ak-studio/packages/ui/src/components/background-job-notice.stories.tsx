@@ -114,9 +114,14 @@ export const Toasts: Story = {
 		const waiting = byTitle("Demo job is waiting for you");
 		await expect(waiting).toHaveAttribute("data-tone", "info");
 		await expect(waiting).toHaveTextContent("Run the last step?");
+		// "Show" on the finished one: it closes that toast; the waiting one stays (and is in the screenshot).
 		await userEvent.click(
-			within(waiting).getByRole("button", { name: "Show" }),
+			within(byTitle("Apply finished")).getByRole("button", { name: "Show" }),
 		);
 		await expect(show).toHaveBeenCalledOnce();
+		await waitFor(() =>
+			expect(within(document.body).getAllByRole("alertdialog")).toHaveLength(2),
+		);
+		await expect(waiting).toBeInTheDocument();
 	},
 };

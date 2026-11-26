@@ -90,6 +90,22 @@ describe("JobProgress", () => {
 		expect(within(region).queryByRole("button", { name: "Stop" })).toBeNull();
 	});
 
+	it("keeps the same card when the job's event beats the reply, so focus stays in the job", async () => {
+		const { region, wait } = await showDemo();
+		await wait(2);
+		const card = await within(region).findByRole("region", {
+			name: "Run the last step?",
+		});
+		within(card).getByRole("button", { name: "Run the last step" }).focus();
+		await userEvent.keyboard("{Enter}");
+		await waitFor(() =>
+			expect(within(region).getByText("Approved by you")).toBeTruthy(),
+		);
+		expect(card.isConnected).toBe(true);
+		expect(card.contains(document.activeElement)).toBe(true);
+		expect(document.activeElement).toBe(card);
+	});
+
 	it("denying ends the job stopped, with the outcome in place", async () => {
 		const { region, wait } = await showDemo();
 		await wait(2);

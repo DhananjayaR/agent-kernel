@@ -229,7 +229,8 @@ function Answering(props: ApprovalCardProps) {
 export const Keyboard: Story = {
 	// React Aria announces a focused button's pending state through its live announcer, pointing at the button;
 	// answering removes the button, and the announcer keeps the stale pointer for 7 s. axe checks after the play
-	// function, inside those 7 s, so the announcer's node (not the story) is left out of the check.
+	// function, inside those 7 s, so the announcer's node (not the story) is left out of the check. The announcer
+	// lives as long as the page, so this story stays the file's last.
 	parameters: { a11y: { context: { exclude: ["[data-live-announcer]"] } } },
 	render: (args) => <Answering {...args} />,
 	play: async ({ canvasElement, args }) => {

@@ -61,13 +61,10 @@ export interface ApprovalProps {
 	frame?: ApprovalFrame;
 }
 
+/** An answer, sent or taken, with what the card needs to show it once the request has gone. */
 interface Answer {
 	requestId: string;
 	which: Which;
-}
-
-/** An answer the job took, with what the card needs to show it once the request has gone. */
-interface Answered extends Answer {
 	frame: ApprovalFrame;
 	title: string;
 	summary: string;
@@ -75,7 +72,7 @@ interface Answered extends Answer {
 
 export function Approval({ job, frame }: ApprovalProps) {
 	const request = job.request;
-	const [answered, setAnswered] = useState<Answered>();
+	const [answered, setAnswered] = useState<Answer>();
 	const [inFlight, setInFlight] = useState<Answer>();
 	const [refused, setRefused] = useState<{
 		requestId: string;
@@ -86,14 +83,16 @@ export function Approval({ job, frame }: ApprovalProps) {
 
 	if (!request) {
 		// Answered by the person: the outcome stays in place (card frame), as the same card (focus stays on it).
-		// Stopped while waiting: nothing.
-		if (answered?.frame !== "card") return null;
+		// The job's event that removes the request comes before the reply to job.respond, so an answer still in
+		// flight counts too (cleared if the reply refuses it). Stopped while waiting: nothing.
+		const shown = answered ?? inFlight;
+		if (shown?.frame !== "card") return null;
 		return (
 			<ApprovalCard
-				key={answered.requestId}
-				title={answered.title}
-				summary={answered.summary}
-				outcome={answered.which === "approve" ? "approved" : "denied"}
+				key={shown.requestId}
+				title={shown.title}
+				summary={shown.summary}
+				outcome={shown.which === "approve" ? "approved" : "denied"}
 				onApprove={() => {}}
 				onDeny={() => {}}
 			/>
@@ -110,7 +109,13 @@ export function Approval({ job, frame }: ApprovalProps) {
 	const answer = (which: Which, typedName?: string) => {
 		if (sending.current) return;
 		sending.current = true;
-		const target: Answer = { requestId: request.id, which };
+		const target: Answer = {
+			requestId: request.id,
+			which,
+			frame: shownFrame,
+			title: request.title,
+			summary: request.summary,
+		};
 		setInFlight(target);
 		setRefused(undefined);
 		const option = which === "approve" ? approve : deny;
@@ -125,13 +130,7 @@ export function Approval({ job, frame }: ApprovalProps) {
 			},
 		})
 			.then(
-				() =>
-					setAnswered({
-						...target,
-						frame: shownFrame,
-						title: request.title,
-						summary: request.summary,
-					}),
+				() => setAnswered(target),
 				(reason: unknown) =>
 					setRefused({
 						requestId: request.id,

@@ -328,10 +328,10 @@ export const At1220WithBadges: Story = {
 		// A state icon, not a count (design gate row (a)): the tab's name says which kind of attention.
 		await expect(
 			within(canvasElement).getByRole("tab", { name: /^Deploy/ }),
-		).toHaveAccessibleName(/^Deploy\s?Needs your answer$/);
+		).toHaveAccessibleName("Deploy Needs your answer");
 		await expect(
 			within(canvasElement).getByRole("tab", { name: /^Test & trace/ }),
-		).toHaveAccessibleName(/^Test & trace\s?Finished$/);
+		).toHaveAccessibleName("Test & trace Finished");
 	},
 };
 
