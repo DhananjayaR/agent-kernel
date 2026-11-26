@@ -87,11 +87,21 @@ describe("parseAnsiLine", () => {
 		// `tput sgr0`: a character set selection, then a reset.
 		expect(stripAnsi(`${ESC}(B${ESC}[mdone`)).toBe("done");
 		expect(stripAnsi(`${ESC}7saved${ESC}8`)).toBe("saved");
+		// A CSI cut off at the end of the line leaks nothing.
+		expect(stripAnsi(`done${ESC}[31`)).toBe("done");
+		expect(stripAnsi(`done${ESC}[`)).toBe("done");
 	});
 
 	it("keeps what follows the last carriage return, as a terminal shows a redrawn line", () => {
 		expect(stripAnsi("10%\r50%\r100%")).toBe("100%");
 		expect(stripAnsi("done\r")).toBe("done");
+		expect(stripAnsi("done\r\r")).toBe("done");
+	});
+
+	it("does not read a private-parameter sequence ending in m as SGR", () => {
+		expect(parseAnsiLine(`${ESC}[>4;2mplain`)).toEqual([
+			{ text: "plain", tone: "default", bold: false },
+		]);
 	});
 
 	it("starts every line plain: a colour never carries over from the line before", () => {

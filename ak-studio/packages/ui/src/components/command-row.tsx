@@ -39,7 +39,10 @@ export type CommandRowProps = Omit<
 	/** Its arguments, already masked by the main process. */
 	args: readonly string[];
 	state: CommandRowState;
-	/** The exit code once it ended: 0 passed, any other failed; null when it ended by a signal (failed). */
+	/**
+	 * The exit code once it ended: 0 passed, any other failed; null when it ended by a signal (failed). Ended with no
+	 * code given (a record that lacks it) reads "Ended", with no verdict.
+	 */
 	exitCode?: number | null;
 	/** How long it ran, or has run so far. */
 	durationMs?: number;
@@ -62,7 +65,7 @@ export function CommandRow({
 	const status: Status =
 		state === "running"
 			? "running"
-			: state === "stopped"
+			: state === "stopped" || exitCode === undefined
 				? "not-set-up"
 				: exitCode === 0
 					? "passed"
@@ -72,9 +75,11 @@ export function CommandRow({
 			? text.running
 			: state === "stopped"
 				? text.stopped
-				: exitCode === null || exitCode === undefined
-					? text.signalled
-					: fillString(text.exited, { code: exitCode });
+				: exitCode === undefined
+					? text.ended
+					: exitCode === null
+						? text.signalled
+						: fillString(text.exited, { code: exitCode });
 	return (
 		<div
 			data-slot="command-row"
@@ -92,7 +97,9 @@ export function CommandRow({
 			</code>
 			{durationMs !== undefined ? (
 				<span className="shrink-0 mono-figures text-ui-sm text-text-muted">
-					<span className="sr-only">{text.duration} </span>
+					<span className="sr-only">
+						{state === "running" ? text.runningFor : text.duration}{" "}
+					</span>
 					{formatDuration(durationMs)}
 				</span>
 			) : null}

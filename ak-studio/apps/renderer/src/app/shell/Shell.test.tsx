@@ -17,6 +17,7 @@ import {
 	defaultMockHandlers,
 } from "../../shared/bridge/mockTransport";
 import { runCommand } from "../../shared/commands/runCommand";
+import { errorStrings } from "../../shared/errors/strings";
 import { App } from "../App";
 import { registry } from "../registry";
 import { shellStrings } from "./strings";
@@ -142,7 +143,7 @@ describe("Shell command palette", () => {
 			name: "Command palette",
 		});
 		const names = within(dialog)
-			.getAllByRole("menuitem")
+			.getAllByRole("option")
 			.map((row) => row.textContent);
 		expect(names).toContain("View: Show or hide the panelCtrl+J");
 		expect(names).toContain("About: Run the demo job");
@@ -178,7 +179,7 @@ describe("Shell command palette", () => {
 			name: "Command palette",
 		});
 		await user.click(
-			within(dialog).getByRole("menuitem", {
+			within(dialog).getByRole("option", {
 				name: "View: Show or hide the panel",
 			}),
 		);
@@ -188,6 +189,43 @@ describe("Shell command palette", () => {
 				screen.queryByRole("dialog", { name: "Command palette" }),
 			).toBeNull(),
 		);
+	});
+
+	it("shows a command that fails after the palette closed in a toast: what happened, then what to do", async () => {
+		vi.spyOn(console, "error").mockImplementation(() => {});
+		setTransport(
+			createMockTransport({
+				handlers: {
+					"about.demoJob": () => {
+						throw new StudioFailure(
+							studioError(
+								"bridge.unavailable",
+								"Restart the app and try again.",
+							),
+						);
+					},
+				},
+			}),
+		);
+		const user = userEvent.setup();
+		render(<App />);
+		await toggle("Hide the panel");
+		await user.keyboard("{Control>}k{/Control}");
+		const dialog = await screen.findByRole("dialog", {
+			name: "Command palette",
+		});
+		await user.click(
+			within(dialog).getByRole("option", { name: "About: Run the demo job" }),
+		);
+		await waitFor(() =>
+			expect(
+				screen.queryByRole("dialog", { name: "Command palette" }),
+			).toBeNull(),
+		);
+		expect(
+			await screen.findByText(errorStrings.titles.unavailable),
+		).toBeTruthy();
+		expect(screen.getByText("Restart the app and try again.")).toBeTruthy();
 	});
 
 	it("leaves Ctrl+J working while a popover (not a modal) is open", async () => {

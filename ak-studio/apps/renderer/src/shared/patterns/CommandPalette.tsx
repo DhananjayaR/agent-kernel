@@ -9,12 +9,13 @@
 //   (commandGate; runCommand refuses it too);
 // - the palette's own command is left out: it is open already.
 // The list is read each time the palette renders, so `when` is asked as it opens. A command is run through
-// runCommand after the palette has closed; a command that fails is logged, as a shortcut's failure is (the command
-// itself shows what went wrong, as its own feedback).
+// runCommand after the palette has closed; a command that fails is reported (failureNotice.ts: the Shell shows it
+// in a toast, since no view is showing it), as a shortcut's failure is.
 import { type CommandPaletteItem, CommandPaletteView } from "@ak-studio/ui";
 import type { AppCommand } from "../commands/command";
-import { commandGate, runCommand } from "../commands/runCommand";
+import { commandGate } from "../commands/runCommand";
 import { describeShortcut, type ShortcutPlatform } from "../commands/shortcuts";
+import { runReported } from "./failureNotice";
 
 /** One app command and the title of the feature that declares it. */
 export interface PaletteCommand {
@@ -55,21 +56,6 @@ export interface CommandPaletteProps {
 	exclude?: string;
 }
 
-/** Runs a command from the palette; a failure is logged as a shortcut's is (useAppShortcuts). */
-function runFromPalette(id: string): void {
-	try {
-		runCommand(id).catch((error: unknown) => {
-			console.error(`[studio] command ${id} failed: ${describe(error)}`);
-		});
-	} catch (error) {
-		console.error(`[studio] command ${id} failed: ${describe(error)}`);
-	}
-}
-
-function describe(error: unknown): string {
-	return error instanceof Error ? error.message : String(error);
-}
-
 export function CommandPalette({
 	isOpen,
 	onOpenChange,
@@ -82,7 +68,7 @@ export function CommandPalette({
 			isOpen={isOpen}
 			onOpenChange={onOpenChange}
 			items={paletteItems(commands, platform, exclude)}
-			onRun={runFromPalette}
+			onRun={runReported}
 		/>
 	);
 }

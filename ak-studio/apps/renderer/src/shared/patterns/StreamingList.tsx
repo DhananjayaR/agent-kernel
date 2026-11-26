@@ -3,7 +3,8 @@
 // and fills StreamingListView, which virtualises the rows: the store appends one batch per update, and only the rows
 // in view are rendered, so a 10,000-line burst costs a few renders, never one per line.
 //
-// - **Copy** writes the text to the clipboard (`navigator.clipboard`); a failure is logged and "copied" is not shown.
+// - **Copy** writes the text to the clipboard (`navigator.clipboard`); a failure is reported (failureNotice.ts: the
+//   Shell's toast) and logged, and "copied" is not shown.
 // - **Clear** hides the lines held so far, in this view only: the stream and its record stay, and later lines show
 //   as they arrive. It is remembered by `seq`, so it survives a re-render and a stream that keeps evicting.
 // - **Not kept:** the header says how many earlier lines the view lacks: those the main process's backlog or this
@@ -13,7 +14,9 @@ import type { StreamId } from "@ak-studio/contract";
 import { StreamingListView } from "@ak-studio/ui";
 import { useMemo, useState } from "react";
 import { useStream } from "../streams/streamStore";
+import { noticeFailure } from "./failureNotice";
 import { presentError } from "./presentError";
+import { patternStrings } from "./strings";
 
 export interface StreamingListProps {
 	/** The stream to show; none shows the empty list and subscribes to nothing. */
@@ -23,13 +26,14 @@ export interface StreamingListProps {
 	className?: string;
 }
 
-/** Copies `text` to the clipboard; rejects (and logs) when the clipboard refuses. */
+/** Copies `text` to the clipboard; rejects, logs and reports it (failureNotice: a toast) when the clipboard refuses. */
 export async function copyToClipboard(text: string): Promise<void> {
 	try {
 		await navigator.clipboard.writeText(text);
 	} catch (error) {
-		console.error(
-			`[studio] copying to the clipboard failed: ${error instanceof Error ? error.message : String(error)}`,
+		noticeFailure(
+			patternStrings.copyFailed,
+			`copying to the clipboard failed: ${error instanceof Error ? error.message : String(error)}`,
 		);
 		throw error;
 	}
@@ -66,6 +70,8 @@ export function StreamingList({
 	const last = view.lines[view.lines.length - 1];
 	return (
 		<StreamingListView
+			// A new stream is a new list: it follows from the start, and "copied" does not carry over.
+			key={streamId}
 			label={label}
 			lines={lines}
 			dropped={dropped}

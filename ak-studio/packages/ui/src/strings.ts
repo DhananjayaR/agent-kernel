@@ -89,8 +89,12 @@ export const uiStrings = {
 		running: "Running",
 		exited: "Exit {code}",
 		signalled: "Ended by a signal",
+		/** Ended, with no exit code on the record. */
+		ended: "Ended",
 		stopped: "Stopped",
 		duration: "Took",
+		/** Read before the time so far while it runs. */
+		runningFor: "Running for",
 	},
 	// The generic session control (session-control.tsx).
 	sessionControl: {

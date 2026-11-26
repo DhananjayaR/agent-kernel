@@ -8,9 +8,12 @@
 // - **Colour.** ANSI colour is collapsed to the text tokens by lib/ansi.ts (red, yellow and green to the status text
 //   colours, dim to muted, bold kept, the rest plain); the text still says "ERROR", so it is never colour alone.
 //   The app's own notes (channel `info`) are muted.
-// - **Follows the end** until the person scrolls up; then "Jump to latest" shows at the bottom right, and following
-//   resumes when they reach the end again (by scrolling, End, or the button). While not following, lines evicted
-//   from the top of the buffer do not move what is in view.
+// - **Follows the end** until the person scrolls up; then "Jump to latest" shows at the bottom right. Following is
+//   decided by what the person does, never by the position alone: an upward wheel, ArrowUp, Page Up or Home on the
+//   rows, grabbing the scrollbar, or any scroll of theirs that moved up stops it at once, before the next batch can
+//   snap the list back (a batch can land every frame). It resumes only when they move down to the end (by wheel,
+//   keys or the scrollbar), press End, or press "Jump to latest". The list's own scrolls (following, keeping place)
+//   never change it. While not following, lines evicted from the top of the buffer do not move what is in view.
 // - **Header.** The label, a note when earlier lines were not kept ("120 earlier lines not kept": Copy then copies
 //   less than the whole output), "Copy" (the selection inside the list if there is one, else every line held; a
 //   callback: this package makes no clipboard call) and "Clear" (empties the view; the record stays).
@@ -27,6 +30,7 @@ import {
 	type HTMLAttributes,
 	type KeyboardEvent,
 	memo,
+	type PointerEvent,
 	type ReactNode,
 	useCallback,
 	useEffect,
@@ -35,6 +39,7 @@ import {
 	useMemo,
 	useRef,
 	useState,
+	type WheelEvent,
 } from "react";
 import {
 	ANSI_BOLD_CLASS,
@@ -154,18 +159,38 @@ export function StreamingListView({
 	const [showJump, setShowJump] = useState(false);
 	const [copied, setCopied] = useState(false);
 
+	// Stable while the lines are: TanStack Virtual rebuilds its measurements when this function changes.
+	const getItemKey = useCallback(
+		(index: number) => lines[index]?.seq ?? index,
+		[lines],
+	);
 	const virtualizer = useVirtualizer({
 		count: lines.length,
 		getScrollElement: () => scrollRef.current,
 		estimateSize: () => STREAM_ROW_HEIGHT,
-		getItemKey: (index) => lines[index]?.seq ?? index,
+		getItemKey,
 		overscan: OVERSCAN,
 	});
 
+	// The list's own scroll positions (following the end, keeping its place): the scroll events they cause are not the
+	// person's. `lastTop` is where the list last was: after its own scroll, or the last scroll event.
+	const ownTop = useRef<number | undefined>(undefined);
+	const lastTop = useRef(0);
+	const setTop = useCallback((el: HTMLElement, top: number) => {
+		el.scrollTop = top;
+		ownTop.current = el.scrollTop;
+		// Where the list now is, so the person's next scroll is measured from here even if the scroll event of this
+		// one never comes on its own (scroll events of one frame are merged).
+		lastTop.current = el.scrollTop;
+	}, []);
+	const follow = useCallback((on: boolean) => {
+		following.current = on;
+		setShowJump(!on);
+	}, []);
 	const scrollToEnd = useCallback(() => {
 		const el = scrollRef.current;
-		if (el) el.scrollTop = el.scrollHeight;
-	}, []);
+		if (el) setTop(el, el.scrollHeight);
+	}, [setTop]);
 
 	// New lines: follow the end, or (not following) keep the rows in view still when lines leave the top.
 	const previousLines = useRef(lines);
@@ -181,10 +206,8 @@ export function StreamingListView({
 		if (
 			first === undefined ||
 			(firstBefore !== undefined && first < firstBefore)
-		) {
-			following.current = true;
-			setShowJump(false);
-		}
+		)
+			follow(true);
 		if (following.current) {
 			scrollToEnd();
 			return;
@@ -195,15 +218,40 @@ export function StreamingListView({
 		while (gone < before.length && (before[gone]?.seq ?? first) < first)
 			gone += 1;
 		if (gone > 0)
-			el.scrollTop = Math.max(0, el.scrollTop - gone * STREAM_ROW_HEIGHT);
-	}, [lines, scrollToEnd]);
+			setTop(el, Math.max(0, el.scrollTop - gone * STREAM_ROW_HEIGHT));
+	}, [lines, scrollToEnd, follow, setTop]);
 
 	const onScroll = () => {
 		const el = scrollRef.current;
 		if (!el) return;
-		const atEnd = isAtEnd(el);
-		following.current = atEnd;
-		setShowJump(!atEnd);
+		const top = el.scrollTop;
+		const own =
+			ownTop.current !== undefined && Math.abs(top - ownTop.current) < 1;
+		ownTop.current = undefined;
+		const moved = top - lastTop.current;
+		lastTop.current = top;
+		if (own) return;
+		// The person's scroll: up stops following; down to the end resumes it.
+		if (moved < 0) follow(false);
+		else if (moved > 0 && isAtEnd(el)) follow(true);
+	};
+
+	// An upward wheel stops following before the browser scrolls, so no batch in between can snap the list back.
+	const onWheel = (event: WheelEvent<HTMLElement>) => {
+		if (event.deltaY < 0 && following.current) follow(false);
+	};
+
+	// Grabbing the scrollbar (a press on the rows' own box, not on a row) stops following while it is held; let go
+	// at the end, it follows again.
+	const onPointerDown = (event: PointerEvent<HTMLElement>) => {
+		const el = scrollRef.current;
+		if (!el || event.target !== el) return;
+		follow(false);
+		const release = () => {
+			window.removeEventListener("pointerup", release);
+			if (isAtEnd(el)) follow(true);
+		};
+		window.addEventListener("pointerup", release);
 	};
 
 	useEffect(() => {
@@ -235,22 +283,26 @@ export function StreamingListView({
 		else setCopied(true);
 	};
 
-	// Home and End go to the first and last line (End follows again); the arrows and Page Up and Down scroll natively.
+	// Home and End go to the first and last line (End follows again); ArrowUp, Page Up and Home stop following at
+	// once. The arrows and Page Up and Down scroll natively.
 	const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
 		const el = scrollRef.current;
 		if (!el || event.target !== el) return;
 		if (event.key === "End") {
 			event.preventDefault();
+			follow(true);
 			scrollToEnd();
 		} else if (event.key === "Home") {
 			event.preventDefault();
-			el.scrollTop = 0;
+			follow(false);
+			setTop(el, 0);
+		} else if (event.key === "ArrowUp" || event.key === "PageUp") {
+			follow(false);
 		}
 	};
 
 	const jump = () => {
-		following.current = true;
-		setShowJump(false);
+		follow(true);
 		scrollToEnd();
 		// The button goes away: focus moves to the rows it scrolled, not to the page.
 		scrollRef.current?.focus();
@@ -328,6 +380,8 @@ export function StreamingListView({
 					// biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must be reachable by keyboard (WCAG 2.1.1).
 					tabIndex={0}
 					onScroll={onScroll}
+					onWheel={onWheel}
+					onPointerDown={onPointerDown}
 					onKeyDown={onKeyDown}
 					className="min-h-0 flex-1 overflow-auto rounded-b-control py-1 outline-none focus-visible:focus-outline"
 				>

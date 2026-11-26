@@ -8,11 +8,12 @@
 //   differs between browsers and test DOMs, so neither is relied on;
 // - focus is not in a text field, unless the command opts in (`whileTyping`);
 // - the command's `when` is true.
-// Then the press is claimed (preventDefault) and the command runs through runCommand; a failure is logged.
+// Then the press is claimed (preventDefault) and the command runs through runCommand; a failure, or a version-gated
+// command's refusal, is reported (patterns/failureNotice.ts: logged, and the Shell shows it in a toast).
 import { isModalOpen } from "@ak-studio/ui";
 import { useEffect, useMemo } from "react";
+import { runReported } from "../patterns/failureNotice";
 import type { AppCommand } from "./command";
-import { runCommand } from "./runCommand";
 import {
 	buildShortcutMap,
 	eventShortcut,
@@ -60,16 +61,8 @@ export function useAppShortcuts(
 			if (isModalOpen(document)) return;
 			if (command.when && !command.when()) return;
 			event.preventDefault();
-			const failed = (err: unknown) => {
-				console.error(
-					`[studio] command ${command.id} failed: ${err instanceof Error ? err.message : String(err)}`,
-				);
-			};
-			try {
-				runCommand(command.id).catch(failed);
-			} catch (err) {
-				failed(err);
-			}
+			// A failure (or a version-gated command's refusal) is reported: the Shell shows it in a toast.
+			runReported(command.id);
 		};
 		document.addEventListener("keydown", onKeyDown);
 		return () => document.removeEventListener("keydown", onKeyDown);

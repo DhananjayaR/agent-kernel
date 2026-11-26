@@ -9,6 +9,7 @@ import {
 	expectFocusWithin,
 	expectInsetFocusRing,
 	expectSolidLayer,
+	expectTokenColour,
 } from "../lib/story-checks";
 import { Button } from "./button";
 import {
@@ -82,25 +83,45 @@ type Story = StoryObj<typeof meta>;
 const body = () => within(document.body);
 const triggerOf = (root: HTMLElement) =>
 	within(root).getByRole("button", { name: "Open the command palette" });
-/** Opens the palette from its trigger (the app opens it with Mod+K) and answers the dialog. */
+/** Opens the palette from its trigger by keyboard (the app opens it with Mod+K) and answers the dialog. */
 const open = async (root: HTMLElement) => {
-	await userEvent.click(triggerOf(root));
+	triggerOf(root).focus();
+	await userEvent.keyboard("{Enter}");
 	return palette();
 };
+/** The search field shows focus as Input does: the text-coloured edge, and the inset focus ring by keyboard. */
+const expectSearchFocus = async () => {
+	const field = search();
+	await waitFor(() => expect(field).toHaveFocus());
+	await expectInsetFocusRing(field);
+	await expectTokenColour(field, "border-top-color", "border-text");
+};
+/** The row Enter acts on: marked (selected, the input's active descendant) and drawn with the inset focus ring. */
+const expectMarked = async (row: Element | undefined) => {
+	await waitFor(() => expect(row).toHaveAttribute("aria-selected", "true"));
+	const el = row as HTMLElement;
+	await expect(search()).toHaveAttribute("aria-activedescendant", el.id);
+	const style = getComputedStyle(el);
+	await expect(style.outlineStyle).toBe("solid");
+	await expect(style.outlineWidth).toBe("2px");
+	await expect(style.outlineOffset).toBe("-2px");
+	await expectTokenColour(el, "outline-color", "outline-focus-ring");
+};
 const palette = () => body().findByRole("dialog", { name: "Command palette" });
-const search = () => body().getByRole("textbox", { name: "Search commands" });
-/** The command rows (the empty state is rendered in a row of its own, with no key). */
-const rows = () =>
-	body()
-		.queryAllByRole("menuitem")
-		.filter((row) => row.hasAttribute("data-key"));
+const search = () => body().getByRole("combobox", { name: "Search commands" });
+/** The command rows (options of the search field's list). */
+const rows = () => body().queryAllByRole("option");
 
-/** Open: a 640 px solid layer near the top, the search field focused, every command with its prefix and shortcut. */
+/**
+ * Open: a 640 px solid layer near the top, the search field focused (with the focus ring), every command with its
+ * prefix and shortcut, and the first marked: Enter with nothing typed runs it.
+ */
 export const Default: Story = {
 	play: async ({ canvasElement }) => {
 		const dialog = await open(canvasElement);
 		await expectFocusWithin(dialog);
-		await expect(search()).toHaveFocus();
+		await expectSearchFocus();
+		await expectMarked(rows()[0]);
 		await expect(isModalOpen()).toBe(true);
 		const surface = dialog.closest("[data-slot=modal]") as HTMLElement;
 		await expect(surface.getBoundingClientRect().width).toBe(640);
@@ -133,7 +154,7 @@ export const Filtered: Story = {
 				"About: Run the demo job",
 			]),
 		);
-		await waitFor(() => expect(rows()[0]).toHaveAttribute("data-focused"));
+		await expectMarked(rows()[0]);
 	},
 };
 
@@ -154,14 +175,52 @@ export const VersionGated: Story = {
 		await open(canvasElement);
 		await userEvent.type(search(), "azure");
 		const gated = rows()[0] as HTMLElement;
-		await waitFor(() => expect(gated).toHaveAttribute("data-focused"));
+		// The only match is gated: marked, read as unavailable with its reason.
+		await expectMarked(gated);
+		await expect(gated).toHaveAttribute("aria-disabled", "true");
 		await expect(gated).toHaveAttribute("data-unavailable");
 		await expect(gated).toHaveAccessibleDescription("Needs OAK 0.12.0");
 		await userEvent.keyboard("{Enter}");
 		await expect(args.onRun).not.toHaveBeenCalled();
 		await expect(await palette()).toBeVisible();
+		// The refusal is said again, politely, so pressing Enter is never met with silence.
+		await expect(within(await palette()).getByRole("status")).toHaveTextContent(
+			"Needs OAK 0.12.0",
+		);
 		await userEvent.click(gated);
 		await expect(args.onRun).not.toHaveBeenCalled();
+	},
+};
+
+/** A gated match is never marked first: the first runnable match is, so Enter with nothing moved runs something. */
+export const MarksFirstRunnable: Story = {
+	args: {
+		items: [
+			{
+				id: "deploy.toAzureFunctions",
+				title: "Deploy: Deploy to Azure Functions",
+				unavailable: "Needs OAK 0.12.0",
+			},
+			{ id: "deploy.plan", title: "Deploy: Plan the deployment" },
+		],
+		onRun: fn(),
+	},
+	play: async ({ canvasElement, args }) => {
+		await open(canvasElement);
+		// Manifest order is kept; the mark skips the gated row.
+		await expect(rows().map((row) => row.getAttribute("data-key"))).toEqual([
+			"deploy.toAzureFunctions",
+			"deploy.plan",
+		]);
+		await expectMarked(rows()[1]);
+		await userEvent.keyboard("{Enter}");
+		await expect(args.onRun).toHaveBeenCalledWith("deploy.plan");
+		// For the screenshot: open again (focus came back to the trigger), the runnable row marked.
+		await waitFor(() => expect(body().queryByRole("dialog")).toBeNull());
+		await waitFor(() => expect(triggerOf(canvasElement)).toHaveFocus());
+		await userEvent.keyboard("{Enter}");
+		await palette();
+		await expectMarked(rows()[1]);
 	},
 };
 
@@ -196,6 +255,12 @@ export const EscapeCloses: Story = {
 			name: "Open the command palette",
 		});
 		await waitFor(() => expect(trigger).toHaveFocus());
+		// Opened again, it starts afresh: for the screenshot, the open palette filtered by "abo".
+		await userEvent.keyboard("{Enter}");
+		await palette();
+		await expect(search()).toHaveValue("");
+		await userEvent.keyboard("abo");
+		await expectMarked(rows()[0]);
 	},
 };
 
@@ -210,32 +275,51 @@ export const Keyboard: Story = {
 		await expect(trigger).toHaveFocus();
 		await userEvent.keyboard("{Enter}");
 		await palette();
-		await waitFor(() => expect(search()).toHaveFocus());
+		await expectSearchFocus();
+		// Nothing typed: the first row is already marked.
+		await expectMarked(rows()[0]);
 		await userEvent.keyboard("about");
 		await waitFor(() => expect(rows()).toHaveLength(2));
 		await waitFor(() => expect(rows()[0]).toHaveAttribute("data-focused"));
 		await userEvent.keyboard("{ArrowDown}");
-		const second = rows()[1] as HTMLElement;
-		await waitFor(() => expect(second).toHaveAttribute("data-focused"));
-		await expectInsetFocusRing(second);
+		await expectMarked(rows()[1]);
+		await expect(rows()[0]).toHaveAttribute("aria-selected", "false");
 		await userEvent.keyboard("{Enter}");
 		await expect(args.onRun).toHaveBeenCalledWith("about.runDemoJob");
 		await waitFor(() => expect(body().queryByRole("dialog")).toBeNull());
 		await waitFor(() => expect(trigger).toHaveFocus());
+		// For the screenshot: open again, filter, and move to the second match.
+		await userEvent.keyboard("{Enter}");
+		await palette();
+		await userEvent.keyboard("about");
+		await expectMarked(rows()[0]);
+		await userEvent.keyboard("{ArrowDown}");
+		await expectMarked(rows()[1]);
 	},
 };
 
-/** Enter after Backspace (React Aria leaves the list then) runs the first match. */
+/**
+ * Backspace keeps a row marked (the first match), so Enter after it runs the row shown; with nothing matching,
+ * Enter does nothing.
+ */
 export const EnterAfterBackspace: Story = {
 	args: { onRun: fn() },
 	play: async ({ canvasElement, args }) => {
 		await open(canvasElement);
-		await userEvent.type(search(), "panelx");
+		await userEvent.keyboard("panelx");
 		await waitFor(() => expect(rows()).toHaveLength(0));
+		await userEvent.keyboard("{Enter}");
+		await expect(args.onRun).not.toHaveBeenCalled();
 		await userEvent.keyboard("{Backspace}");
 		await waitFor(() => expect(rows()).toHaveLength(1));
+		await expectMarked(rows()[0]);
 		await userEvent.keyboard("{Enter}");
 		await expect(args.onRun).toHaveBeenCalledWith("shell.toggleBottomPanel");
 		await waitFor(() => expect(body().queryByRole("dialog")).toBeNull());
+		// For the screenshot: the state this story is about, the match marked after Backspace.
+		await userEvent.keyboard("{Enter}");
+		await palette();
+		await userEvent.keyboard("panelx{Backspace}");
+		await expectMarked(rows()[0]);
 	},
 };

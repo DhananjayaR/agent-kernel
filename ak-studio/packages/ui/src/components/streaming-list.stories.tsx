@@ -3,7 +3,7 @@
 // (everything held, or the selection), clear, long lines (no wrap: the list scrolls sideways, the page never does),
 // 10,000 lines (only the rows in view are in the page), a failed stream, and the keyboard.
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { expectFocusRing, tabTo, tokenColour } from "../lib/story-checks";
 import { Button } from "./button";
@@ -377,6 +377,62 @@ export const StreamFailed: Story = {
 	},
 };
 
+/** A stream in a burst: 5 lines every 20 ms, 60 times (300 lines), then it stops, so the end state is fixed. */
+function Burst() {
+	const [lines, setLines] = useState(() => ticks(40));
+	const [done, setDone] = useState(false);
+	useEffect(() => {
+		let sent = 0;
+		const timer = setInterval(() => {
+			sent += 1;
+			setLines((prev) => [...prev, ...ticks(5, prev.length + 1)]);
+			if (sent === 60) {
+				clearInterval(timer);
+				setDone(true);
+			}
+		}, 20);
+		return () => clearInterval(timer);
+	}, []);
+	return (
+		<div className="flex flex-col gap-3">
+			<StreamingListView
+				label="Ticker output"
+				lines={lines}
+				onCopy={() => undefined}
+				className="h-64 max-w-dialog-l"
+			/>
+			<p className="text-ui text-text">{done ? "Burst over" : "Bursting"}</p>
+		</div>
+	);
+}
+
+/**
+ * Scrolled up during a burst, by less than half a row: the list stops following at the wheel, before the next batch,
+ * and stays where the person left it while lines keep arriving.
+ */
+export const ScrollUpDuringBurst: Story = {
+	render: () => <Burst />,
+	play: async ({ canvasElement }) => {
+		const rows = tickerRows(canvasElement);
+		await waitFor(() =>
+			expect(within(rows).getByText("Tick 80")).toBeVisible(),
+		);
+		await expect(atEnd(rows)).toBe(true);
+		// A synthetic wheel does not scroll: the wheel and its scroll, in one task, as the browser does them.
+		rows.dispatchEvent(new WheelEvent("wheel", { deltaY: -4, bubbles: true }));
+		rows.scrollTop -= 4;
+		const left = rows.scrollTop;
+		await within(canvasElement).findByText("Burst over", undefined, {
+			timeout: 5000,
+		});
+		await expect(Math.abs(rows.scrollTop - left)).toBeLessThanOrEqual(1);
+		await expect(atEnd(rows)).toBe(false);
+		await expect(
+			within(canvasElement).getByRole("button", { name: "Jump to latest" }),
+		).toBeVisible();
+	},
+};
+
 /** Keyboard: Copy, Clear, then the rows (a focusable region: arrows and Page Up and Down scroll, End follows again). */
 export const Keyboard: Story = {
 	render: () => <Arriving start={60} />,
@@ -388,6 +444,17 @@ export const Keyboard: Story = {
 		const rows = tickerRows(canvasElement);
 		await expect(rows).toHaveFocus();
 		await expect(getComputedStyle(rows).outlineStyle).toBe("solid");
+		// ArrowUp stops following at once (before the browser has scrolled), and End follows again.
+		await userEvent.keyboard("{ArrowUp}");
+		await within(canvasElement).findByRole("button", {
+			name: "Jump to latest",
+		});
+		await userEvent.keyboard("{End}");
+		await waitFor(() =>
+			expect(
+				within(canvasElement).queryByRole("button", { name: "Jump to latest" }),
+			).toBeNull(),
+		);
 		await userEvent.keyboard("{Home}");
 		await waitFor(() => expect(rows.scrollTop).toBe(0));
 		await within(canvasElement).findByRole("button", {

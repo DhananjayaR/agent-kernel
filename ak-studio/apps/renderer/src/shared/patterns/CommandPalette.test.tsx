@@ -158,15 +158,20 @@ describe("CommandPalette", () => {
 		const { commands, toggle, deploy } = fixture();
 		useCapabilityScope.setState({ catalog, version: "0.10.0" });
 		const { user, onOpenChange, dialog } = show(commands);
-		const gated = within(dialog).getByRole("menuitem", {
+		const gated = within(dialog).getByRole("option", {
 			name: "Deploy: Deploy to Azure",
 		});
 		expect(gated.textContent).toContain("Needs OAK 0.12.0");
+		expect(gated.getAttribute("aria-disabled")).toBe("true");
 		await user.click(gated);
 		expect(deploy).not.toHaveBeenCalled();
 		expect(onOpenChange).not.toHaveBeenCalled();
+		// The refusal is said, politely.
+		expect(within(dialog).getByRole("status").textContent).toBe(
+			"Needs OAK 0.12.0",
+		);
 		await user.click(
-			within(dialog).getByRole("menuitem", {
+			within(dialog).getByRole("option", {
 				name: "View: Show or hide the panel",
 			}),
 		);
@@ -174,12 +179,35 @@ describe("CommandPalette", () => {
 		expect(toggle).toHaveBeenCalledOnce();
 	});
 
-	it("logs a command that fails, as a shortcut's failure is", async () => {
+	it("marks the first runnable match with nothing typed, so Enter runs the row shown", async () => {
+		const { commands, deploy, toggle } = fixture();
+		useCapabilityScope.setState({ catalog, version: "0.10.0" });
+		// The gated command first: the mark skips it.
+		const gatedFirst = [commands[3], commands[0]].filter(
+			(entry): entry is PaletteCommand => entry !== undefined,
+		);
+		const { user, dialog } = show(gatedFirst);
+		const search = within(dialog).getByRole("combobox", {
+			name: "Search commands",
+		});
+		const options = within(dialog).getAllByRole("option");
+		expect(options.map((o) => o.getAttribute("aria-selected"))).toEqual([
+			"false",
+			"true",
+		]);
+		expect(search.getAttribute("aria-activedescendant")).toBe(options[1]?.id);
+		search.focus();
+		await user.keyboard("{Enter}");
+		expect(toggle).toHaveBeenCalledOnce();
+		expect(deploy).not.toHaveBeenCalled();
+	});
+
+	it("reports a command that fails (logged; the Shell shows it in a toast)", async () => {
 		const log = vi.spyOn(console, "error").mockImplementation(() => {});
 		const { commands, fails } = fixture();
 		const { user, dialog } = show(commands);
 		await user.click(
-			within(dialog).getByRole("menuitem", { name: "About: Fail" }),
+			within(dialog).getByRole("option", { name: "About: Fail" }),
 		);
 		expect(fails).toHaveBeenCalledOnce();
 		await waitFor(() =>

@@ -39,7 +39,8 @@ export const Running: Story = {
 		const code = row.querySelector("code") as HTMLElement;
 		await expect(code).toHaveTextContent("uv run pytest tests");
 		await expect(getComputedStyle(code).fontFamily).toContain("JetBrains Mono");
-		await expect(row).toHaveTextContent("Took 4.2 s");
+		// While it runs the time reads "Running for"; once it ended, "Took".
+		await expect(row).toHaveTextContent("Running for 4.2 s");
 		await expect(row.getBoundingClientRect().height).toBeGreaterThanOrEqual(40);
 	},
 };
@@ -156,6 +157,14 @@ export const List: Story = {
 			</li>
 			<li>
 				<CommandRow
+					executable="ak"
+					args={["features", "--json"]}
+					state="ended"
+					durationMs={410}
+				/>
+			</li>
+			<li>
+				<CommandRow
 					executable="docker"
 					args={["info"]}
 					state="running"
@@ -166,8 +175,15 @@ export const List: Story = {
 	),
 	play: async ({ canvasElement }) => {
 		await expect(within(canvasElement).getAllByRole("listitem")).toHaveLength(
-			3,
+			4,
 		);
+		// Ended with no exit code on its record: "Ended", with no verdict (not "Ended by a signal").
+		const ended = within(canvasElement).getAllByRole(
+			"listitem",
+		)[2] as HTMLElement;
+		await expect(chipOf(ended)).toHaveTextContent("Ended");
+		await expect(chipOf(ended)).toHaveAttribute("data-status", "not-set-up");
+		await expect(ended).toHaveTextContent("Took 410 ms");
 		await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
 			window.innerWidth,
 		);

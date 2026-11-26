@@ -83,12 +83,13 @@ function applySgr(state: SgrState, params: string): void {
 }
 
 /**
- * CSI sequences (SGR among them), OSC sequences (titles, links), and other escapes: ESC, any intermediate bytes,
+ * CSI sequences (SGR among them; one cut off at the end of the line too), OSC sequences (titles, links), and other
+ * escapes: ESC, any intermediate bytes,
  * then a final byte (`ESC ( B`, the character set `tput sgr0` selects; `ESC 7`; `ESC M`).
  */
 const ESCAPE =
 	// biome-ignore lint/suspicious/noControlCharactersInRegex: matching terminal escape sequences is the point.
-	/\x1b\[([0-?]*)([ -/]*)([@-~])|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)?|\x1b[ -/]*[0-~]?/g;
+	/\x1b\[([0-?]*)([ -/]*)([@-~])|\x1b\[[0-?]*[ -/]*$|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)?|\x1b[ -/]*[0-~]?/g;
 
 /** Control characters other than a tab (and ESC, handled above). */
 // biome-ignore lint/suspicious/noControlCharactersInRegex: stripping control characters is the point.
@@ -101,7 +102,7 @@ function toneOf(state: SgrState): AnsiTone {
 /** One line of output as styled runs, in order; empty runs are left out. */
 export function parseAnsiLine(line: string): AnsiSegment[] {
 	// A carriage return redraws the line: keep what was written after the last one (a trailing one changes nothing).
-	const trimmed = line.endsWith("\r") ? line.slice(0, -1) : line;
+	const trimmed = line.replace(/\r+$/, "");
 	const lastReturn = trimmed.lastIndexOf("\r");
 	const text = lastReturn >= 0 ? trimmed.slice(lastReturn + 1) : trimmed;
 
@@ -121,7 +122,9 @@ export function parseAnsiLine(line: string): AnsiSegment[] {
 		push(text.slice(at, match.index));
 		at = match.index + match[0].length;
 		// Only an SGR sequence (final byte "m", no intermediate bytes) changes the style.
-		if (match[3] === "m" && match[2] === "") applySgr(state, match[1] ?? "");
+		// A private-parameter sequence ending in "m" (`ESC[>4;2m`, xterm's key modes) is not SGR.
+		if (match[3] === "m" && match[2] === "" && /^[\d;]*$/.test(match[1] ?? ""))
+			applySgr(state, match[1] ?? "");
 	}
 	push(text.slice(at));
 	return segments;

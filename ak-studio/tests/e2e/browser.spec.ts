@@ -184,18 +184,32 @@ test("Ctrl+K opens the command palette: typing filters, Enter runs about.runDemo
 	await page.keyboard.press("Control+k");
 	const palette = page.getByRole("dialog", { name: "Command palette" });
 	await expect(palette).toBeVisible();
-	const search = palette.getByRole("textbox", { name: "Search commands" });
+	const search = palette.getByRole("combobox", { name: "Search commands" });
 	await expect(search).toBeFocused();
 	// Every command, with its feature's title and its shortcut; Ctrl+J does nothing while it is open.
 	await expect(
-		palette.getByRole("menuitem", { name: "View: Show or hide the panel" }),
+		palette.getByRole("option", { name: "View: Show or hide the panel" }),
 	).toContainText("Ctrl+J");
 	await page.keyboard.press("Control+j");
+	// Two frames for a toggle to land, then: the panel unchanged, the palette still open with focus in it.
+	await page.evaluate(
+		() =>
+			new Promise((done) =>
+				requestAnimationFrame(() => requestAnimationFrame(done)),
+			),
+	);
 	await expect(panel).toHaveJSProperty("offsetHeight", 240);
+	await expect(palette).toBeVisible();
+	await expect(search).toBeFocused();
 	await page.keyboard.type("demo job");
-	await expect(palette.getByRole("menuitem")).toHaveText([
+	await expect(palette.getByRole("option")).toHaveText([
 		"About: Run the demo job",
 	]);
+	// The match is marked: Enter acts on the row shown.
+	await expect(palette.getByRole("option")).toHaveAttribute(
+		"aria-selected",
+		"true",
+	);
 	await page.keyboard.press("Enter");
 	await expect(palette).toBeHidden();
 	await expect(before).toBeFocused();

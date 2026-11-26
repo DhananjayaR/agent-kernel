@@ -18,7 +18,9 @@ import {
 import { setTransport } from "../bridge/client";
 import { createMockBackend, type MockBackend } from "../bridge/mockTransport";
 import { STREAM_BUFFER_LINES, useStreamStore } from "../streams/streamStore";
+import { bindFailureNotice } from "./failureNotice";
 import { StreamingList } from "./StreamingList";
+import { patternStrings } from "./strings";
 
 let backend: MockBackend;
 let writeText: MockInstance<(text: string) => Promise<void>>;
@@ -67,8 +69,10 @@ describe("StreamingList", () => {
 		expect(screen.getByRole("status").textContent).toBe("Output copied");
 	});
 
-	it("does not say copied when the clipboard refuses, and logs it", async () => {
+	it("does not say copied when the clipboard refuses, and reports it (the Shell's toast) and logs it", async () => {
 		const log = vi.spyOn(console, "error").mockImplementation(() => {});
+		const notify = vi.fn();
+		const unbind = bindFailureNotice(notify);
 		writeText.mockRejectedValue(new Error("not allowed"));
 		const streamId = backend.streams.create();
 		backend.streams.write(streamId, "stdout", "one");
@@ -79,6 +83,8 @@ describe("StreamingList", () => {
 		expect(log).toHaveBeenCalledWith(
 			"[studio] copying to the clipboard failed: not allowed",
 		);
+		expect(notify).toHaveBeenCalledWith(patternStrings.copyFailed);
+		unbind();
 	});
 
 	it("clears what it held, in this view only, and shows what comes next", async () => {
@@ -142,6 +148,22 @@ describe("StreamingList", () => {
 		expect(useStreamStore.getState().streams.gone?.error?.code).toBe(
 			ERROR_CODES.streamNotFound,
 		);
+	});
+
+	it("starts afresh for a new stream: no copied state carried over", async () => {
+		const first = backend.streams.create();
+		const second = backend.streams.create();
+		backend.streams.write(first, "stdout", "one");
+		backend.streams.write(second, "stdout", "two");
+		const view = render(<StreamingList streamId={first} label="Output" />);
+		await flushAll();
+		await press("Copy");
+		expect(screen.getByRole("status").textContent).toBe("Output copied");
+		view.rerender(<StreamingList streamId={second} label="Output" />);
+		await flushAll();
+		expect(screen.getByRole("status").textContent).toBe("");
+		await press("Copy");
+		expect(writeText).toHaveBeenLastCalledWith("two");
 	});
 
 	it("shows nothing and subscribes to nothing with no stream", () => {
