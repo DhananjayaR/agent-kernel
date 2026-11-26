@@ -217,12 +217,15 @@ export function createMockBackend(
 	const events = new EventBus({ masker, log });
 	const streams = new StreamHub({ masker, log: (m) => log(masker.mask(m)) });
 	const scopes = new ProjectScopes({ masker, log });
+	const clock = options.clock ?? systemClock;
 	const jobs = new JobService({
 		events,
 		streams,
 		scopes,
 		records: new InMemoryJobRecordStore(),
 		masker,
+		// A job's `startedAt` comes from the same clock as its steps, so a FakeClock freezes its elapsed time too.
+		now: () => clock.now(),
 		log,
 	});
 	const sessions = new SessionService({ events, streams, scopes, masker, log });
@@ -238,7 +241,7 @@ export function createMockBackend(
 	const watcher = new FakeWatcher();
 	registerFeatureServices(collected, {
 		app: { version: MOCK_VERSION, platform: "browser" },
-		clock: options.clock ?? systemClock,
+		clock,
 		commandRunner,
 		projectFs,
 		watcher,

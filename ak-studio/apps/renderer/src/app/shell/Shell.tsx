@@ -7,7 +7,8 @@
 // empty state that names the phase that fills it. Its tabs come from the feature manifests (the registry), and it
 // mounts the app's one shortcut listener, for the platform app.info reports; it binds the shell's actions for its
 // app commands (shellActions.ts), so Mod+J (shell.toggleBottomPanel) goes through the same layout save as the
-// panel's own toggle.
+// panel's own toggle. It also binds its navigate for features' commands (shared/commands/navigation.ts) and shows
+// the background job notices (shared/patterns/BackgroundJobNotice.tsx): a state icon on the owning tab and a toast.
 import {
 	DEFAULT_SHELL_LAYOUT,
 	type OutputOf,
@@ -35,13 +36,16 @@ import {
 } from "@ak-studio/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getTransport, isStudioFailure } from "../../shared/bridge/client";
+import { bindNavigate } from "../../shared/commands/navigation";
+import { findCommand, runCommand } from "../../shared/commands/runCommand";
 import {
 	describeShortcut,
 	shortcutPlatform,
 } from "../../shared/commands/shortcuts";
 import { useAppShortcuts } from "../../shared/commands/useAppShortcuts";
+import { useBackgroundJobNotice } from "../../shared/patterns/BackgroundJobNotice";
 import {
 	cacheStoredLayout,
 	cacheStoredTheme,
@@ -60,6 +64,23 @@ const MAC_TRAFFIC_LIGHTS_INSET = 76;
 
 /** The top bar's tabs, from the feature manifests. */
 const SHELL_TABS = registry.tabs.map(({ id, label }) => ({ id, label }));
+
+/** The features with a tab: the background job notice's icons go on these. */
+const TAB_FEATURES = registry.tabs.map(({ id }) => id);
+
+/** The feature whose route is on screen. */
+function featureAt(pathname: string): string | undefined {
+	return registry.routes.find((route) => route.path === pathname)?.featureId;
+}
+
+/** "Show" on a background job notice: the owning feature's `<feature>.show` command, if it declares one. */
+function showCommand(featureId: string): (() => void) | undefined {
+	const id = `${featureId}.show`;
+	if (!findCommand(id)) return undefined;
+	return () => {
+		void runCommand(id);
+	};
+}
 
 /** The bottom panel's show/hide shortcut, as the registry has it; a command renamed or left without a shortcut throws. */
 const PANEL_SHORTCUT = (() => {
@@ -133,6 +154,26 @@ function LoadedShell({
 	useBindShellActions({
 		toggleBottomPanel: () =>
 			rememberPanel({ ...layout.bottomPanel, open: !layout.bottomPanel.open }),
+		showCommands: () => {
+			setPanelTab("commands");
+			if (!layout.bottomPanel.open)
+				rememberPanel({ ...layout.bottomPanel, open: true });
+		},
+	});
+	// Feature commands navigate through this (shared/commands/navigation.ts): `about.show`, say.
+	useEffect(
+		() =>
+			bindNavigate((to) => {
+				void navigate({ to });
+			}),
+		[navigate],
+	);
+	const onScreen = useMemo(() => featureAt(pathname), [pathname]);
+	const tabBadges = useBackgroundJobNotice({
+		toasts,
+		onScreen,
+		tabs: TAB_FEATURES,
+		showCommand,
 	});
 	const platform = shortcutPlatform(info?.platform);
 	useAppShortcuts(registry.commands, platform);
@@ -150,6 +191,7 @@ function LoadedShell({
 				onTabChange={(next) => {
 					void navigate({ to: pathOfTab(next) });
 				}}
+				tabBadges={tabBadges}
 				// The window has no system title bar: the top bar is its drag region. Linux and Windows (and the
 				// browser) get our controls; macOS keeps its own traffic lights, so only room is kept for them.
 				leadingInset={mac ? MAC_TRAFFIC_LIGHTS_INSET : undefined}

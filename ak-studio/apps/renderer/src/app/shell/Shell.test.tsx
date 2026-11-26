@@ -2,9 +2,11 @@
 // its tabs come from the feature manifests; Mod+J (the app command shell.toggleBottomPanel) shows and hides the
 // bottom panel, Ctrl+J or Cmd+J by platform, and does nothing behind a modal; and its error paths, against a
 // transport that fails on purpose: the layout-save toast (a background notice; the layout stays as the person set
-// it) and the bridge-error banner (shows the failure's message).
+// it) and the bridge-error banner (shows the failure's message). Also the job patterns' hooks into the shell:
+// "Show commands" (shell.showCommands) and the background job notice's toast with "Show" (about.show).
 import { studioError } from "@ak-studio/contract";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { FakeClock } from "@ak-studio/runtime";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { StudioFailure, setTransport } from "../../shared/bridge/client";
@@ -12,6 +14,7 @@ import {
 	createMockTransport,
 	defaultMockHandlers,
 } from "../../shared/bridge/mockTransport";
+import { runCommand } from "../../shared/commands/runCommand";
 import { App } from "../App";
 import { registry } from "../registry";
 import { shellStrings } from "./strings";
@@ -177,5 +180,38 @@ describe("Shell error paths", () => {
 
 		expect(await screen.findByText("The bridge did not answer")).toBeTruthy();
 		expect(screen.getByText(shellStrings.bridgeError)).toBeTruthy();
+	});
+});
+
+describe("Shell and the job patterns", () => {
+	it("shell.showCommands opens the bottom panel on the Commands view", async () => {
+		const { user } = renderApp();
+		await user.click(await toggle("Hide the panel"));
+		await toggle("Show the panel");
+		await act(() => runCommand("shell.showCommands"));
+		await toggle("Hide the panel");
+		const panelTabs = screen.getByRole("tablist", { name: "Panel views" });
+		expect(
+			within(panelTabs)
+				.getByRole("tab", { name: "Commands" })
+				.getAttribute("aria-selected"),
+		).toBe("true");
+	});
+
+	it("a job waiting off screen raises its toast; Show runs the owner's show command and opens its screen", async () => {
+		const clock = new FakeClock();
+		setTransport(createMockTransport({ clock }));
+		const user = userEvent.setup();
+		render(<App />);
+		await screen.findByRole("tablist", { name: "Project views" });
+		expect(window.location.hash).not.toBe("#/about");
+		await act(() => runCommand("about.runDemoJob"));
+		await act(() => clock.advance(2000));
+		const toast = await screen.findByRole("alertdialog", {
+			name: /Demo job is waiting for you/,
+		});
+		expect(toast.textContent).toContain("Run the last step?");
+		await user.click(within(toast).getByRole("button", { name: "Show" }));
+		await waitFor(() => expect(window.location.hash).toBe("#/about"));
 	});
 });

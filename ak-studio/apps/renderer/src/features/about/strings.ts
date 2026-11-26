@@ -8,5 +8,6 @@ export const aboutStrings = {
 	},
 	commands: {
 		runDemoJob: "Run the demo job",
+		show: "Open About",
 	},
 } as const;

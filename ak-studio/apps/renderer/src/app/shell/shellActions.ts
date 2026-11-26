@@ -6,6 +6,8 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 
 export interface ShellActions {
 	toggleBottomPanel(): void;
+	/** Opens the bottom panel on the Commands view (the job progress pattern's "Show commands"). */
+	showCommands(): void;
 }
 
 let bound: ShellActions | undefined;
@@ -30,6 +32,7 @@ export function useBindShellActions(actions: ShellActions): void {
 	useEffect(() => {
 		const mine: ShellActions = {
 			toggleBottomPanel: () => latest.current.toggleBottomPanel(),
+			showCommands: () => latest.current.showCommands(),
 		};
 		bound = mine;
 		return () => {

@@ -45,5 +45,6 @@ export const shellStrings = {
 	/** The shell's app commands, as the command palette and menus name them. */
 	commands: {
 		toggleBottomPanel: "Show or hide the panel",
+		showCommands: "Show commands",
 	},
 } as const;

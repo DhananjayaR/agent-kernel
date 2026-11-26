@@ -1,7 +1,8 @@
 // The About feature's manifest: its id and route, the screen that route mounts (the empty state, titled from the
-// feature's strings), and its app command, which starts the demo job through runCommand.
+// feature's strings), and its app commands: one starts the demo job through runCommand, one opens the screen.
 import { render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { bindNavigate } from "../../shared/commands/navigation";
 import {
 	getCommands,
 	runCommand,
@@ -47,5 +48,19 @@ describe("aboutFeature", () => {
 		await waitFor(() =>
 			expect(mock?.backend.jobs.list()[0]?.state).toBe("cancelled"),
 		);
+	});
+
+	it("offers about.show, which opens the About screen once a shell can navigate", async () => {
+		const command = aboutFeature.commands.find((c) => c.id === "about.show");
+		expect(command?.title).toBe("Open About");
+		setCommands(aboutFeature.commands);
+		const navigate = vi.fn();
+		// No shell: hidden, and running it does nothing.
+		expect(command?.when?.()).toBe(false);
+		await runCommand("about.show");
+		const unbind = bindNavigate(navigate);
+		await runCommand("about.show");
+		unbind();
+		expect(navigate).toHaveBeenCalledExactlyOnceWith("/about");
 	});
 });
