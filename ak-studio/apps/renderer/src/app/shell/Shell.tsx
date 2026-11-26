@@ -33,7 +33,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
-import { getTransport, isStudioFailure } from "../bridge/client";
+import { getTransport, isStudioFailure } from "../../shared/bridge/client";
 import {
 	appInfoQueryKey,
 	cacheStoredLayout,
@@ -41,7 +41,7 @@ import {
 	fetchAppInfo,
 	storeLayout,
 	storeTheme,
-} from "../queries";
+} from "../../shared/queries";
 import { useWindowMaximized } from "../useWindowMaximized";
 import { tabFromPath } from "./routes";
 import { shellStrings } from "./strings";

@@ -5,7 +5,7 @@
  * docs/specs/950-agent-kernel-studio-phase-1/research/technology/p1a-design-gate-options.md): palette A (OAK's brand from
  * docs/src/css/custom.css), Inter for UI text, Archivo for headings, JetBrains Mono for code and figures,
  * one density (Spectrum 2 medium, spike S1 measurements in research/technology/spike-s1-components.md), and the
- * default theme follows the system (dark when unknown; apps/renderer/src/theme.ts).
+ * default theme follows the system (dark when unknown; apps/renderer/src/app/theme.ts).
  *
  * Colour token names. Each Tailwind colour `--color-<name>` gives the utilities `bg-<name>`, `text-<name>`,
  * `border-<name>`, `outline-<name>` and so on; its per-theme value is the variable `--role-<name>`.

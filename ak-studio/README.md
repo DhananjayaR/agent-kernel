@@ -47,7 +47,7 @@ pnpm package     # build, then electron-builder for this system into apps/deskto
 pnpm test:packaged  # start and check the packaged app in release/ (run pnpm package first; Linux: under X)
 ```
 
-Members: `apps/desktop`, `apps/renderer`, `packages/contract`, `packages/ui`, `packages/kernel-catalog`.
+Members: `apps/desktop`, `apps/renderer`, `packages/contract`, `packages/runtime`, `packages/ui`, `packages/kernel-catalog`.
 
 `test:storybook` and `test:e2e` need Playwright's Chromium (`pnpm exec playwright install chromium` once; on a
 fresh Linux machine `pnpm exec playwright install --with-deps chromium`).
@@ -87,7 +87,9 @@ request (so the renderer loaded and its preload works).
 
 Boundary rules live in `.dependency-cruiser.cjs`: the renderer and `packages/ui` import no `electron` or Node
 built-in; `packages/contract` imports only `zod`; `packages/ui` (the whole member, `.storybook/` and config files
-included) imports neither `apps/*` nor `@ak-studio/contract`; nothing imports `apps/desktop` but itself.
+included) imports neither `apps/*` nor `@ak-studio/contract`; `packages/runtime` imports only `@ak-studio/contract`, `zod` and itself
+(no Node built-in, no `electron`); nothing imports `apps/desktop` but itself. In `apps/renderer/src`: `features/<a>` never imports
+`features/<b>`, `shared/` imports neither `features/` nor `app/`, and `features/` never imports `app/`.
 `pnpm lint` runs the rules and the self-test. dependency-cruiser needs `@swc/core` under
 TypeScript 7 (without it a run is silently green: "0 modules"), so `depcruise:selftest` checks a deliberately
 violating fixture in `tools/depcruise-selftest/fixture/` (ignored by Biome and the tsconfigs) and fails if
@@ -115,7 +117,7 @@ headings, and the primary button's label in SemiBold, `font-heading font-cta`: "
 buttons"),
 `font-mono` (JetBrains Mono) and `mono-figures` (JetBrains Mono with tabular figures, for durations, counts and
 money). The default theme preference is `system`, which follows the OS and is dark when the OS reports neither
-(`apps/renderer/src/theme.ts`). Chromium reports light when the OS gives no signal (for example bare Linux), so in practice such a machine
+(`apps/renderer/src/app/theme.ts`). Chromium reports light when the OS gives no signal (for example bare Linux), so in practice such a machine
 opens light; the dark fallback applies only where neither scheme is reported.
 The fonts are under the SIL Open Font License 1.1: their copyright lines and the licence text are in
 `apps/desktop/resources/THIRD-PARTY-NOTICES.txt`, which the packaged app ships in its `resources/` folder. The same file
@@ -210,7 +212,7 @@ react-resizable-panels refuses to mount, so `DesktopShell` mounts the panel grou
 bottom panel clears the outer tab state for its own Tabs (as React Aria's TabPanel does). Both depend on react-aria
 3.53.1 internals under the 1.22.1 pin: check them on any upgrade (the shell stories and axe's aria checks catch a
 regression). In the app
-(`apps/renderer/src/shell/`), the tabs are hash routes (`#/canvas` ... `#/deploy`) whose empty states name the phase
+(`apps/renderer/src/app/shell/`), the tabs are hash routes (`#/canvas` ... `#/deploy`) whose empty states name the phase
 that fills them; no project can be opened before P2, so everything project-scoped shows its not-yet state (the switcher "No project open", the run control "No project to run" with no start control, the deploy status "Not deployed", the coding agent "not set up"); Build with AI opens a popover saying it arrives in P6; settings open a modal with
 the theme; the status bar shows the Studio's version (the project's OAK version is a separate slot P2
 fills). A failed layout save is a background toast.

@@ -1,7 +1,7 @@
 // The renderer in a plain browser: no `window.studio`, so it runs on the mock transport.
 import { expect, type Page, test } from "@playwright/test";
 
-// The mock transport's fixture version (apps/renderer/src/bridge/mockTransport.ts, MOCK_VERSION). Not imported:
+// The mock transport's fixture version (apps/renderer/src/shared/bridge/mockTransport.ts, MOCK_VERSION). Not imported:
 // the renderer's source is not loaded into the test runner.
 const MOCK_VERSION = "0.0.0-mock";
 

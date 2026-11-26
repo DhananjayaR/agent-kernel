@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { cruise } from "../cruise-lib.mjs";
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
-const EXPECTED_MODULES = 20;
+const EXPECTED_MODULES = 33;
 const expected = [
 	["renderer-ui-no-electron", "apps/renderer/src/violation.ts"], // resolves via fixture node_modules
 	["renderer-ui-no-electron", "apps/renderer/src/required.ts"], // require()
@@ -22,12 +22,30 @@ const expected = [
 	["ui-no-apps-or-contract", "packages/ui/src/index.ts"],
 	["ui-no-apps-or-contract", "packages/ui/.storybook/preview.ts"], // outside src
 	["desktop-is-private", "apps/renderer/src/violation.ts"],
+	["runtime-only-contract-zod", "packages/runtime/src/index.ts"], // bare fs
+	["runtime-only-contract-zod", "packages/runtime/src/electron.ts"],
+	[
+		"runtime-tests-only-contract-zod-vitest",
+		"packages/runtime/src/violation.test.ts",
+	], // node:fs in a test
+	[
+		"renderer-feature-isolation",
+		"apps/renderer/src/features/a/crossFeature.ts",
+	],
+	["renderer-shared-is-a-leaf", "apps/renderer/src/shared/usesFeature.ts"],
+	["renderer-shared-is-a-leaf", "apps/renderer/src/shared/usesApp.ts"],
+	["renderer-features-not-app", "apps/renderer/src/features/a/usesApp.ts"],
 ];
 // Must NOT be reported: a contract test importing vitest, zod and contract files is allowed, and the
 // test-only rule (not contract-only-zod) is the one that judges contract tests.
 const unexpected = [
 	["*", "packages/contract/src/allowed.test.ts"],
 	["contract-only-zod", "packages/contract/src/violation.test.ts"],
+	["*", "packages/runtime/src/allowed.ts"], // contract, zod and itself
+	["runtime-only-contract-zod", "packages/runtime/src/violation.test.ts"],
+	["*", "apps/renderer/src/features/a/index.ts"], // a feature's own files
+	["renderer-feature-isolation", "apps/renderer/src/features/a/usesApp.ts"], // judged by the app rule only
+	["*", "apps/renderer/src/app/app.ts"], // app/ composes features
 ];
 
 const { summary, parserMissing, stderr } = cruise({

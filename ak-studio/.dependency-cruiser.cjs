@@ -17,6 +17,20 @@ const CONTRACT_ALLOWED = [
 	"(^|/)node_modules/zod/",
 ];
 
+// What runtime source may import: itself, @ak-studio/contract and zod (unresolved or resolved).
+const RUNTIME_ALLOWED = [
+	"^packages/runtime/src/",
+	"^@ak-studio/contract($|/)",
+	"^packages/contract/",
+	"^zod($|/)",
+	"(^|/)node_modules/zod/",
+];
+
+// The renderer's layers (apps/renderer/src): app/ composes features/, which build on shared/. main.tsx is the
+// entry at the src root and may import app/.
+const RENDERER_APP = "^apps/renderer/src/app/";
+const RENDERER_FEATURES = "^apps/renderer/src/features/";
+
 /** @type {import('dependency-cruiser').IConfiguration} */
 module.exports = {
 	forbidden: [
@@ -71,6 +85,54 @@ module.exports = {
 					"^@ak-studio/(contract|renderer|desktop)($|/)",
 				],
 			},
+		},
+		{
+			name: "runtime-only-contract-zod",
+			comment:
+				"packages/runtime is browser-safe: it imports only @ak-studio/contract, zod and itself (no Node built-in, no electron).",
+			severity: "error",
+			from: { path: "^packages/runtime/src/", pathNot: "\\.test\\.ts$" },
+			to: { pathNot: RUNTIME_ALLOWED },
+		},
+		{
+			name: "runtime-tests-only-contract-zod-vitest",
+			comment:
+				"packages/runtime unit tests (*.test.ts) import only @ak-studio/contract, zod, vitest and the runtime itself.",
+			severity: "error",
+			from: { path: "^packages/runtime/src/.*\\.test\\.ts$" },
+			to: {
+				pathNot: [
+					...RUNTIME_ALLOWED,
+					"^vitest($|/)",
+					"(^|/)node_modules/vitest/",
+				],
+			},
+		},
+		{
+			name: "renderer-feature-isolation",
+			comment:
+				"A feature (features/<a>) never imports another feature (features/<b>): features compose through app/ and share through shared/.",
+			severity: "error",
+			from: { path: "^apps/renderer/src/features/([^/]+)/" },
+			to: {
+				path: RENDERER_FEATURES,
+				pathNot: "^apps/renderer/src/features/$1/",
+			},
+		},
+		{
+			name: "renderer-shared-is-a-leaf",
+			comment: "shared/ imports neither features/ nor app/.",
+			severity: "error",
+			from: { path: "^apps/renderer/src/shared/" },
+			to: { path: [RENDERER_FEATURES, RENDERER_APP] },
+		},
+		{
+			name: "renderer-features-not-app",
+			comment:
+				"features/ never imports app/ (app/ composes features, not the reverse).",
+			severity: "error",
+			from: { path: RENDERER_FEATURES },
+			to: { path: RENDERER_APP },
 		},
 		{
 			name: "desktop-is-private",

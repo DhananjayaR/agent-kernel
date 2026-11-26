@@ -1,7 +1,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
-import { createQueryClient } from "./queries";
+import { createQueryClient } from "../shared/queries";
 import { createAppRouter } from "./routes/router";
 import { useAppTheme } from "./useAppTheme";
 
