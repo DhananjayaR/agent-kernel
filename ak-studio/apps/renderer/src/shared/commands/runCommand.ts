@@ -5,7 +5,10 @@
 // manifest tests catch most first), and in production it is logged and nothing runs, so a stale id never takes
 // the shell down. A command whose kernel capability the project's OAK version lacks is refused with the version
 // gate's reason (CommandUnavailableError): it exists, but cannot run here (the palette lists it with that reason).
-import { type CapabilityGate, capabilityGate } from "../capability/capability";
+import {
+	type CapabilityGateResult,
+	capabilityGate,
+} from "../capability/capability";
 import type { AppCommand } from "./command";
 
 /** Refusal of a command whose capability the project's OAK version lacks; the message is the gate's reason. */
@@ -14,7 +17,7 @@ export class CommandUnavailableError extends Error {
 	readonly status: "needs-upgrade" | "removed";
 	constructor(
 		commandId: string,
-		gate: Extract<CapabilityGate, { available: false }>,
+		gate: Extract<CapabilityGateResult, { available: false }>,
 	) {
 		super(gate.reason);
 		this.name = "CommandUnavailableError";
@@ -24,7 +27,7 @@ export class CommandUnavailableError extends Error {
 }
 
 /** Whether `command` can run for the open project's OAK version (capability.tsx, capabilityGate). */
-export function commandGate(command: AppCommand): CapabilityGate {
+export function commandGate(command: AppCommand): CapabilityGateResult {
 	return capabilityGate(command.capability);
 }
 

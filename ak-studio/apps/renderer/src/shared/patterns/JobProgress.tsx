@@ -3,8 +3,9 @@
 // job with `useJob` and fills JobProgressView: the title, the state, the current step, the elapsed time from the
 // job's `startedAt` (the clock is ClockProvider's, so tests and stories freeze it), "Stop" when the job is
 // cancellable (cancelJob, pending after 300 ms, a refusal said inline), the job's question as the approval pattern
-// (Approval), and at the end the result (the view's own words for its typed result), "Stopped", or the error with
-// its next action (presentError, until Task 17's ErrorView).
+// (Approval), and at the end the result (the view's own words for its typed result), "Stopped", or the error in the
+// error family's banner (presentError, as ErrorView shows it: what happened, what to do, file and line, the detail
+// collapsed, and its next action run through runReported).
 //
 // "Show commands" runs the app command `shell.showCommands` (it opens the bottom panel on the Commands view) and is
 // shown only when the job ran commands (`commandIds`) and that command exists. The Commands view lists a job's
@@ -17,12 +18,13 @@ import {
 	JobProgressView,
 } from "@ak-studio/ui";
 import { type ReactNode, useState } from "react";
-import { findCommand, runCommand } from "../commands/runCommand";
+import { findCommand } from "../commands/runCommand";
+import { runReported } from "../commands/runReported";
 import { cancelJob, useJob } from "../jobs/jobStore";
 import { usePendingAfter } from "../query/pending";
 import { Approval } from "./Approval";
 import { useNow } from "./clock";
-import { failureOf, type InlineError, presentError } from "./presentError";
+import { type ErrorSlots, failureOf, presentError } from "./presentError";
 
 /** The app command behind "Show commands" (the shell's; app/shell/manifest.ts). */
 export const SHOW_COMMANDS_COMMAND = "shell.showCommands";
@@ -42,11 +44,6 @@ const ACTIVE: ReadonlySet<JobState> = new Set([
 	"waiting-for-user",
 ]);
 
-/** The inline error in JobProgressView's shape. */
-function jobError({ title, description, action }: InlineError) {
-	return { title, message: description, action };
-}
-
 export interface JobProgressProps {
 	jobId: JobId;
 	/** The result in one line, in the view's own words (a job's result is typed per kind). */
@@ -65,7 +62,7 @@ export function JobProgress({
 	// Ticks only while a time can show: running or waiting, with a start time (not while queued).
 	const now = useNow(active && job?.startedAt !== undefined);
 	const [stopping, setStopping] = useState(false);
-	const [stopError, setStopError] = useState<InlineError>();
+	const [stopError, setStopError] = useState<ErrorSlots>();
 	const stopLate = usePendingAfter(stopping, jobId);
 	if (!job) return null;
 
@@ -80,7 +77,7 @@ export function JobProgress({
 	const showCommands =
 		job.commandIds.length > 0 && findCommand(SHOW_COMMANDS_COMMAND)
 			? () => {
-					void runCommand(SHOW_COMMANDS_COMMAND);
+					runReported(SHOW_COMMANDS_COMMAND);
 				}
 			: undefined;
 
@@ -96,7 +93,7 @@ export function JobProgress({
 			stopError={stopError}
 			onShowCommands={showCommands}
 			result={job.state === "succeeded" ? renderResult?.(job) : undefined}
-			error={job.error ? jobError(presentError(job.error)) : undefined}
+			error={job.error ? presentError(job.error) : undefined}
 		>
 			<Approval job={job} />
 		</JobProgressView>

@@ -9,4 +9,12 @@ export const patternStrings = {
 		description:
 			"Select the lines in the list and copy them with the keyboard instead.",
 	},
+	/** A save from the unsaved changes dialog found the file changed on disk: its description (what to do). */
+	saveConflict:
+		"The file was saved elsewhere while you were editing. Stay to keep yours or take theirs, or discard your changes.",
+	/** The clipboard refused a version gate's Copy. */
+	copyCommandFailed: {
+		title: "The upgrade command could not be copied",
+		description: "Select the command and copy it with the keyboard instead.",
+	},
 } as const;

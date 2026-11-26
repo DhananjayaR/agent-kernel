@@ -14,7 +14,7 @@ import type { StreamId } from "@ak-studio/contract";
 import { StreamingListView } from "@ak-studio/ui";
 import { useMemo, useState } from "react";
 import { useStream } from "../streams/streamStore";
-import { noticeFailure } from "./failureNotice";
+import { copyToClipboard } from "./clipboard";
 import { presentError } from "./presentError";
 import { patternStrings } from "./strings";
 
@@ -26,17 +26,9 @@ export interface StreamingListProps {
 	className?: string;
 }
 
-/** Copies `text` to the clipboard; rejects, logs and reports it (failureNotice: a toast) when the clipboard refuses. */
-export async function copyToClipboard(text: string): Promise<void> {
-	try {
-		await navigator.clipboard.writeText(text);
-	} catch (error) {
-		noticeFailure(
-			patternStrings.copyFailed,
-			`copying to the clipboard failed: ${error instanceof Error ? error.message : String(error)}`,
-		);
-		throw error;
-	}
+/** Copies `text` to the clipboard; a refusal is reported (a toast that says to copy with the keyboard instead). */
+export function copyOutput(text: string): Promise<void> {
+	return copyToClipboard(text, patternStrings.copyFailed);
 }
 
 export function StreamingList({
@@ -75,7 +67,7 @@ export function StreamingList({
 			label={label}
 			lines={lines}
 			dropped={dropped}
-			onCopy={copyToClipboard}
+			onCopy={copyOutput}
 			onClear={
 				streamId === undefined
 					? undefined

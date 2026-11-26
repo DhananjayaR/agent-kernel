@@ -15,14 +15,15 @@ import {
 	type SessionFact,
 } from "@ak-studio/ui";
 import { useState } from "react";
-import { findCommand, runCommand } from "../commands/runCommand";
+import { findCommand } from "../commands/runCommand";
+import { runReported } from "../commands/runReported";
 import { usePendingAfter } from "../query/pending";
 import {
 	startSession,
 	stopSession,
 	useSession,
 } from "../sessions/sessionStore";
-import { failureOf, type InlineError, presentError } from "./presentError";
+import { type ErrorSlots, failureOf, presentError } from "./presentError";
 
 export interface SessionControlProps {
 	/** The session kind ("about.ticker"). */
@@ -58,7 +59,7 @@ export function SessionControl({
 }: SessionControlProps) {
 	const session = useSession(kind, projectId);
 	const [calling, setCalling] = useState<"start" | "stop">();
-	const [refused, setRefused] = useState<InlineError>();
+	const [refused, setRefused] = useState<ErrorSlots>();
 	const pending = usePendingAfter(calling !== undefined, calling);
 	const state: SessionControlState = session?.state ?? "stopped";
 	const live = LIVE.has(state);
@@ -80,7 +81,7 @@ export function SessionControl({
 	const showLog =
 		logCommand !== undefined && findCommand(logCommand)
 			? () => {
-					void runCommand(logCommand);
+					runReported(logCommand);
 				}
 			: undefined;
 
@@ -103,11 +104,7 @@ export function SessionControl({
 			}
 			pending={pending}
 			onShowLog={showLog}
-			error={
-				error
-					? { title: error.title, description: error.description }
-					: undefined
-			}
+			error={error}
 		/>
 	);
 }

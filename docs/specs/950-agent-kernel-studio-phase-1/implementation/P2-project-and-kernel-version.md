@@ -137,7 +137,12 @@ feature F?**
       project version (`capabilityGate`, P1b Task 16): right for "no project open". A project whose OAK version is
       not known yet, or cannot be read, must not take that path: gate it with its own reason (such as "OAK version
       unknown") rather than let every capability through.
-- [ ] One renderer hook and one component for the version-unavailable pattern from the design gate.
+- [ ] One renderer hook and one component for the version-unavailable pattern from the design gate. Built in P1b
+      Task 17: `useCapabilityNotice` and `CapabilityGate` (`tab`, `section`, `control`; `CapabilityTag` for a
+      section list). P2 mounts `CatalogProvider` with the catalog, the project's version, `upgradeCommand(since)`
+      (built from the project's own dependency line, keeping its extras) and `openDocs(url)`. The window opens no
+      links itself (`security.ts` denies window-open and navigation), so `openDocs` needs a main-process operation
+      (`shell.openExternal` on an allow-listed docs host); until then the notice shows no docs link.
 - [ ] **Supported floor.** Studio declares the oldest OAK version it opens with full support.
       Decided 26 Nov 2026: **0.10** (the current minor; `ak-py` is 0.10.2). Below the floor the project opens
       read-only with a banner. **Read-only** (decided 26 Nov 2026) means the Studio writes nothing to the project:

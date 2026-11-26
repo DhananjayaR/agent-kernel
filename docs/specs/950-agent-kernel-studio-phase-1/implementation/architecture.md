@@ -394,14 +394,19 @@ type StudioError = {
 
 - Codes live in one catalog in `packages/contract`. A code with no presentation fails a test.
 - `ErrorView` renders any error inline, in a banner or in a toast, by the placement rules in
-  [conventions-and-skills.md](conventions-and-skills.md).
+  [conventions-and-skills.md](conventions-and-skills.md): the error catalogue's placement for its code, unless the
+  view passes its own. Inline and banner use the empty, cannot-read and error family (`StateMessage`: the centred
+  frame when nothing is left to show, a banner otherwise); a toast goes through the failure notice the Shell binds.
+  `detail` is collapsed; `file` and `line` are a `PathChip`; `action` runs its app command through `runReported`.
 - Thrown exceptions never cross the bridge; the service boundary converts them.
 
 ## OAK versions in the code
 
 - `useCapability(id)` returns `available`, `needs-upgrade` or `removed` from the P2 catalog.
-- `<CapabilityGate id="...">` wraps any control or section that needs a capability and renders the
-  version-unavailable pattern when it is missing. No feature writes its own version check.
+- `<CapabilityGate id="..." size="tab | section | control">` wraps any tab, form section or control that needs a
+  capability and renders the version-unavailable pattern when it is missing (`VersionNotice` at that size; a
+  section's fields read-only). No feature writes its own version check. The upgrade command and the docs opener
+  come from `CatalogProvider` (P2); the command is shown to copy, never run.
 - Each feature's manifest lists the capabilities it uses, so a test can confirm every one exists.
 - An app command can name the capability it needs. The command palette lists a command the project's
   version lacks with the version gate's reason ("Needs OAK 0.12.0"), and `runCommand` refuses it. Both ask

@@ -21,7 +21,7 @@ import { ApprovalCard, ConfirmModal, uiStrings } from "@ak-studio/ui";
 import { useRef, useState } from "react";
 import { respondToJob } from "../jobs/jobStore";
 import { usePendingAfter } from "../query/pending";
-import { failureOf, type InlineError, presentError } from "./presentError";
+import { type ErrorSlots, failureOf, presentError } from "./presentError";
 
 type Option = NonNullable<UserRequest["options"]>[number];
 type Which = "approve" | "deny";
@@ -77,7 +77,7 @@ export function Approval({ job, frame }: ApprovalProps) {
 	const [inFlight, setInFlight] = useState<Answer>();
 	const [refused, setRefused] = useState<{
 		requestId: string;
-		error: InlineError;
+		error: ErrorSlots;
 	}>();
 	const sending = useRef(false);
 	const late = usePendingAfter(inFlight !== undefined, inFlight);

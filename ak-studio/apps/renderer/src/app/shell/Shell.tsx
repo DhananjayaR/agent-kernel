@@ -11,7 +11,7 @@
 // the background job notices (shared/patterns/BackgroundJobNotice.tsx): a state icon on the owning tab and a toast,
 // and the command palette (shared/patterns/CommandPalette.tsx), opened by shell.openCommandPalette (Mod+K). It binds
 // the failure notice (shared/patterns/failureNotice.ts): a command that fails from the palette or a shortcut, or a
-// refused Copy, shows as a danger toast.
+// refused Copy, shows as a danger toast, with the error's next action when it has one.
 import {
 	DEFAULT_SHELL_LAYOUT,
 	type OutputOf,
@@ -183,11 +183,12 @@ function LoadedShell({
 	);
 	// A command that fails from the palette or a shortcut, or a refused Copy: no view shows it, so a toast does.
 	useEffect(() => {
-		const unbindNotice = bindFailureNotice(({ title, description }) => {
+		const unbindNotice = bindFailureNotice(({ title, description, action }) => {
 			notifyBackgroundResult(toasts, {
 				tone: "danger",
 				title,
 				...(description === undefined ? {} : { description }),
+				...(action === undefined ? {} : { action }),
 			});
 		});
 		const unbindReporter = bindCommandFailureReporter(reportCommandFailure);

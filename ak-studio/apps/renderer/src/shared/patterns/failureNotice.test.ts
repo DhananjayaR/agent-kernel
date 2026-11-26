@@ -87,6 +87,27 @@ describe("commandFailureNotice", () => {
 			errorStrings.titles.internal,
 		);
 	});
+
+	it("gives the toast the error's next action when it has one, which runs its app command", async () => {
+		const run = vi.fn();
+		setCommands([
+			defineCommand({ id: "shell.openSettings", title: "Settings", run }),
+		]);
+		const notice = commandFailureNotice(
+			"about.runDemoJob",
+			new StudioFailure({
+				...studioError("bridge.unavailable", "Restart the app."),
+				action: { label: "Open settings", commandId: "shell.openSettings" },
+			}),
+		);
+		expect(notice).toMatchObject({
+			title: errorStrings.titles.unavailable,
+			description: "Restart the app.",
+			action: { label: "Open settings" },
+		});
+		notice.action?.onAction();
+		await vi.waitFor(() => expect(run).toHaveBeenCalledOnce());
+	});
 });
 
 describe("reporting", () => {

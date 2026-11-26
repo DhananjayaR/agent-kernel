@@ -1,7 +1,8 @@
-// Running an app command where no view will show its failure: the command palette, a shortcut, a toast's "Show". A
-// rejection, a synchronous throw (an unknown id in development) or a version-gated refusal goes to the bound
-// reporter: the Shell binds patterns/failureNotice.ts's reportCommandFailure (a toast). Unbound (tests, Storybook),
-// it is logged. It lives with the commands, so the commands never import the patterns.
+// Running an app command where no view will show its failure: the command palette, a shortcut, a toast's "Show", an
+// error's next action (ErrorView). A rejection, a synchronous throw (an unknown id in development) or a
+// version-gated refusal goes to the bound reporter: the Shell binds patterns/failureNotice.ts's reportCommandFailure
+// (a toast). Unbound (tests, Storybook), it is logged. It lives with the commands, so the commands never import the
+// patterns.
 import { runCommand } from "./runCommand";
 
 type Reporter = (commandId: string, error: unknown) => void;
@@ -22,10 +23,12 @@ export function bindCommandFailureReporter(report: Reporter): () => void {
 	};
 }
 
-/** Runs `commandId` with no arguments; any failure is reported, never thrown. */
-export function runReported(commandId: string): void {
+/** Runs `commandId` (with `args`, when given); any failure is reported, never thrown. */
+export function runReported(commandId: string, args?: unknown): void {
 	try {
-		runCommand(commandId).catch((error: unknown) => reporter(commandId, error));
+		runCommand(commandId, args).catch((error: unknown) =>
+			reporter(commandId, error),
+		);
 	} catch (error) {
 		reporter(commandId, error);
 	}

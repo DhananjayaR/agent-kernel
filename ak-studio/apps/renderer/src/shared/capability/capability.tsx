@@ -12,7 +12,12 @@
 // capability scope, a small store the mounted CatalogProvider writes its catalog and version into, through
 // `capabilityGate`. With no project version (no project open, all of P1b) nothing is gated: there is no version to
 // compare, and a command that makes no sense without a project hides itself with `when`.
+//
+// The provider also takes P2's upgrade command builder and docs opener, which the version gate
+// (patterns/CapabilityGate.tsx) reads with `useCapabilityNotice` to say why and what to do. The command is shown to
+// copy, never run.
 import {
+	type Capability,
 	type CapabilityCatalog,
 	type CapabilityStatus,
 	EMPTY_CATALOG,
@@ -38,6 +43,10 @@ interface CatalogContextValue {
 	catalog: CapabilityCatalog;
 	/** The project's OAK version; undefined with no project, when no capability can be asked about. */
 	version: string | undefined;
+	/** The upgrade command for a lower bound (P2: from the project's own dependency line, keeping its extras). */
+	upgradeCommand?: ((since: string) => string) | undefined;
+	/** Opens a capability's docs page (P2: through the main process; the window opens no links itself). */
+	openDocs?: ((url: string) => void) | undefined;
 }
 
 /** No provider mounted: the app's catalog and no version. */
@@ -60,6 +69,14 @@ export interface CatalogProviderProps {
 	catalog: CapabilityCatalog;
 	/** The project's OAK version (P2: from KernelService). */
 	version: string;
+	/**
+	 * Builds the upgrade command for a lower bound ("0.12.0" to `uv add "agentkernel[openai]>=0.12"`). P2's
+	 * KernelService builds it from the project's own dependency line, keeping its extras. The version gate shows it
+	 * to copy and never runs it; without it, the gate says to upgrade with no command.
+	 */
+	upgradeCommand?: (since: string) => string;
+	/** Opens a capability's docs page. Without it, the version gate shows no docs link. */
+	openDocs?: (url: string) => void;
 	children?: ReactNode;
 }
 
@@ -67,9 +84,14 @@ export interface CatalogProviderProps {
 export function CatalogProvider({
 	catalog,
 	version,
+	upgradeCommand,
+	openDocs,
 	children,
 }: CatalogProviderProps) {
-	const value = useMemo(() => ({ catalog, version }), [catalog, version]);
+	const value = useMemo(
+		() => ({ catalog, version, upgradeCommand, openDocs }),
+		[catalog, version, upgradeCommand, openDocs],
+	);
 	useLayoutEffect(() => {
 		useCapabilityScope.setState(value, true);
 		return () => {
@@ -129,8 +151,43 @@ export function useCapability(id: string): CapabilityStatus {
 	});
 }
 
+/** What a version gate shows for a capability: its status, its catalog entry, and the project's version and tools. */
+export interface CapabilityNotice {
+	status: CapabilityStatus;
+	/** The catalog's entry (its title, `since`, `until`, `replacedBy`, `docs`); none only for an unknown id in a build. */
+	entry: Capability | undefined;
+	/** The title of the capability that replaces it, when the entry names one the catalog knows. */
+	replacement: string | undefined;
+	version: string | undefined;
+	upgradeCommand: string | undefined;
+	openDocs: (() => void) | undefined;
+}
+
+/** `useCapability` with what the version gate needs to say why (CapabilityGate). */
+export function useCapabilityNotice(id: string): CapabilityNotice {
+	const status = useCapability(id);
+	const { catalog, version, upgradeCommand, openDocs } =
+		useContext(CatalogContext);
+	const entry = catalog.get(id);
+	const docs = entry?.docs;
+	return {
+		status,
+		entry,
+		replacement:
+			entry?.replacedBy === undefined
+				? undefined
+				: (catalog.get(entry.replacedBy)?.title ?? entry.replacedBy),
+		version,
+		upgradeCommand:
+			status === "needs-upgrade" && entry && upgradeCommand
+				? upgradeCommand(entry.since)
+				: undefined,
+		openDocs: docs !== undefined && openDocs ? () => openDocs(docs) : undefined,
+	};
+}
+
 /** Whether something that needs a capability can run, and if not, why (the version gate's reason, in one line). */
-export type CapabilityGate =
+export type CapabilityGateResult =
 	| { readonly available: true }
 	| {
 			readonly available: false;
@@ -139,7 +196,7 @@ export type CapabilityGate =
 			readonly reason: string;
 	  };
 
-const AVAILABLE: CapabilityGate = Object.freeze({ available: true });
+const AVAILABLE: CapabilityGateResult = Object.freeze({ available: true });
 
 /**
  * The gate for capability `id` (none: available) in `scope` (default: the capability scope). With no project
@@ -149,7 +206,7 @@ const AVAILABLE: CapabilityGate = Object.freeze({ available: true });
 export function capabilityGate(
 	id: string | undefined,
 	scope: CatalogContextValue = useCapabilityScope.getState(),
-): CapabilityGate {
+): CapabilityGateResult {
 	if (id === undefined) return AVAILABLE;
 	const { catalog, version } = scope;
 	if (version === undefined && catalog.has(id)) return AVAILABLE;

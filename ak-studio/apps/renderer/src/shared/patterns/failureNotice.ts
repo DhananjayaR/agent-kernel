@@ -7,7 +7,8 @@
 //
 // What the toast says: a version-gated command (CommandUnavailableError) says the command is not available and the
 // version gate's reason ("Needs OAK 0.12.0"); any other failure says the error catalogue's title for its code (what
-// happened) and the error's own message (what to do), as presentError does. Commands are run with
+// happened) and the error's own message (what to do), as presentError does, with the error's next action (its app
+// command) as the toast's button when it has one. A toast with an action stays until dismissed. Commands are run with
 // shared/commands/runReported.ts, whose reporter the Shell binds to reportCommandFailure.
 import { CommandUnavailableError, findCommand } from "../commands/runCommand";
 import { failureOf, presentError } from "./presentError";
@@ -19,6 +20,8 @@ export interface FailureNotice {
 	title: string;
 	/** What to do next. */
 	description?: string;
+	/** The error's next action (its app command), when it has one: the toast's button. */
+	action?: { label: string; onAction: () => void };
 }
 
 type Notify = (notice: FailureNotice) => void;
@@ -55,8 +58,12 @@ export function commandFailureNotice(
 			description: error.message,
 		};
 	}
-	const { title, description } = presentError(failureOf(error));
-	return description === undefined ? { title } : { title, description };
+	const { title, description, action } = presentError(failureOf(error));
+	return {
+		title,
+		...(typeof description === "string" ? { description } : {}),
+		...(action ? { action } : {}),
+	};
 }
 
 /** Reports a command that failed or was refused, run from the palette or a shortcut. */

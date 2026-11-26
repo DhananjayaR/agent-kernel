@@ -191,18 +191,22 @@ describe("Shell command palette", () => {
 		);
 	});
 
-	it("shows a command that fails after the palette closed in a toast: what happened, then what to do", async () => {
+	it("shows a command that fails after the palette closed in a toast: what happened, what to do, and its next action", async () => {
 		vi.spyOn(console, "error").mockImplementation(() => {});
 		setTransport(
 			createMockTransport({
 				handlers: {
 					"about.demoJob": () => {
-						throw new StudioFailure(
-							studioError(
+						throw new StudioFailure({
+							...studioError(
 								"bridge.unavailable",
 								"Restart the app and try again.",
 							),
-						);
+							action: {
+								label: "Show or hide the panel",
+								commandId: "shell.toggleBottomPanel",
+							},
+						});
 					},
 				},
 			}),
@@ -226,6 +230,11 @@ describe("Shell command palette", () => {
 			await screen.findByText(errorStrings.titles.unavailable),
 		).toBeTruthy();
 		expect(screen.getByText("Restart the app and try again.")).toBeTruthy();
+		// The error's next action is the toast's button, and runs its app command (the panel, open, now hides).
+		await user.click(
+			screen.getByRole("button", { name: "Show or hide the panel" }),
+		);
+		expect(await toggle("Show the panel")).toBeTruthy();
 	});
 
 	it("leaves Ctrl+J working while a popover (not a modal) is open", async () => {
