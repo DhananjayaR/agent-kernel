@@ -17,6 +17,13 @@ describe("keys", () => {
 		expect(config.detail("p1")).toEqual(["config", "p1"]);
 	});
 
+	it("builds an app-level key per query, under the domain's prefix and apart from the others", () => {
+		const about = keys("about");
+		expect(about.app("info")).toEqual(["about", "info"]);
+		expect(about.app("note")).not.toEqual(about.app("info"));
+		expect(about.app("info").slice(0, 1)).toEqual(about.all);
+	});
+
 	it("answers a new array each time, so a caller cannot change another's key", () => {
 		const config = keys("config");
 		expect(config.project("p1")).not.toBe(config.project("p1"));

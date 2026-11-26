@@ -121,11 +121,9 @@ describe("WindowService", () => {
 				}),
 			)
 			.register(new SessionService({ events, streams, scopes, masker }));
-		expect(registry.missingHandlers()).toEqual([
-			"app.info",
-			"app.setLayout",
-			"app.setTheme",
-			"app.setUnsaved",
-		]);
+		// The app's own requests are AppService's; the features' are their services'.
+		expect(
+			registry.missingHandlers().filter((name) => /^(app|window)\./.test(name)),
+		).toEqual(["app.info", "app.setLayout", "app.setTheme", "app.setUnsaved"]);
 	});
 });

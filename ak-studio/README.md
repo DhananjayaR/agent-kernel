@@ -30,7 +30,11 @@ pnpm install --frozen-lockfile   # also fetches the Electron binary (apps/deskto
 pnpm lint        # Biome (warnings fail) and its self-test, check-palette, check-classes, check-stories (each with its
                  # self-test), compile-schemas --check, depcruise and its self-test
 pnpm typecheck   # tsc -b over all members
-pnpm test        # every member's unit tests (Vitest), then check-palette's own test
+pnpm test        # every member's unit tests (Vitest), the tools' own tests and the generator test
+pnpm new:feature <name>                       # a feature folder in the renderer, listed in app/features.ts
+pnpm new:operation <feature> <name> --shape query|command|job [--desktop]   # an operation, end to end
+pnpm new:component <name> [--group <group>]   # a packages/ui component, its stories and its export
+pnpm test:generators      # run the three generators in a temporary copy and check the copy (part of pnpm test)
 pnpm check-palette        # no default-palette class, arbitrary value or colour literal in apps/renderer, packages/ui
 pnpm check-classes        # no arbitrary value (p-[13px], gap-(--x)) or inline colour style in their .ts/.tsx
 pnpm check-stories        # every component and screen has a stories file with its required stories
@@ -100,6 +104,49 @@ included) imports neither `apps/*` nor `@ak-studio/contract`; `packages/runtime`
 TypeScript 7 (without it a run is silently green: "0 modules"), so `depcruise:selftest` checks a deliberately
 violating fixture in `tools/depcruise-selftest/fixture/` (ignored by Biome and the tsconfigs) and fails if
 fewer than 2 modules are cruised or any rule goes unreported.
+
+**Generators** (`tools/generators/`, plain Node scripts). Every feature, operation and shared component starts
+from one, so the skeleton is never hand-written and passes every check as generated. Names are kebab-case
+(`release-notes`; no path, no `..`, at most 40 characters). A generator plans every file before writing any: it
+refuses to overwrite anything, and a refused run writes nothing. It then runs Biome (`check --write`) on what it
+wrote, which sorts the imports and exports it added.
+
+- `pnpm new:feature release-notes` creates `apps/renderer/src/features/release-notes/`: `manifest.ts` (id, a route
+  at `/release-notes`, no commands, no capabilities; no tab: add one by hand with its `order`) and
+  `manifest.test.tsx`; `strings.ts` (the title, "Release notes"); `api/keys.ts` (`keys("release-notes")`);
+  `model/store.ts` and its test (the feature store: UI state, a selection); an empty `components/`; and
+  `screens/ReleaseNotesScreen.tsx` with its stories (no visual baseline yet: run `pnpm test:visual` and commit
+  the screenshots). It adds the manifest to `app/features.ts`. Refused: a name
+  taken by a feature, `shell`, the app's own operation domains (`app`, `job(s)`, `session(s)`, `window`, `stream(s)`,
+  `events`) and any name a contract or runtime module already has.
+- `pnpm new:operation release-notes save-summary --shape command` adds `release-notes.saveSummary`:
+  - the declaration `releaseNotesSaveSummary` (input `{}`, output or job result `{}`; a job is `cancellable` and
+    does not survive quit) in `packages/contract/src/release-notes.ts`, created and exported from the contract's
+    index on the feature's first operation, and its entry in the `operations` map;
+  - its handler, a method of `ReleaseNotesService` in `packages/runtime/src/release-notes/`, with a test through
+    a real `ServiceRegistry`. A job's method is its runner, given to `JobService` with `jobs.define`. The service
+    is created on the first operation and listed in `packages/runtime/src/features.ts`, which `registerServices`
+    and the mock transport both register, so the browser serves what the app serves;
+  - its hook, `useReleaseNotesSaveSummary`, in the feature's `api/`, with a test against the mock transport: a
+    command's uses `useStudioMutation`, a job's `useStartJob`, and a query's `useStudioQuery` with its own app-level
+    key (`releaseNotesKeys.app("readSummary")`, `["release-notes", "readSummary"]`).
+  - `--desktop`, for a query or command whose handler needs Node or Electron, puts the handler in
+    `apps/desktop/src/main/services/ReleaseNotesService.ts` instead, registered in `registerServices.ts`, and the
+    mock answers it from a fixture in `apps/renderer/src/shared/bridge/desktopFixtures.ts`. A job is never
+    desktop-only: its runner reaches Node through the runtime's ports.
+- `pnpm new:component status-line` adds `StatusLine` and `StatusLineProps` (`packages/ui/src/components/status-line.tsx`)
+  with its stories (`Display/Status line`; `--group` picks Controls, Display, Overlays, Structure or Patterns) and
+  exports both from `packages/ui/src/index.ts`. A new story has no visual baseline: run `pnpm test:visual` and
+  commit the screenshots.
+
+Session kinds and app commands are not generated: a session kind is declared with `defineSessionKind` in the
+feature's contract file and added to `sessionKinds`, and an app command with `defineCommand` in the manifest.
+
+`pnpm test:generators` copies the workspace into a temporary folder (the files git sees, with `node_modules`
+linked so `@ak-studio/*` resolves inside the copy), checks the refusals leave the copy unchanged, runs all three
+generators (a feature, a query, a command, a job, a desktop-only query and a component), then runs Biome,
+depcruise, check-stories, check-classes, `tsc -b` and the contract, runtime, desktop and renderer tests in the
+copy, and deletes it. About 11 s.
 
 **Design system** (values decided at the P1a design gate, 25 November 2026). `packages/ui/src/theme.css` is the
 Tailwind 4 entry: the default palette is removed (`--color-*: initial`) and only the Studio's colour tokens exist,

@@ -1,9 +1,10 @@
 // The mock Transport, for the browser, tests and Storybook. It runs a real ServiceRegistry from
 // @ak-studio/runtime (pre-flight ruling 9), the same one the main process serves, so the renderer behaves the same
 // against it as against the app: the input parsed, the output and stream events parsed and stripped, exceptions
-// turned into StudioErrors, errors masked. Behind it: fixture handlers for `app.*` and `window.*`, and the
-// runtime's EventBus, StreamHub, JobService and SessionService over an in-memory JobRecordStore, sharing the
-// registry's masker.
+// turned into StudioErrors, errors masked. Behind it: fixture handlers for `app.*` and `window.*` and for the
+// operations of desktop-only feature services (desktopFixtures.ts), the runtime's EventBus, StreamHub,
+// JobService and SessionService over an in-memory JobRecordStore, sharing the registry's masker, and the
+// runtime's feature services (registerFeatureServices), as the app serves them.
 import {
 	type Contract,
 	contract,
@@ -34,11 +35,13 @@ import {
 	JobService,
 	type Log,
 	ProjectScopes,
+	registerFeatureServices,
 	type SecretMasker,
 	ServiceRegistry,
 	SessionService,
 	StreamHub,
 } from "@ak-studio/runtime";
+import { desktopFixtureHandlers } from "./desktopFixtures";
 import { logStreamError, type StreamErrorHandler } from "./ipcTransport";
 
 export type MockHandlers = {
@@ -213,6 +216,12 @@ export function createMockBackend(
 	for (const service of [events, streams, jobs, sessions]) {
 		service.register(collected as never);
 	}
+	registerFeatureServices(collected, {
+		jobs,
+		sessions,
+		events,
+		scopes,
+	});
 	const mockWindow = createMockWindow();
 	const requests: Record<string, AnyRequestHandler> = {
 		...Object.fromEntries(collected.requests),
@@ -221,6 +230,7 @@ export function createMockBackend(
 			DEFAULT_SHELL_LAYOUT,
 			mockWindow,
 		) as Record<string, AnyRequestHandler>),
+		...(desktopFixtureHandlers as Record<string, AnyRequestHandler>),
 		...(options.handlers as Record<string, AnyRequestHandler> | undefined),
 	};
 	const streamHandlers: Record<string, AnyStreamHandler> = {

@@ -10,7 +10,7 @@
 	"scripts": {
 		"dev": "pnpm --filter @ak-studio/desktop dev",
 		"build": "pnpm check-palette && pnpm compile-schemas:check && pnpm --filter @ak-studio/desktop build",
-		"test": "pnpm -r --if-present test && pnpm check-palette:test && pnpm compile-schemas:test && pnpm fixture-tree:test",
+		"test": "pnpm -r --if-present test && pnpm check-palette:test && pnpm compile-schemas:test && pnpm fixture-tree:test && pnpm test:generators",
 		"lint": "biome check --error-on-warnings . && pnpm biome:selftest && pnpm check-palette && pnpm check-classes && pnpm check-classes:test && pnpm check-stories && pnpm check-stories:test && pnpm compile-schemas:check && pnpm depcruise && pnpm depcruise:selftest",
 		"typecheck": "tsc -b",
 		"storybook": "pnpm --filter @ak-studio/ui storybook",
@@ -37,6 +37,10 @@
 		"compile-schemas:check": "node tools/compile-schemas.mjs --check",
 		"compile-schemas:test": "vitest run tools/compile-schemas.test.mjs",
 		"make-app-icon": "node tools/make-app-icon.mjs",
+		"new:feature": "node tools/generators/new-feature.mjs",
+		"new:operation": "node tools/generators/new-operation.mjs",
+		"new:component": "node tools/generators/new-component.mjs",
+		"test:generators": "vitest run tools/generators/generators.test.mjs",
 		"third-party-notices": "node tools/third-party-notices.mjs"
 	},
 	"devDependencies": {

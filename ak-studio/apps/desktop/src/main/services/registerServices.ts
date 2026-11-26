@@ -1,11 +1,14 @@
 // Every service the app serves, registered against one ServiceRegistry. index.ts builds the app's registry with
 // this, and the contract test (registerServices.test.ts) uses the same function, so a service dropped here
 // fails the test and not only the app's start-up. No Electron import: index.ts passes Electron's values in.
+// Feature services join here: the runtime's through registerFeatureServices (packages/runtime/src/features.ts),
+// a desktop-only one (it needs Node) on its own line, added by `pnpm new:operation --desktop`.
 import {
 	EventBus,
 	JobService,
 	type Log,
 	ProjectScopes,
+	registerFeatureServices,
 	type SecretMasker,
 	type ServiceRegistry,
 	SessionService,
@@ -69,5 +72,8 @@ export function registerServices(
 	registry.register(jobs);
 	const sessions = new SessionService({ events, streams, scopes, masker, log });
 	registry.register(sessions);
+	// The features' services: the runtime's (browser-safe, also served by the mock transport), then the
+	// desktop-only ones (`pnpm new:operation --desktop` adds each below this line).
+	registerFeatureServices(registry, { jobs, sessions, events, scopes });
 	return { app, window, masker, events, streams, scopes, jobs, sessions };
 }

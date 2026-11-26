@@ -7,7 +7,12 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { DEFAULT_SHELL_LAYOUT, ERROR_CODES } from "@ak-studio/contract";
+import {
+	DEFAULT_SHELL_LAYOUT,
+	ERROR_CODES,
+	type OperationName,
+	operations,
+} from "@ak-studio/contract";
 import {
 	EventBus,
 	InMemoryJobRecordStore,
@@ -35,9 +40,14 @@ beforeEach(() => {
 });
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
+/** For the operations no service here serves (the features'): AppService is what is under test. */
+function notUnderTest(): never {
+	throw new Error("not served in this test");
+}
+
 function serve(service: AppService) {
-	// The window, event, stream, job and session services serve the rest, so the registry (which needs every
-	// handler) can start.
+	// The window, event, stream, job and session services serve the rest, and the features' operations get a
+	// handler that is never called, so the registry (which needs every handler) can start.
 	const masker = new SecretMasker();
 	const events = new EventBus({ masker });
 	const streams = new StreamHub({ masker });
@@ -57,6 +67,9 @@ function serve(service: AppService) {
 			}),
 		)
 		.register(new SessionService({ events, streams, scopes, masker }));
+	for (const name of registry.missingHandlers())
+		if (Object.hasOwn(operations, name))
+			registry.handle(name as OperationName, notUnderTest);
 	registry.start();
 	return registry;
 }
