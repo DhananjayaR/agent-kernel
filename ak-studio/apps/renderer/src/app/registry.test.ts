@@ -1,14 +1,20 @@
 // The app registry, built from the feature manifests (app/features.ts), with no DOM: the shell's tabs in order with
 // their labels and paths, the manifest checks (every capability a manifest or command names is in the kernel
-// capability catalog; every command id is unique; every `runCommand("…")` id in the renderer's source is an app
-// command, found by a source scan), and the shortcut clash test, platform by platform.
-import { EMPTY_CATALOG } from "@ak-studio/kernel-catalog";
+// capability catalog the app uses; every command id is unique and in its feature's namespace; every
+// `runCommand("…")` id in the renderer's source is an app command, found by a source scan), and the shortcut clash
+// test, platform by platform, with Mod+K and the native menu's accelerators kept.
+import type { CapabilityCatalog } from "@ak-studio/kernel-catalog";
 import { describe, expect, it } from "vitest";
+import { APP_CATALOG } from "../shared/capability/capability";
 import { defineCommand } from "../shared/commands/command";
-import { defineFeature } from "../shared/commands/feature";
+import {
+	defineFeature,
+	type FeatureManifest,
+} from "../shared/commands/feature";
 import { getCommands } from "../shared/commands/runCommand";
 import {
 	findShortcutClashes,
+	NATIVE_MENU_SHORTCUTS,
 	RESERVED_SHORTCUTS,
 	SHORTCUT_PLATFORMS,
 } from "../shared/commands/shortcuts";
@@ -16,6 +22,21 @@ import { features } from "./features";
 import { buildRegistry, registry } from "./registry";
 
 const Empty = () => null;
+
+/** The capabilities `manifests` (or their commands) name that `catalog` does not have. */
+function unknownCapabilities(
+	manifests: readonly FeatureManifest[],
+	catalog: CapabilityCatalog,
+): string[] {
+	return manifests
+		.flatMap((feature) => [
+			...feature.capabilities,
+			...feature.commands.flatMap((command) =>
+				command.capability === undefined ? [] : [command.capability],
+			),
+		])
+		.filter((id) => !catalog.has(id));
+}
 
 /** A literal id passed to runCommand that is not an app command. */
 interface UnknownCommandId {
@@ -83,15 +104,33 @@ describe("the registry's tabs", () => {
 });
 
 describe("the manifests", () => {
-	it("name only capabilities in the kernel capability catalog (empty in P1b, so none)", () => {
-		const named = features.flatMap((feature) => [
-			...feature.capabilities,
-			...feature.commands.flatMap((command) =>
-				command.capability === undefined ? [] : [command.capability],
-			),
-		]);
-		expect(named.filter((id) => !EMPTY_CATALOG.has(id))).toEqual([]);
+	it("name only capabilities in the catalog the app uses (empty in P1b, so none)", () => {
+		expect(unknownCapabilities(features, APP_CATALOG)).toEqual([]);
 		expect(registry.capabilities).toEqual([]);
+	});
+
+	it("would fail on a capability the catalog lacks (the check can fail)", () => {
+		const planted = defineFeature({
+			id: "planted",
+			commands: [
+				defineCommand({
+					id: "planted.run",
+					title: "Run",
+					capability: "made.up.command",
+					run: () => {},
+				}),
+			],
+			capabilities: ["made.up.feature"],
+		});
+		expect(unknownCapabilities([planted], APP_CATALOG)).toEqual([
+			"made.up.feature",
+			"made.up.command",
+		]);
+		const knows: CapabilityCatalog = {
+			has: (id) => id.startsWith("made.up."),
+			status: () => "available",
+		};
+		expect(unknownCapabilities([planted], knows)).toEqual([]);
 	});
 
 	it("have unique feature ids and unique command ids", () => {
@@ -101,6 +140,11 @@ describe("the manifests", () => {
 		expect(new Set(commandIds).size).toBe(commandIds.length);
 	});
 
+	it("look a command up by id, and throw for one no manifest declares", () => {
+		expect(registry.command("shell.toggleBottomPanel").shortcut).toBe("Mod+J");
+		expect(() => registry.command("shell.nope")).toThrow(/shell\.nope/);
+	});
+
 	it("give runCommand the registry's commands", () => {
 		expect(getCommands()).toEqual(registry.commands);
 		expect(registry.commands.map((command) => command.id)).toContain(
@@ -108,16 +152,30 @@ describe("the manifests", () => {
 		);
 	});
 
-	it("are refused by buildRegistry when two commands share an id, two features share a path, or a tab has no route", () => {
+	it("are refused by buildRegistry when two commands share an id, a command is outside its feature's namespace, two features share a path, or a tab has no route", () => {
 		const command = defineCommand({ id: "a.one", title: "One", run: () => {} });
 		const feature = (id: string, extra: object = {}) =>
 			defineFeature({ id, commands: [], capabilities: [], ...extra });
 		expect(() =>
+			buildRegistry([feature("a", { commands: [command, command] })]),
+		).toThrow(/a\.one is declared twice/);
+		// Feature b may not declare a.one, nor ab.one (the prefix is the id and a dot).
+		expect(() =>
+			buildRegistry([feature("b", { commands: [command] })]),
+		).toThrow(/a\.one is declared by feature b/);
+		const ab = defineCommand({ id: "ab.one", title: "One", run: () => {} });
+		expect(() => buildRegistry([feature("a", { commands: [ab] })])).toThrow(
+			/ab\.one is declared by feature a/,
+		);
+		expect(
 			buildRegistry([
-				feature("a", { commands: [command] }),
-				feature("b", { commands: [command] }),
-			]),
-		).toThrow(/a\.one/);
+				feature("ab", {
+					tab: { label: "AB", path: "/ab", order: 1 },
+					routes: [{ path: "/ab", component: Empty }],
+					commands: [ab],
+				}),
+			]).command("ab.one"),
+		).toBe(ab);
 		expect(() => buildRegistry([feature("a"), feature("a")])).toThrow(
 			/feature a/,
 		);
@@ -168,13 +226,15 @@ describe("runCommand ids in the source", () => {
 });
 
 describe("shortcuts", () => {
-	it("never clash, on any platform, and leave Mod+K to the command palette", () => {
+	it("never clash, on any platform, and leave Mod+K to the command palette and the native menu its accelerators", () => {
 		for (const platform of SHORTCUT_PLATFORMS)
 			expect(
 				findShortcutClashes(registry.commands, platform),
 				platform,
 			).toEqual([]);
 		expect(Object.keys(RESERVED_SHORTCUTS)).toContain("Mod+K");
+		expect(NATIVE_MENU_SHORTCUTS.other).toContain("Control+R");
+		expect(NATIVE_MENU_SHORTCUTS.mac).toContain("Meta+R");
 	});
 
 	it("give Mod+J to shell.toggleBottomPanel: Cmd+J on macOS, Ctrl+J elsewhere, in the registry's shortcut map", () => {

@@ -13,6 +13,13 @@ import {
 } from "@ak-studio/kernel-catalog";
 import { createContext, type ReactNode, useContext, useMemo } from "react";
 
+/**
+ * The capability catalog the app uses: empty until P2 adds its entries (pre-flight ruling 10). The one place it is
+ * chosen: the provider's default below, and what the manifest test (app/registry.test.ts) checks every capability
+ * a manifest names against.
+ */
+export const APP_CATALOG: CapabilityCatalog = EMPTY_CATALOG;
+
 interface CatalogContextValue {
 	catalog: CapabilityCatalog;
 	/** The project's OAK version; undefined with no project, when no capability can be asked about. */
@@ -20,7 +27,7 @@ interface CatalogContextValue {
 }
 
 const CatalogContext = createContext<CatalogContextValue>({
-	catalog: EMPTY_CATALOG,
+	catalog: APP_CATALOG,
 	version: undefined,
 });
 

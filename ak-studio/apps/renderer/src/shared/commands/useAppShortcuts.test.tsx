@@ -4,6 +4,7 @@
 // false.
 import { Modal } from "@ak-studio/ui";
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type AppCommand, defineCommand } from "./command";
 import { setCommands } from "./runCommand";
@@ -187,6 +188,37 @@ describe("useAppShortcuts", () => {
 			fireEvent.keyDown(document.body, { key: "j", ctrlKey: true });
 		});
 		expect(calls).toBe(2);
+	});
+
+	it("runs a command once per press under StrictMode, which mounts the listener twice", () => {
+		const add = vi.spyOn(document, "addEventListener");
+		const remove = vi.spyOn(document, "removeEventListener");
+		const run = vi.fn();
+		const commands = [
+			defineCommand({
+				id: "shell.toggleBottomPanel",
+				title: "Show or hide the panel",
+				shortcut: "Mod+J",
+				run,
+			}),
+		];
+		setCommands(commands);
+		const keydowns = (spy: typeof add) =>
+			spy.mock.calls.filter(([type]) => type === "keydown").length;
+		const view = render(
+			<StrictMode>
+				<Harness commands={commands} platform="other" />
+			</StrictMode>,
+		);
+		// The double mount happened: added, removed, added again.
+		expect(keydowns(add)).toBe(2);
+		expect(keydowns(remove)).toBe(1);
+		fireEvent.keyDown(document.body, { key: "j", ctrlKey: true });
+		expect(run).toHaveBeenCalledTimes(1);
+		view.unmount();
+		expect(keydowns(remove)).toBe(2);
+		fireEvent.keyDown(document.body, { key: "j", ctrlKey: true });
+		expect(run).toHaveBeenCalledTimes(1);
 	});
 
 	it("adds one keydown listener for every command, and removes it on unmount", () => {

@@ -14,6 +14,58 @@ export const SHORTCUT_PLATFORMS: readonly ShortcutPlatform[] = ["mac", "other"];
 export const RESERVED_SHORTCUTS: Readonly<Record<string, string>> =
 	Object.freeze({ "Mod+K": "shell.openCommandPalette" });
 
+/** The owner the clash test names for the native menu's accelerators: not a command id (those have a dot). */
+export const NATIVE_MENU = "(native menu)";
+
+/**
+ * The accelerators of the static native application menu (apps/desktop/src/main/menu.ts, P1b-plan ruling 12), per
+ * platform, in the resolved aria-keyshortcuts form (Control, Alt, Shift, Meta, key), because some cannot be written
+ * as a manifest shortcut (Ctrl+Cmd+F, F11). Electron's role defaults: reload Mod+R, force reload Mod+Shift+R,
+ * developer tools (development builds; reserved always) Alt+Cmd+I or Ctrl+Shift+I, zoom Mod+0 Mod+= Mod+-, full
+ * screen Ctrl+Cmd+F or F11, the Edit menu's undo Mod+Z, redo Shift+Cmd+Z (Ctrl+Y and Ctrl+Shift+Z elsewhere), cut,
+ * copy, paste Mod+X Mod+C Mod+V, paste and match style Shift+Cmd+V (macOS), select all Mod+A, and on macOS the app
+ * menu's hide Cmd+H, hide others Alt+Cmd+H and quit Cmd+Q. A menu change must update this list.
+ */
+export const NATIVE_MENU_SHORTCUTS: Readonly<
+	Record<ShortcutPlatform, readonly string[]>
+> = Object.freeze({
+	mac: [
+		"Meta+R",
+		"Shift+Meta+R",
+		"Alt+Meta+I",
+		"Meta+0",
+		"Meta+=",
+		"Meta+-",
+		"Control+Meta+F",
+		"Meta+Z",
+		"Shift+Meta+Z",
+		"Meta+X",
+		"Meta+C",
+		"Meta+V",
+		"Shift+Meta+V",
+		"Meta+A",
+		"Meta+H",
+		"Alt+Meta+H",
+		"Meta+Q",
+	],
+	other: [
+		"Control+R",
+		"Control+Shift+R",
+		"Control+Shift+I",
+		"Control+0",
+		"Control+=",
+		"Control+-",
+		"F11",
+		"Control+Z",
+		"Control+Y",
+		"Control+Shift+Z",
+		"Control+X",
+		"Control+C",
+		"Control+V",
+		"Control+A",
+	],
+});
+
 export interface ParsedShortcut {
 	mod: boolean;
 	ctrl: boolean;
@@ -86,6 +138,10 @@ export function parseShortcut(shortcut: string): ParsedShortcut {
 	// never be named back to this shortcut.
 	if (parsed.shift && PUNCTUATION.has(parsed.key))
 		fail("Shift with a punctuation key cannot be matched on every layout");
+	// Option does the same on macOS (Option+/ types ÷), and the physical-key fallback names letters and digits
+	// only, so the press could never be named back either.
+	if (parsed.alt && PUNCTUATION.has(parsed.key))
+		fail("Alt with a punctuation key cannot be matched on macOS");
 	return parsed;
 }
 
@@ -214,25 +270,48 @@ export interface ShortcutClash {
 
 /**
  * The clashes among `commands`' shortcuts on `platform`, including any command taking a reserved shortcut that is
- * not its own. Empty means none: the registry test runs this for every platform.
+ * not its own or one of the native menu's accelerators. Empty means none: the registry test runs this for every
+ * platform.
  */
 export function findShortcutClashes(
 	commands: readonly { id: string; shortcut?: string }[],
 	platform: ShortcutPlatform,
 	reserved: Readonly<Record<string, string>> = RESERVED_SHORTCUTS,
+	nativeMenu: Readonly<
+		Record<ShortcutPlatform, readonly string[]>
+	> = NATIVE_MENU_SHORTCUTS,
 ): ShortcutClash[] {
 	const byShortcut = new Map<string, string[]>();
-	const add = (shortcut: string, id: string) => {
-		const resolved = resolveShortcut(shortcut, platform);
+	const addResolved = (resolved: string, id: string) => {
 		const ids = byShortcut.get(resolved) ?? [];
 		if (!ids.includes(id)) ids.push(id);
 		byShortcut.set(resolved, ids);
 	};
+	for (const resolved of nativeMenu[platform])
+		addResolved(resolved, NATIVE_MENU);
 	for (const [shortcut, owner] of Object.entries(reserved))
-		add(shortcut, owner);
+		addResolved(resolveShortcut(shortcut, platform), owner);
 	for (const command of commands)
-		if (command.shortcut !== undefined) add(command.shortcut, command.id);
+		if (command.shortcut !== undefined)
+			addResolved(resolveShortcut(command.shortcut, platform), command.id);
 	return [...byShortcut.entries()]
 		.filter(([, ids]) => ids.length > 1)
 		.map(([shortcut, ids]) => ({ shortcut, ids }));
+}
+
+/**
+ * Each resolved shortcut on `platform` and its command (the first, if two clash: the clash test fails that). Pure,
+ * so the registry builds it without the listener's module (useAppShortcuts.ts).
+ */
+export function buildShortcutMap<C extends { shortcut?: string }>(
+	commands: readonly C[],
+	platform: ShortcutPlatform,
+): ReadonlyMap<string, C> {
+	const map = new Map<string, C>();
+	for (const command of commands) {
+		if (command.shortcut === undefined) continue;
+		const resolved = resolveShortcut(command.shortcut, platform);
+		if (!map.has(resolved)) map.set(resolved, command);
+	}
+	return map;
 }

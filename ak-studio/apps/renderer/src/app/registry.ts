@@ -2,12 +2,15 @@
 // The tabs (by their `order`), the routes, the command list (handed to runCommand, shared/commands/runCommand.ts,
 // so any feature can run any command without importing it), the capabilities the manifests name, and the shortcut
 // map per platform. The shell and the router import this module, never a feature. A manifest list it cannot accept
-// (two features with one id, two commands with one id, two routes at one path) throws as the app loads.
+// (two features with one id, two commands with one id, a command outside its feature's namespace, two routes at one
+// path) throws as the app loads.
 import type { AppCommand } from "../shared/commands/command";
 import type { FeatureManifest, FeatureRoute } from "../shared/commands/feature";
 import { setCommands } from "../shared/commands/runCommand";
-import type { ShortcutPlatform } from "../shared/commands/shortcuts";
-import { buildShortcutMap } from "../shared/commands/useAppShortcuts";
+import {
+	buildShortcutMap,
+	type ShortcutPlatform,
+} from "../shared/commands/shortcuts";
 import { features } from "./features";
 
 /** A tab in the shell's top bar: its feature's id, label and route path. */
@@ -31,13 +34,19 @@ export interface AppRegistry {
 	routes: readonly AppRoute[];
 	/** Every app command, in manifest order. */
 	commands: readonly AppCommand[];
+	/** The command with `id`; throws if no manifest declares it (a renamed id fails at once, not silently). */
+	command(id: string): AppCommand;
 	/** Every capability a manifest or one of its commands names, once each. */
 	capabilities: readonly string[];
 	/** Each resolved shortcut on `platform` ("Control+J") and its command: what the app's keydown listener looks up. */
 	shortcutMap(platform: ShortcutPlatform): ReadonlyMap<string, AppCommand>;
 }
 
-/** Builds the registry from `manifests`; throws for repeated feature ids, command ids or route paths. */
+/**
+ * Builds the registry from `manifests`; throws for repeated feature ids, command ids or route paths, and for a
+ * command whose id does not start with its feature's id and a dot (the palette's prefix and namespace ownership
+ * rest on it).
+ */
 export function buildRegistry(
 	manifests: readonly FeatureManifest[],
 ): AppRegistry {
@@ -63,6 +72,10 @@ export function buildRegistry(
 		}
 		if (manifest.tab) tabs.push({ id: manifest.id, ...manifest.tab });
 		for (const command of manifest.commands) {
+			if (!command.id.startsWith(`${manifest.id}.`))
+				throw new Error(
+					`command ${command.id} is declared by feature ${manifest.id}: its id must start with "${manifest.id}."`,
+				);
 			if (commandIds.has(command.id))
 				throw new Error(`command ${command.id} is declared twice`);
 			commandIds.add(command.id);
@@ -81,6 +94,11 @@ export function buildRegistry(
 		defaultTab,
 		routes,
 		commands,
+		command: (id) => {
+			const found = commands.find((command) => command.id === id);
+			if (!found) throw new Error(`no feature declares command ${id}`);
+			return found;
+		},
 		capabilities: [...capabilities],
 		shortcutMap: (platform) => buildShortcutMap(commands, platform),
 	};

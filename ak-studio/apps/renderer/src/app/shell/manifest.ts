@@ -7,8 +7,8 @@ import { defineFeature } from "../../shared/commands/feature";
 import { shellActions, shellActionsBound } from "./shellActions";
 import { shellStrings } from "./strings";
 
-/** The bottom panel's show/hide command id, which the Shell reads its shortcut from. */
-export const TOGGLE_BOTTOM_PANEL = "shell.toggleBottomPanel";
+/** The bottom panel's show/hide command id (the Shell reads its shortcut through the registry). */
+const TOGGLE_BOTTOM_PANEL = "shell.toggleBottomPanel";
 
 export const shellFeature = defineFeature({
 	id: "shell",

@@ -4,10 +4,13 @@
 import { describe, expect, it } from "vitest";
 import { defineCommand } from "./command";
 import {
+	buildShortcutMap,
 	describeShortcut,
 	eventShortcut,
 	findShortcutClashes,
 	formatShortcut,
+	NATIVE_MENU,
+	NATIVE_MENU_SHORTCUTS,
 	parseShortcut,
 	RESERVED_SHORTCUTS,
 	resolveShortcut,
@@ -54,10 +57,13 @@ describe("parseShortcut", () => {
 		expect(parseShortcut("F6")).toMatchObject({ mod: false, key: "F6" });
 	});
 
-	it("refuses a shortcut with no key, two keys, an unknown or repeated modifier, both Mod and Ctrl, or Shift with punctuation", () => {
+	it("refuses a shortcut with no key, two keys, an unknown or repeated modifier, both Mod and Ctrl, or Shift or Alt with punctuation", () => {
 		for (const bad of [
 			"Mod+Shift+/",
 			"Shift+.",
+			"Mod+Alt+/",
+			"Alt+[",
+			"Ctrl+Alt+;",
 			"",
 			"Mod",
 			"Mod+",
@@ -68,6 +74,13 @@ describe("parseShortcut", () => {
 			"Mod+Enterr",
 		])
 			expect(() => parseShortcut(bad), bad).toThrow();
+	});
+});
+
+describe("parseShortcut and Alt", () => {
+	it("accepts Alt with a letter, a digit or a named key, which macOS's Option can still be named back to", () => {
+		for (const good of ["Mod+Alt+J", "Alt+1", "Alt+F6", "Mod+Alt+ArrowUp"])
+			expect(() => parseShortcut(good), good).not.toThrow();
 	});
 });
 
@@ -192,6 +205,60 @@ describe("findShortcutClashes", () => {
 		}
 	});
 
+	it("keeps the native menu's accelerators: a command taking one clashes, on the platform where the menu has it", () => {
+		for (const [shortcut, platforms] of [
+			["Mod+R", ["mac", "other"]], // reload
+			["Mod+Shift+R", ["mac", "other"]], // force reload
+			["Mod+=", ["mac", "other"]], // zoom in
+			["Mod+-", ["mac", "other"]], // zoom out
+			["Mod+0", ["mac", "other"]], // actual size
+			["Mod+C", ["mac", "other"]], // copy
+			["Mod+V", ["mac", "other"]], // paste
+			["Mod+X", ["mac", "other"]], // cut
+			["Mod+A", ["mac", "other"]], // select all
+			["Mod+Z", ["mac", "other"]], // undo
+			["Mod+Shift+Z", ["mac", "other"]], // redo
+			["Mod+Alt+I", ["mac"]], // developer tools on macOS (Alt+Cmd+I)
+			["Mod+Shift+I", ["other"]], // developer tools elsewhere (Ctrl+Shift+I)
+			["Ctrl+Y", ["other"]], // redo on Windows
+			["F11", ["other"]], // full screen
+			["Mod+Q", ["mac"]], // quit
+			["Mod+H", ["mac"]], // hide
+		] as const)
+			for (const platform of SHORTCUT_PLATFORMS) {
+				const clashes = findShortcutClashes(
+					[command("a.one", shortcut)],
+					platform,
+				);
+				expect(clashes, `${shortcut} on ${platform}`).toEqual(
+					(platforms as readonly string[]).includes(platform)
+						? [
+								{
+									shortcut: resolveShortcut(shortcut, platform),
+									ids: [NATIVE_MENU, "a.one"],
+								},
+							]
+						: [],
+				);
+			}
+	});
+
+	it("lists each native accelerator once, in the resolved form a key press is named in", () => {
+		for (const platform of SHORTCUT_PLATFORMS) {
+			const list = NATIVE_MENU_SHORTCUTS[platform];
+			expect(new Set(list).size, platform).toBe(list.length);
+			for (const resolved of list)
+				expect(
+					/^(?:Control\+)?(?:Alt\+)?(?:Shift\+)?(?:Meta\+)?[^+]+$/.test(
+						resolved,
+					),
+					resolved,
+				).toBe(true);
+		}
+		// "Shell: ..." command ids have a dot; the native menu's owner has none, so no command can own it.
+		expect(NATIVE_MENU).not.toContain(".");
+	});
+
 	it("passes commands with different shortcuts, or none", () => {
 		const commands = [
 			command("a.one", "Mod+J"),
@@ -201,5 +268,20 @@ describe("findShortcutClashes", () => {
 		];
 		for (const platform of SHORTCUT_PLATFORMS)
 			expect(findShortcutClashes(commands, platform)).toEqual([]);
+	});
+});
+
+describe("buildShortcutMap", () => {
+	it("maps each resolved shortcut to its command, the first if two clash, and skips commands without one", () => {
+		const commands = [
+			command("a.one", "Mod+J"),
+			command("b.two", "Mod+J"),
+			command("c.three"),
+			command("d.four", "Alt+F6"),
+		];
+		const other = buildShortcutMap(commands, "other");
+		expect([...other.keys()]).toEqual(["Control+J", "Alt+F6"]);
+		expect(other.get("Control+J")?.id).toBe("a.one");
+		expect(buildShortcutMap(commands, "mac").get("Meta+J")?.id).toBe("a.one");
 	});
 });

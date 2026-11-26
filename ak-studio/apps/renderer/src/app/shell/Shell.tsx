@@ -50,7 +50,6 @@ import {
 import { useStudioMutation } from "../../shared/query/hooks";
 import { registry } from "../registry";
 import { useWindowMaximized } from "../useWindowMaximized";
-import { TOGGLE_BOTTOM_PANEL } from "./manifest";
 import { PanelEmptyState } from "./PanelEmptyState";
 import { pathOfTab, tabFromPath } from "./routes";
 import { useBindShellActions } from "./shellActions";
@@ -62,10 +61,12 @@ const MAC_TRAFFIC_LIGHTS_INSET = 76;
 /** The top bar's tabs, from the feature manifests. */
 const SHELL_TABS = registry.tabs.map(({ id, label }) => ({ id, label }));
 
-/** The bottom panel's show/hide shortcut, as its manifest declares it. */
-const PANEL_SHORTCUT =
-	registry.commands.find((command) => command.id === TOGGLE_BOTTOM_PANEL)
-		?.shortcut ?? "Mod+J";
+/** The bottom panel's show/hide shortcut, as the registry has it; a command renamed or left without a shortcut throws. */
+const PANEL_SHORTCUT = (() => {
+	const { id, shortcut } = registry.command("shell.toggleBottomPanel");
+	if (shortcut === undefined) throw new Error(`command ${id} has no shortcut`);
+	return shortcut;
+})();
 
 /** A window control press. A failure is not shown: the window simply does not change, and the next press tries again. */
 function requestWindow(

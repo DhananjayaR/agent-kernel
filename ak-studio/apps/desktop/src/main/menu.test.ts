@@ -28,6 +28,29 @@ describe("buildMenuTemplate", () => {
 		}
 	});
 
+	it("uses only the roles whose accelerators the renderer reserves (NATIVE_MENU_SHORTCUTS in apps/renderer/src/shared/commands/shortcuts.ts)", () => {
+		// A role added here brings its own accelerator: add it to NATIVE_MENU_SHORTCUTS, then to this list, so no
+		// app command can take it.
+		const used = new Set(
+			(["darwin", "linux", "win32"] as const).flatMap((platform) =>
+				roles(buildMenuTemplate({ platform, isPackaged: false })),
+			),
+		);
+		expect([...used].sort()).toEqual([
+			"about",
+			"appMenu",
+			"editMenu",
+			"forceReload",
+			"help",
+			"reload",
+			"resetZoom",
+			"toggleDevTools",
+			"togglefullscreen",
+			"zoomIn",
+			"zoomOut",
+		]);
+	});
+
 	it("offers developer tools only in unpackaged builds", () => {
 		for (const platform of ["darwin", "linux", "win32"] as const) {
 			expect(

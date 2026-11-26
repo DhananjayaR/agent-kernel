@@ -14,24 +14,10 @@ import { useEffect, useMemo } from "react";
 import type { AppCommand } from "./command";
 import { runCommand } from "./runCommand";
 import {
+	buildShortcutMap,
 	eventShortcut,
-	resolveShortcut,
 	type ShortcutPlatform,
 } from "./shortcuts";
-
-/** Each resolved shortcut on `platform` and its command (the first, if two clash: the clash test fails that). */
-export function buildShortcutMap(
-	commands: readonly AppCommand[],
-	platform: ShortcutPlatform,
-): ReadonlyMap<string, AppCommand> {
-	const map = new Map<string, AppCommand>();
-	for (const command of commands) {
-		if (command.shortcut === undefined) continue;
-		const resolved = resolveShortcut(command.shortcut, platform);
-		if (!map.has(resolved)) map.set(resolved, command);
-	}
-	return map;
-}
 
 const NOT_TEXT_INPUTS = new Set([
 	"button",
