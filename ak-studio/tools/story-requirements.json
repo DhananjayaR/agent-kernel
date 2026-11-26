@@ -57,6 +57,61 @@
 		{
 			"pattern": "packages/ui/src/components/desktop-shell.tsx",
 			"stories": ["At1220WithBadges", "BadgesComeAndGo"]
+		},
+		{
+			"pattern": "packages/ui/src/components/session-control.tsx",
+			"stories": [
+				"Stopped",
+				"Starting",
+				"Running",
+				"Pending",
+				"Stopping",
+				"Failed",
+				"StartRefused",
+				"Keyboard"
+			]
+		},
+		{
+			"pattern": "packages/ui/src/components/streaming-list.tsx",
+			"stories": [
+				"Default",
+				"Empty",
+				"Following",
+				"ScrolledUp",
+				"Dropped",
+				"Copy",
+				"CopySelection",
+				"Clear",
+				"LongLines",
+				"TenThousandLines",
+				"StreamFailed",
+				"Keyboard"
+			]
+		},
+		{
+			"pattern": "packages/ui/src/components/command-row.tsx",
+			"stories": [
+				"Running",
+				"Succeeded",
+				"Failed",
+				"Signalled",
+				"Stopped",
+				"MaskedSecret",
+				"List"
+			]
+		},
+		{
+			"pattern": "packages/ui/src/components/command-palette.tsx",
+			"stories": [
+				"Default",
+				"Filtered",
+				"NoMatches",
+				"VersionGated",
+				"MacShortcuts",
+				"EscapeCloses",
+				"Keyboard",
+				"EnterAfterBackspace"
+			]
 		}
 	],
 	"coveredBy": {

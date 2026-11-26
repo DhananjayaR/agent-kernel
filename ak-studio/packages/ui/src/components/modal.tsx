@@ -11,6 +11,10 @@
 // focusable named region so it can be scrolled from the keyboard. Collections inside (DataTable, Tree) leave
 // Escape to the modal. ConfirmModal (confirm-modal.tsx) builds on it.
 //
+// ModalLayer is the same overlay with no frame of its own (no heading, body or footer), for a modal that draws its
+// own content: the command palette, an overlay at the top centre, Dialog size L (640 px). It carries the same
+// data-slot="modal-overlay", so isModalOpen sees it and app shortcuts do not act while it is open.
+//
 // Stacking: the scrim is z-40, toasts z-50 (above any modal), React Aria's popovers above both.
 // Separation: in light theme the scrim (navy text at 40%) separates the modal's fill from the page by more than
 // 2:1; in dark theme no existing colour is dark enough for that (theme.css, scrim), so the dark modal draws its
@@ -206,5 +210,62 @@ export function Modal({
 			{trigger}
 			{overlay}
 		</DialogTrigger>
+	);
+}
+
+export type ModalLayerProps = {
+	isOpen: boolean;
+	onOpenChange: (isOpen: boolean) => void;
+	/** The dialog's accessible name (it shows no heading). */
+	title: string;
+	/** `top`: near the top of the window, centred (the command palette); `center` by default. */
+	placement?: "center" | "top";
+	/** Dialog size: M (480 px) by default, L (640 px). */
+	size?: "m" | "l";
+	/** Close when the scrim is clicked. Off by default: a stray click must not lose work. */
+	isDismissable?: boolean;
+	children: ReactNode | ((close: Close) => ReactNode);
+	className?: string;
+};
+
+/** A modal with no frame of its own: the overlay, the solid surface and focus handling, around `children`. */
+export function ModalLayer({
+	isOpen,
+	onOpenChange,
+	title,
+	placement = "center",
+	size = "m",
+	isDismissable = false,
+	children,
+	className,
+}: ModalLayerProps) {
+	return (
+		<ModalOverlay
+			data-slot="modal-overlay"
+			className={cn(modalOverlay, placement === "top" && "items-start pt-16")}
+			isDismissable={isDismissable}
+			isOpen={isOpen}
+			onOpenChange={onOpenChange}
+		>
+			<AriaModal
+				data-slot="modal"
+				className={cn(
+					modalSurface,
+					size === "l" ? "w-dialog-l" : "w-dialog-m",
+					className,
+				)}
+			>
+				<Dialog
+					aria-label={title}
+					className="flex min-h-0 flex-col outline-none"
+				>
+					{({ close }) => (
+						<InOverlayContext.Provider value={true}>
+							{typeof children === "function" ? children(close) : children}
+						</InOverlayContext.Provider>
+					)}
+				</Dialog>
+			</AriaModal>
+		</ModalOverlay>
 	);
 }

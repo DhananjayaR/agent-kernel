@@ -41,6 +41,7 @@ export const THEME_KEYS = {
 		"dialog",
 		"field-width",
 		"dialog-m",
+		"dialog-l",
 		"popover-s",
 		"focus-ring",
 		"focus-gap",

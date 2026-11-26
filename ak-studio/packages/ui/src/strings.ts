@@ -1,7 +1,8 @@
 // The English defaults of the shared components, in one place (copy rules: sentence case; reviewed and later
 // translated in one module). Every one can be overridden where the component is used: StatusChip's `label`,
 // Combobox's `emptyText`, BuildWithAIButton's and SettingsButton's `label`, and the `strings` prop of PathChip,
-// CodeBlock, Modal, ConfirmModal, ToastRegion, ApprovalCard, JobProgressView, the background job notice and the shell (DesktopShell, ProjectSwitcher, RunControl,
+// CodeBlock, Modal, ConfirmModal, ToastRegion, ApprovalCard, JobProgressView, the background job notice, StreamingListView, CommandRow,
+// SessionControlView, CommandPaletteView and the shell (DesktopShell, ProjectSwitcher, RunControl,
 // DeployStatus, BottomPanel, StatusBar, SettingsModal, WindowControls). Placeholders such as `{port}` are filled by `fillString`.
 // Features keep their own copy in their own strings module and pass it in.
 export const uiStrings = {
@@ -72,6 +73,43 @@ export const uiStrings = {
 		failed: "{job} failed",
 		waiting: "{job} is waiting for you",
 		show: "Show",
+	},
+	// The streaming list (streaming-list.tsx). `{count}` is a number of lines.
+	streamingList: {
+		copy: "Copy",
+		copied: "Output copied",
+		clear: "Clear",
+		jumpToLatest: "Jump to latest",
+		empty: "No output yet",
+		dropped: "{count} earlier lines not kept",
+		droppedOne: "1 earlier line not kept",
+	},
+	// The command row (command-row.tsx): a command the app ran. `{code}` is its exit code.
+	commandRow: {
+		running: "Running",
+		exited: "Exit {code}",
+		signalled: "Ended by a signal",
+		stopped: "Stopped",
+		duration: "Took",
+	},
+	// The generic session control (session-control.tsx).
+	sessionControl: {
+		stopped: "Stopped",
+		starting: "Starting",
+		running: "Running",
+		stopping: "Stopping",
+		failed: "Failed",
+		start: "Start",
+		stop: "Stop",
+		showLog: "Show log",
+	},
+	// The command palette (command-palette.tsx).
+	commandPalette: {
+		title: "Command palette",
+		search: "Search commands",
+		placeholder: "Type a command",
+		commands: "Commands",
+		noMatches: "No matching commands",
 	},
 	// The desktop shell (Task 10). The app areas are fixed; their empty states are the app's own copy.
 	shell: {
@@ -175,6 +213,18 @@ export type JobProgressStrings = {
 };
 export type BackgroundJobStrings = {
 	-readonly [K in keyof typeof uiStrings.backgroundJob]: string;
+};
+export type StreamingListStrings = {
+	-readonly [K in keyof typeof uiStrings.streamingList]: string;
+};
+export type CommandRowStrings = {
+	-readonly [K in keyof typeof uiStrings.commandRow]: string;
+};
+export type SessionControlStrings = {
+	-readonly [K in keyof typeof uiStrings.sessionControl]: string;
+};
+export type CommandPaletteStrings = {
+	-readonly [K in keyof typeof uiStrings.commandPalette]: string;
 };
 export type ShellStrings = {
 	-readonly [K in keyof typeof uiStrings.shell]: string;

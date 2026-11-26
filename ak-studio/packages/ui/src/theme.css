@@ -233,6 +233,7 @@
 	--spacing-dialog: 32px; /* Dialog padding-x */
 	--spacing-field-width: 208px; /* default field width */
 	--spacing-dialog-m: 480px; /* Dialog size M */
+	--spacing-dialog-l: 640px; /* Dialog size L: the command palette (P1b design gate row (b)) */
 	--spacing-popover-s: 336px; /* Popover size S */
 	--spacing-focus-ring: 2px; /* focus-indicator-thickness */
 	--spacing-focus-gap: 2px; /* focus-indicator-gap (outline-offset) */

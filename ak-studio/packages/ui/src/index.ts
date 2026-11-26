@@ -2,7 +2,8 @@
 // The components below are the base set proposed for the P1a design gate (Task 9): the ones P2 and P3 use
 // (controls, display, overlays and structure; Drawer is left to P6), and the desktop shell (Task 10: DesktopShell,
 // TopBar, AppTabList, ProjectSwitcher, the top bar controls, BottomPanel, StatusBar, SettingsModal), and the P1b
-// patterns (Task 15: ApprovalCard, JobProgressView, the background job notice). The "Base component set" and
+// patterns (Task 15: ApprovalCard, JobProgressView, the background job notice; Task 16: SessionControlView,
+// StreamingListView, CommandRow, CommandPaletteView). The "Base component set" and
 // "Shell layout" sign-offs are pending. Exports are in path order (Biome sorts them).
 export const name = "@ak-studio/ui";
 
@@ -55,6 +56,18 @@ export {
 	type ComboboxItemProps,
 	type ComboboxProps,
 } from "./components/combobox";
+export {
+	type CommandPaletteItem,
+	CommandPaletteView,
+	type CommandPaletteViewProps,
+} from "./components/command-palette";
+export {
+	CommandRow,
+	type CommandRowProps,
+	type CommandRowState,
+	formatDuration,
+	quoteArg,
+} from "./components/command-row";
 export {
 	ConfirmModal,
 	type ConfirmModalProps,
@@ -123,6 +136,8 @@ export {
 	isModalOpen,
 	MODAL_OPEN_SELECTOR,
 	Modal,
+	ModalLayer,
+	type ModalLayerProps,
 	type ModalOpening,
 	type ModalProps,
 } from "./components/modal";
@@ -156,6 +171,12 @@ export {
 	type SelectProps,
 } from "./components/select";
 export {
+	type SessionControlState,
+	SessionControlView,
+	type SessionControlViewProps,
+	type SessionFact,
+} from "./components/session-control";
+export {
 	SettingsModal,
 	type SettingsModalProps,
 	type ThemeChoice,
@@ -172,6 +193,12 @@ export {
 	StatusChip,
 	type StatusChipProps,
 } from "./components/status-chip";
+export {
+	STREAM_ROW_HEIGHT,
+	StreamingListView,
+	type StreamingListViewProps,
+	type StreamLine,
+} from "./components/streaming-list";
 export { Switch, type SwitchProps } from "./components/switch";
 export {
 	Tab,
@@ -219,12 +246,21 @@ export {
 	WindowControls,
 	type WindowControlsProps,
 } from "./components/window-controls";
+export {
+	ANSI_TONE_CLASS,
+	type AnsiSegment,
+	type AnsiTone,
+	parseAnsiLine,
+	stripAnsi,
+} from "./lib/ansi";
 export { cn } from "./lib/utils";
 export type {
 	ApprovalStrings,
 	BackgroundJobStrings,
 	BottomPanelStrings,
 	CodeBlockStrings,
+	CommandPaletteStrings,
+	CommandRowStrings,
 	ConfirmModalStrings,
 	DeployStatusStrings,
 	JobProgressStrings,
@@ -232,9 +268,11 @@ export type {
 	PathChipStrings,
 	ProjectSwitcherStrings,
 	RunControlStrings,
+	SessionControlStrings,
 	SettingsStrings,
 	ShellStrings,
 	StatusBarStrings,
+	StreamingListStrings,
 	ToastStrings,
 	WindowControlsStrings,
 } from "./strings";
