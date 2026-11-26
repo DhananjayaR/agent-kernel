@@ -5,12 +5,14 @@ import { comment } from "../lib.mjs";
 
 export const manifest = (
 	n,
-) => `${comment(`The ${n.title} feature's manifest: how it joins the app (architecture.md, Features). The route its screen is mounted at, its app commands and the kernel capabilities it uses. The only file app/ imports (app/features.ts).`)}
+) => `${comment(`The ${n.title} feature's manifest: how it joins the app (architecture.md, Features). Its title (the command palette's prefix), the route its screen is mounted at, its app commands and the kernel capabilities it uses. The only file app/ imports (app/features.ts).`)}
 import { defineFeature } from "../../shared/commands/feature";
 import { ${n.pascal}Screen } from "./screens/${n.pascal}Screen";
+import { ${n.camel}Strings } from "./strings";
 
 export const ${n.camel}Feature = defineFeature({
 	id: "${n.kebab}",
+	title: ${n.camel}Strings.title,
 	routes: [{ path: "/${n.kebab}", component: ${n.pascal}Screen }],
 	commands: [],
 	capabilities: [],

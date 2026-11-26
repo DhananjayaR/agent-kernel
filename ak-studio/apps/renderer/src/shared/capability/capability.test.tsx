@@ -5,20 +5,28 @@ import type {
 	CapabilityCatalog,
 	CapabilityStatus,
 } from "@ak-studio/kernel-catalog";
-import { renderHook } from "@testing-library/react";
+import { render, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	CatalogProvider,
+	capabilityGate,
 	capabilityStatus,
 	resetCapabilityLog,
 	useCapability,
+	useCapabilityScope,
 } from "./capability";
 
 /** A catalog that knows three capabilities, whose status depends only on the version's minor (good enough here). */
 const fake: CapabilityCatalog = {
 	has: (id) =>
 		["framework.maf", "deploy.azure.functions", "config.schedule"].includes(id),
+	get: (id) =>
+		id === "framework.maf"
+			? { id, title: "Microsoft Agent Framework", since: "0.10.0" }
+			: id === "deploy.azure.functions"
+				? { id, title: "Azure Functions", since: "0.5.0", until: "0.11.0" }
+				: undefined,
 	status: (id, version): CapabilityStatus => {
 		const minor = Number(version.split(".")[1]);
 		if (id === "framework.maf")
@@ -101,5 +109,56 @@ describe("capabilityStatus", () => {
 			}),
 		).toBe("available");
 		expect(log).toHaveBeenCalledOnce();
+	});
+});
+
+describe("capabilityGate", () => {
+	it("is available with no capability, and gives the version gate's reason otherwise", () => {
+		expect(capabilityGate(undefined)).toEqual({ available: true });
+		const old = { catalog: fake, version: "0.9.1" };
+		expect(capabilityGate("framework.maf", old)).toEqual({
+			available: false,
+			status: "needs-upgrade",
+			reason: "Needs OAK 0.10.0",
+		});
+		expect(
+			capabilityGate("deploy.azure.functions", {
+				catalog: fake,
+				version: "0.11.0",
+			}),
+		).toEqual({
+			available: false,
+			status: "removed",
+			reason: "Removed in OAK 0.11.0",
+		});
+		expect(
+			capabilityGate("framework.maf", { catalog: fake, version: "0.10.2" }),
+		).toEqual({ available: true });
+	});
+
+	it("gates nothing with no project version, but still throws for an id the catalog lacks", () => {
+		expect(
+			capabilityGate("framework.maf", { catalog: fake, version: undefined }),
+		).toEqual({ available: true });
+		expect(() =>
+			capabilityGate("framework.typo", { catalog: fake, version: undefined }),
+		).toThrow(/not in the kernel capability catalog/);
+	});
+
+	it("reads the capability scope, which the mounted CatalogProvider writes and clears", () => {
+		const before = useCapabilityScope.getState();
+		expect(before.version).toBeUndefined();
+		const { unmount } = render(
+			<CatalogProvider catalog={fake} version="0.9.0">
+				<span />
+			</CatalogProvider>,
+		);
+		expect(useCapabilityScope.getState()).toEqual({
+			catalog: fake,
+			version: "0.9.0",
+		});
+		expect(capabilityGate("framework.maf").available).toBe(false);
+		unmount();
+		expect(useCapabilityScope.getState()).toBe(before);
 	});
 });

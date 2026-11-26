@@ -8,6 +8,8 @@ export interface ShellActions {
 	toggleBottomPanel(): void;
 	/** Opens the bottom panel on the Commands view (the job progress pattern's "Show commands"). */
 	showCommands(): void;
+	/** Opens the command palette (Mod+K). */
+	openCommandPalette(): void;
 }
 
 let bound: ShellActions | undefined;
@@ -33,6 +35,7 @@ export function useBindShellActions(actions: ShellActions): void {
 		const mine: ShellActions = {
 			toggleBottomPanel: () => latest.current.toggleBottomPanel(),
 			showCommands: () => latest.current.showCommands(),
+			openCommandPalette: () => latest.current.openCommandPalette(),
 		};
 		bound = mine;
 		return () => {

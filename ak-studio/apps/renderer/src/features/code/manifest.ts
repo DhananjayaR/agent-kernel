@@ -6,6 +6,7 @@ import { codeStrings } from "./strings";
 
 export const codeFeature = defineFeature({
 	id: "code",
+	title: codeStrings.tab,
 	tab: { label: codeStrings.tab, path: "/code", order: 2 },
 	routes: [{ path: "/code", component: CodeScreen }],
 	commands: [],

@@ -6,6 +6,7 @@ import { testTraceStrings } from "./strings";
 
 export const testTraceFeature = defineFeature({
 	id: "test-trace",
+	title: testTraceStrings.tab,
 	tab: { label: testTraceStrings.tab, path: "/test-trace", order: 4 },
 	routes: [{ path: "/test-trace", component: TestTraceScreen }],
 	commands: [],

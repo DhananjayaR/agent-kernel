@@ -6,12 +6,26 @@
 // An id the catalog does not have is a bug (a typo, or an entry not yet added): in development and tests it
 // throws, so it is found at once; in a production build it answers "available", so a slip never hides a working
 // control, and logs once per id.
+//
+// Commands are gated outside React too: `runCommand` refuses a command whose capability the project lacks, and the
+// command palette (mounted in the shell, perhaps above any provider) lists it with the reason. Both read the
+// capability scope, a small store the mounted CatalogProvider writes its catalog and version into, through
+// `capabilityGate`. With no project version (no project open, all of P1b) nothing is gated: there is no version to
+// compare, and a command that makes no sense without a project hides itself with `when`.
 import {
 	type CapabilityCatalog,
 	type CapabilityStatus,
 	EMPTY_CATALOG,
 } from "@ak-studio/kernel-catalog";
-import { createContext, type ReactNode, useContext, useMemo } from "react";
+import {
+	createContext,
+	type ReactNode,
+	useContext,
+	useLayoutEffect,
+	useMemo,
+} from "react";
+import { create } from "zustand";
+import { capabilityStrings } from "./strings";
 
 /**
  * The capability catalog the app uses: empty until P2 adds its entries (pre-flight ruling 10). The one place it is
@@ -26,10 +40,21 @@ interface CatalogContextValue {
 	version: string | undefined;
 }
 
-const CatalogContext = createContext<CatalogContextValue>({
+/** No provider mounted: the app's catalog and no version. */
+const NO_PROJECT_SCOPE: CatalogContextValue = Object.freeze({
 	catalog: APP_CATALOG,
 	version: undefined,
 });
+
+const CatalogContext = createContext<CatalogContextValue>(NO_PROJECT_SCOPE);
+
+/**
+ * The catalog and version of the mounted CatalogProvider (or none), for what cannot read the context: runCommand,
+ * and the command palette. The provider writes it; nothing else should.
+ */
+export const useCapabilityScope = create<CatalogContextValue>()(
+	() => NO_PROJECT_SCOPE,
+);
 
 export interface CatalogProviderProps {
 	catalog: CapabilityCatalog;
@@ -38,13 +63,21 @@ export interface CatalogProviderProps {
 	children?: ReactNode;
 }
 
-/** Gives the views below it the catalog and the project's version. */
+/** Gives the views below it the catalog and the project's version, and writes both into the capability scope. */
 export function CatalogProvider({
 	catalog,
 	version,
 	children,
 }: CatalogProviderProps) {
 	const value = useMemo(() => ({ catalog, version }), [catalog, version]);
+	useLayoutEffect(() => {
+		useCapabilityScope.setState(value, true);
+		return () => {
+			// A later provider may have taken over: only the scope this one wrote is reset.
+			if (useCapabilityScope.getState() === value)
+				useCapabilityScope.setState(NO_PROJECT_SCOPE, true);
+		};
+	}, [value]);
 	return (
 		<CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>
 	);
@@ -94,4 +127,45 @@ export function useCapability(id: string): CapabilityStatus {
 		strict: !import.meta.env.PROD,
 		log: consoleLog,
 	});
+}
+
+/** Whether something that needs a capability can run, and if not, why (the version gate's reason, in one line). */
+export type CapabilityGate =
+	| { readonly available: true }
+	| {
+			readonly available: false;
+			readonly status: "needs-upgrade" | "removed";
+			/** "Needs OAK 0.12.0", "Removed in OAK 0.14.0". */
+			readonly reason: string;
+	  };
+
+const AVAILABLE: CapabilityGate = Object.freeze({ available: true });
+
+/**
+ * The gate for capability `id` (none: available) in `scope` (default: the capability scope). With no project
+ * version nothing is gated (see the header). An id the catalog lacks follows `capabilityStatus`'s rules: it throws
+ * in development and tests, and is available in a production build.
+ */
+export function capabilityGate(
+	id: string | undefined,
+	scope: CatalogContextValue = useCapabilityScope.getState(),
+): CapabilityGate {
+	if (id === undefined) return AVAILABLE;
+	const { catalog, version } = scope;
+	if (version === undefined && catalog.has(id)) return AVAILABLE;
+	const status = capabilityStatus(catalog, id, version, {
+		strict: !import.meta.env.PROD,
+		log: consoleLog,
+	});
+	if (status === "available") return AVAILABLE;
+	const entry = catalog.get(id);
+	const reason =
+		status === "needs-upgrade"
+			? entry?.since
+				? capabilityStrings.needsUpgrade.replace("{since}", entry.since)
+				: capabilityStrings.needsUpgradeUnknown
+			: entry?.until
+				? capabilityStrings.removed.replace("{until}", entry.until)
+				: capabilityStrings.removedUnknown;
+	return { available: false, status, reason };
 }

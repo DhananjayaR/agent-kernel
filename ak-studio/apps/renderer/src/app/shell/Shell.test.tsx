@@ -3,7 +3,9 @@
 // bottom panel, Ctrl+J or Cmd+J by platform, and does nothing behind a modal; and its error paths, against a
 // transport that fails on purpose: the layout-save toast (a background notice; the layout stays as the person set
 // it) and the bridge-error banner (shows the failure's message). Also the job patterns' hooks into the shell:
-// "Show commands" (shell.showCommands) and the background job notice's toast with "Show" (about.show).
+// "Show commands" (shell.showCommands) and the background job notice's toast with "Show" (about.show). The command
+// palette: Ctrl+K opens it (from a text field too), it lists the commands with their features' titles, runs one,
+// and holds Ctrl+J off while open; a popover (not a modal) does not.
 import { studioError } from "@ak-studio/contract";
 import { FakeClock } from "@ak-studio/runtime";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
@@ -126,6 +128,73 @@ describe("Shell shortcuts", () => {
 		await waitFor(() =>
 			expect(screen.queryByRole("dialog", { name: "Settings" })).toBeNull(),
 		);
+		await user.keyboard("{Control>}j{/Control}");
+		expect(await toggle("Show the panel")).toBeTruthy();
+	});
+});
+
+describe("Shell command palette", () => {
+	it("opens on Ctrl+K, even from a text field, listing each command with its feature's title and shortcut", async () => {
+		const { user } = renderApp();
+		await toggle("Hide the panel");
+		await user.keyboard("{Control>}k{/Control}");
+		const dialog = await screen.findByRole("dialog", {
+			name: "Command palette",
+		});
+		const names = within(dialog)
+			.getAllByRole("menuitem")
+			.map((row) => row.textContent);
+		expect(names).toContain("View: Show or hide the panelCtrl+J");
+		expect(names).toContain("About: Run the demo job");
+		// Not its own command: it is open already.
+		expect(names.some((name) => name?.includes("command palette"))).toBe(false);
+		// Typing goes to the search field; Ctrl+J does nothing while the palette (a modal) is open.
+		await user.keyboard("{Control>}j{/Control}");
+		expect(
+			screen.getByRole("button", { name: "Hide the panel", hidden: true }),
+		).toBeTruthy();
+		await user.keyboard("{Escape}");
+		await waitFor(() =>
+			expect(
+				screen.queryByRole("dialog", { name: "Command palette" }),
+			).toBeNull(),
+		);
+		// From a text field too (Mod+K types nothing).
+		const field = document.createElement("input");
+		document.body.append(field);
+		field.focus();
+		await user.keyboard("{Control>}k{/Control}");
+		expect(
+			await screen.findByRole("dialog", { name: "Command palette" }),
+		).toBeTruthy();
+		field.remove();
+	});
+
+	it("runs the chosen command after it closes", async () => {
+		const { user } = renderApp();
+		await toggle("Hide the panel");
+		await user.keyboard("{Control>}k{/Control}");
+		const dialog = await screen.findByRole("dialog", {
+			name: "Command palette",
+		});
+		await user.click(
+			within(dialog).getByRole("menuitem", {
+				name: "View: Show or hide the panel",
+			}),
+		);
+		expect(await toggle("Show the panel")).toBeTruthy();
+		await waitFor(() =>
+			expect(
+				screen.queryByRole("dialog", { name: "Command palette" }),
+			).toBeNull(),
+		);
+	});
+
+	it("leaves Ctrl+J working while a popover (not a modal) is open", async () => {
+		const { user } = renderApp();
+		await toggle("Hide the panel");
+		await user.click(screen.getByRole("button", { name: "Build with AI" }));
+		await screen.findByRole("dialog", { name: "Build with AI" });
 		await user.keyboard("{Control>}j{/Control}");
 		expect(await toggle("Show the panel")).toBeTruthy();
 	});

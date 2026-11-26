@@ -6,6 +6,7 @@ import { deployStrings } from "./strings";
 
 export const deployFeature = defineFeature({
 	id: "deploy",
+	title: deployStrings.tab,
 	tab: { label: deployStrings.tab, path: "/deploy", order: 5 },
 	routes: [{ path: "/deploy", component: DeployScreen }],
 	commands: [],

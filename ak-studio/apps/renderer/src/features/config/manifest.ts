@@ -6,6 +6,7 @@ import { configStrings } from "./strings";
 
 export const configFeature = defineFeature({
 	id: "config",
+	title: configStrings.tab,
 	tab: { label: configStrings.tab, path: "/config", order: 3 },
 	routes: [{ path: "/config", component: ConfigScreen }],
 	commands: [],

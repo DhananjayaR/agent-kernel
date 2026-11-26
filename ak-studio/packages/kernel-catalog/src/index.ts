@@ -27,6 +27,8 @@ export type CapabilityStatus = "available" | "needs-upgrade" | "removed";
 export interface CapabilityCatalog {
 	/** Whether the catalog has an entry for `id`. */
 	has(id: string): boolean;
+	/** The entry for `id` (its `since`, `until`, `replacedBy`: what a version gate says), if the catalog has one. */
+	get(id: string): Capability | undefined;
 	/** The capability's status for an OAK `version`. Only for an id `has` knows: anything else throws. */
 	status(id: string, version: string): CapabilityStatus;
 }
@@ -34,6 +36,7 @@ export interface CapabilityCatalog {
 /** The catalog until P2: it has no capability, so asking the status of any throws. */
 export const EMPTY_CATALOG: CapabilityCatalog = Object.freeze({
 	has: () => false,
+	get: () => undefined,
 	status: (id: string): CapabilityStatus => {
 		throw new Error(`the capability catalog has no entry for ${id}`);
 	},

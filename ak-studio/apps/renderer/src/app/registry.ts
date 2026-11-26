@@ -1,7 +1,8 @@
 // The app registry: everything the shell and the router need from the feature manifests (features.ts), built once.
 // The tabs (by their `order`), the routes, the command list (handed to runCommand, shared/commands/runCommand.ts,
-// so any feature can run any command without importing it), the capabilities the manifests name, and the shortcut
-// map per platform, and which feature owns each job kind and which command shows it (the background job notice).
+// so any feature can run any command without importing it), the same list with each feature's title (what the
+// command palette shows), the capabilities the manifests name, and the shortcut map per platform, and which
+// feature owns each job kind and which command shows it (the background job notice).
 // The shell and the router import this module, never a feature. A manifest list it cannot accept (two features with
 // one id, two commands with one id, a command outside its feature's namespace, two routes at one path, two owners
 // of one job kind) throws as the app loads.
@@ -12,6 +13,7 @@ import {
 	buildShortcutMap,
 	type ShortcutPlatform,
 } from "../shared/commands/shortcuts";
+import type { PaletteCommand } from "../shared/patterns/CommandPalette";
 import { features } from "./features";
 
 /** A tab in the shell's top bar: its feature's id, label and route path. */
@@ -35,6 +37,8 @@ export interface AppRegistry {
 	routes: readonly AppRoute[];
 	/** Every app command, in manifest order. */
 	commands: readonly AppCommand[];
+	/** Every app command with its feature's title, in manifest order: what the command palette lists. */
+	paletteCommands: readonly PaletteCommand[];
 	/** The command with `id`; throws if no manifest declares it (a renamed id fails at once, not silently). */
 	command(id: string): AppCommand;
 	/** Every capability a manifest or one of its commands names, once each. */
@@ -61,6 +65,7 @@ export function buildRegistry(
 	const routes: AppRoute[] = [];
 	const tabs: AppTab[] = [];
 	const commands: AppCommand[] = [];
+	const paletteCommands: PaletteCommand[] = [];
 	const capabilities = new Set<string>();
 	const jobOwners = new Map<string, string>();
 	const shows = new Map<string, string>();
@@ -87,6 +92,7 @@ export function buildRegistry(
 				throw new Error(`command ${command.id} is declared twice`);
 			commandIds.add(command.id);
 			commands.push(command);
+			paletteCommands.push({ command, featureTitle: manifest.title });
 			if (command.capability !== undefined)
 				capabilities.add(command.capability);
 		}
@@ -117,6 +123,7 @@ export function buildRegistry(
 		defaultTab,
 		routes,
 		commands,
+		paletteCommands,
 		command: (id) => {
 			const found = commands.find((command) => command.id === id);
 			if (!found) throw new Error(`no feature declares command ${id}`);

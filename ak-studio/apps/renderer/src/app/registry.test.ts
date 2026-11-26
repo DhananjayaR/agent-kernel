@@ -87,6 +87,7 @@ describe("the registry's tabs", () => {
 		const built = buildRegistry([
 			defineFeature({
 				id: "b",
+				title: "B",
 				tab: { label: "B", path: "/b", order: 2 },
 				routes: [{ path: "/b", component: Empty }],
 				commands: [],
@@ -94,6 +95,7 @@ describe("the registry's tabs", () => {
 			}),
 			defineFeature({
 				id: "a",
+				title: "A",
 				tab: { label: "A", path: "/a", order: 1 },
 				routes: [{ path: "/a", component: Empty }],
 				commands: [],
@@ -113,6 +115,7 @@ describe("the manifests", () => {
 	it("would fail on a capability the catalog lacks (the check can fail)", () => {
 		const planted = defineFeature({
 			id: "planted",
+			title: "Planted",
 			commands: [
 				defineCommand({
 					id: "planted.run",
@@ -129,6 +132,7 @@ describe("the manifests", () => {
 		]);
 		const knows: CapabilityCatalog = {
 			has: (id) => id.startsWith("made.up."),
+			get: () => undefined,
 			status: () => "available",
 		};
 		expect(unknownCapabilities([planted], knows)).toEqual([]);
@@ -156,7 +160,13 @@ describe("the manifests", () => {
 	it("are refused by buildRegistry when two commands share an id, a command is outside its feature's namespace, two features share a path, or a tab has no route", () => {
 		const command = defineCommand({ id: "a.one", title: "One", run: () => {} });
 		const feature = (id: string, extra: object = {}) =>
-			defineFeature({ id, commands: [], capabilities: [], ...extra });
+			defineFeature({
+				id,
+				title: id,
+				commands: [],
+				capabilities: [],
+				...extra,
+			});
 		expect(() =>
 			buildRegistry([feature("a", { commands: [command, command] })]),
 		).toThrow(/a\.one is declared twice/);
@@ -189,11 +199,15 @@ describe("the manifests", () => {
 		expect(() =>
 			defineFeature({
 				id: "a",
+				title: "A",
 				tab: { label: "A", path: "/a", order: 1 },
 				commands: [],
 				capabilities: [],
 			}),
 		).toThrow(/\/a/);
+		expect(() =>
+			defineFeature({ id: "a", title: " ", commands: [], capabilities: [] }),
+		).toThrow(/feature a: it has no title/);
 	});
 });
 
@@ -229,7 +243,13 @@ describe("Job ownership and show commands", () => {
 			run: () => {},
 		});
 		const feature = (id: string, extra: object = {}) =>
-			defineFeature({ id, commands: [], capabilities: [], ...extra });
+			defineFeature({
+				id,
+				title: id,
+				commands: [],
+				capabilities: [],
+				...extra,
+			});
 		expect(() =>
 			buildRegistry([
 				feature("a", { jobs: ["x.run"] }),
@@ -251,7 +271,13 @@ describe("Job ownership and show commands", () => {
 		// A manifest not made by defineFeature is checked by the registry as well.
 		expect(() =>
 			buildRegistry([
-				{ id: "a", commands: [], capabilities: [], show: "a.show" },
+				{
+					id: "a",
+					title: "A",
+					commands: [],
+					capabilities: [],
+					show: "a.show",
+				},
 			]),
 		).toThrow(/show command a\.show is not one of its commands/);
 	});
@@ -309,5 +335,33 @@ describe("shortcuts", () => {
 		expect(mac.has("Control+J")).toBe(false);
 		expect(other.get("Control+J")?.id).toBe("shell.toggleBottomPanel");
 		expect(other.has("Meta+J")).toBe(false);
+	});
+
+	it("give Mod+K to shell.openCommandPalette, the command its reservation names", () => {
+		expect(registry.command("shell.openCommandPalette").shortcut).toBe("Mod+K");
+		expect(RESERVED_SHORTCUTS["Mod+K"]).toBe("shell.openCommandPalette");
+		expect(registry.shortcutMap("other").get("Control+K")?.id).toBe(
+			"shell.openCommandPalette",
+		);
+		expect(registry.shortcutMap("mac").get("Meta+K")?.id).toBe(
+			"shell.openCommandPalette",
+		);
+	});
+});
+
+describe("the command palette's list", () => {
+	it("has every command once, in manifest order, with its feature's title", () => {
+		expect(registry.paletteCommands.map((entry) => entry.command)).toEqual(
+			registry.commands,
+		);
+		for (const { command, featureTitle } of registry.paletteCommands) {
+			const feature = features.find((f) => command.id.startsWith(`${f.id}.`));
+			expect(featureTitle, command.id).toBe(feature?.title);
+		}
+		expect(
+			registry.paletteCommands.find(
+				(entry) => entry.command.id === "about.runDemoJob",
+			)?.featureTitle,
+		).toBe("About");
 	});
 });

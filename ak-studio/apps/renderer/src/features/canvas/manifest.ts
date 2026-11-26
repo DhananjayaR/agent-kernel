@@ -6,6 +6,7 @@ import { canvasStrings } from "./strings";
 
 export const canvasFeature = defineFeature({
 	id: "canvas",
+	title: canvasStrings.tab,
 	tab: { label: canvasStrings.tab, path: "/canvas", order: 1 },
 	routes: [{ path: "/canvas", component: CanvasScreen }],
 	commands: [],

@@ -8,6 +8,7 @@ describe("EMPTY_CATALOG", () => {
 		const catalog: CapabilityCatalog = EMPTY_CATALOG;
 		expect(catalog.has("framework.maf")).toBe(false);
 		expect(catalog.has("")).toBe(false);
+		expect(catalog.get("framework.maf")).toBeUndefined();
 		expect(() => catalog.status("framework.maf", "0.10.2")).toThrow(
 			/no entry for framework\.maf/,
 		);

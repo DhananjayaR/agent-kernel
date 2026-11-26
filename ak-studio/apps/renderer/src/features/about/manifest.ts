@@ -13,6 +13,7 @@ const ABOUT_PATH = "/about";
 
 export const aboutFeature = defineFeature({
 	id: "about",
+	title: aboutStrings.title,
 	routes: [{ path: ABOUT_PATH, component: AboutScreen }],
 	// The demo job's notices belong to About; "Show" runs about.show.
 	jobs: ["about.demoJob"],

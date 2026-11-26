@@ -8,7 +8,8 @@
 // mounts the app's one shortcut listener, for the platform app.info reports; it binds the shell's actions for its
 // app commands (shellActions.ts), so Mod+J (shell.toggleBottomPanel) goes through the same layout save as the
 // panel's own toggle. It also binds its navigate for features' commands (shared/commands/navigation.ts) and shows
-// the background job notices (shared/patterns/BackgroundJobNotice.tsx): a state icon on the owning tab and a toast.
+// the background job notices (shared/patterns/BackgroundJobNotice.tsx): a state icon on the owning tab and a toast,
+// and the command palette (shared/patterns/CommandPalette.tsx), opened by shell.openCommandPalette (Mod+K).
 import {
 	DEFAULT_SHELL_LAYOUT,
 	type OutputOf,
@@ -46,6 +47,7 @@ import {
 } from "../../shared/commands/shortcuts";
 import { useAppShortcuts } from "../../shared/commands/useAppShortcuts";
 import { useBackgroundJobNotice } from "../../shared/patterns/BackgroundJobNotice";
+import { CommandPalette } from "../../shared/patterns/CommandPalette";
 import {
 	cacheStoredLayout,
 	cacheStoredTheme,
@@ -54,6 +56,7 @@ import {
 import { useStudioMutation } from "../../shared/query/hooks";
 import { registry } from "../registry";
 import { useWindowMaximized } from "../useWindowMaximized";
+import { OPEN_COMMAND_PALETTE } from "./manifest";
 import { PanelEmptyState } from "./PanelEmptyState";
 import { pathOfTab, tabFromPath } from "./routes";
 import { useBindShellActions } from "./shellActions";
@@ -129,6 +132,7 @@ function LoadedShell({
 	);
 	const [panelTab, setPanelTab] = useState<BottomPanelTabId>("problems");
 	const [settingsOpen, setSettingsOpen] = useState(false);
+	const [paletteOpen, setPaletteOpen] = useState(false);
 	const [toasts] = useState(createToastQueue);
 
 	const saveLayout = useStudioMutation("app.setLayout", {
@@ -159,6 +163,7 @@ function LoadedShell({
 			if (!layout.bottomPanel.open)
 				rememberPanel({ ...layout.bottomPanel, open: true });
 		},
+		openCommandPalette: () => setPaletteOpen(true),
 	});
 	// Feature commands navigate through this (shared/commands/navigation.ts): `about.show`, say.
 	useEffect(
@@ -275,6 +280,13 @@ function LoadedShell({
 							}
 						: undefined
 				}
+			/>
+			<CommandPalette
+				isOpen={paletteOpen}
+				onOpenChange={setPaletteOpen}
+				commands={registry.paletteCommands}
+				platform={platform}
+				exclude={OPEN_COMMAND_PALETTE}
 			/>
 			<ToastRegion queue={toasts} />
 		</>

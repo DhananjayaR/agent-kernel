@@ -25,6 +25,8 @@ export const panelEmptyStates: Record<BottomPanelTabId, EmptyCopy> = {
 };
 
 export const shellStrings = {
+	/** The shell's name before its commands in the command palette ("View: Show or hide the panel"). */
+	title: "View",
 	buildWithAI: {
 		title: "Build with AI",
 		description:
@@ -46,5 +48,6 @@ export const shellStrings = {
 	commands: {
 		toggleBottomPanel: "Show or hide the panel",
 		showCommands: "Show commands",
+		openCommandPalette: "Show the command palette",
 	},
 } as const;

@@ -171,3 +171,50 @@ test("shows the window controls in the browser, and Maximise toggles to Restore"
 		controls.getByRole("button", { name: "Maximise" }),
 	).toBeVisible();
 });
+
+test("Ctrl+K opens the command palette: typing filters, Enter runs about.runDemoJob, and the job appears", async ({
+	page,
+}) => {
+	await page.goto("/");
+	await expect(appVersion(page)).toHaveText(MOCK_VERSION);
+	const panel = page.locator('[data-panel][id="bottom-panel"]');
+	await expect(panel).toHaveJSProperty("offsetHeight", 240);
+	const before = page.getByRole("tab", { name: "Canvas" });
+	await before.focus();
+	await page.keyboard.press("Control+k");
+	const palette = page.getByRole("dialog", { name: "Command palette" });
+	await expect(palette).toBeVisible();
+	const search = palette.getByRole("textbox", { name: "Search commands" });
+	await expect(search).toBeFocused();
+	// Every command, with its feature's title and its shortcut; Ctrl+J does nothing while it is open.
+	await expect(
+		palette.getByRole("menuitem", { name: "View: Show or hide the panel" }),
+	).toContainText("Ctrl+J");
+	await page.keyboard.press("Control+j");
+	await expect(panel).toHaveJSProperty("offsetHeight", 240);
+	await page.keyboard.type("demo job");
+	await expect(palette.getByRole("menuitem")).toHaveText([
+		"About: Run the demo job",
+	]);
+	await page.keyboard.press("Enter");
+	await expect(palette).toBeHidden();
+	await expect(before).toBeFocused();
+	// The job runs in the background (About is not on screen): its notice says it is waiting for an answer.
+	await expect(
+		page.getByText("Demo job is waiting for you", { exact: true }),
+	).toBeVisible({ timeout: 10_000 });
+});
+
+test("Ctrl+J still acts while a popover (not a modal) is open", async ({
+	page,
+}) => {
+	await page.goto("/");
+	const panel = page.locator('[data-panel][id="bottom-panel"]');
+	await expect(panel).toHaveJSProperty("offsetHeight", 240);
+	await page.getByRole("button", { name: "Build with AI" }).click();
+	await expect(
+		page.getByRole("dialog", { name: "Build with AI" }),
+	).toBeVisible();
+	await page.keyboard.press("Control+j");
+	await expect(panel).toHaveJSProperty("offsetHeight", 48);
+});

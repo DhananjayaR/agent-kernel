@@ -1,5 +1,5 @@
 // Feature manifests (architecture.md, Features): how a feature joins the app. A feature's manifest.ts declares its
-// tab, its routes, its app commands, the job kinds it owns and the command that shows it (the background job
+// title (the command palette's prefix), its tab, its routes, its app commands, the job kinds it owns and the command that shows it (the background job
 // notice), and the kernel capabilities it uses; app/features.ts lists the manifests and
 // app/registry.ts builds the shell's tabs, the router's routes, the command list and the shortcut map from them.
 // Adding a feature never edits the shell. A manifest is checked when it is defined.
@@ -24,6 +24,11 @@ export interface FeatureRoute {
 export interface FeatureManifest {
 	/** The feature's folder name under features/ (kebab-case); its tab's id. */
 	id: string;
+	/**
+	 * The feature's name as people read it, from its strings module ("Deploy", "About"): the command palette shows
+	 * it before each of its commands ("About: Run the demo job").
+	 */
+	title: string;
 	tab?: FeatureTab;
 	routes?: readonly FeatureRoute[];
 	commands: readonly AppCommand[];
@@ -47,6 +52,7 @@ export function defineFeature(manifest: FeatureManifest): FeatureManifest {
 		throw new Error(`feature ${manifest.id}: ${why}`);
 	};
 	if (!FEATURE_ID.test(manifest.id)) fail("its id is not kebab-case");
+	if (manifest.title.trim() === "") fail("it has no title");
 	const paths = (manifest.routes ?? []).map((route) => route.path);
 	for (const path of paths)
 		if (!ROUTE_PATH.test(path)) fail(`route path ${path} is not /kebab-case`);

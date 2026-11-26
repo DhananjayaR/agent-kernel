@@ -1,12 +1,39 @@
 // App commands with no DOM: defineCommand checks what a manifest declares, and runCommand looks a command up,
 // parses its arguments and runs it. An unknown id or bad arguments is a development error: it throws in
 // development and tests, and is only logged in production, so it never takes the shell down.
+import type { CapabilityCatalog } from "@ak-studio/kernel-catalog";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { useCapabilityScope } from "../capability/capability";
 import { defineCommand } from "./command";
-import { getCommands, runCommand, setCommands } from "./runCommand";
+import {
+	CommandUnavailableError,
+	getCommands,
+	runCommand,
+	setCommands,
+} from "./runCommand";
+
+/** Knows `deploy.azure` (since 0.12.0) and `framework.old` (until 0.11.0), by the version's minor. */
+const catalog: CapabilityCatalog = {
+	has: (id) => id === "deploy.azure" || id === "framework.old",
+	get: (id) =>
+		id === "deploy.azure"
+			? { id, title: "Azure", since: "0.12.0" }
+			: id === "framework.old"
+				? { id, title: "Old", since: "0.1.0", until: "0.11.0" }
+				: undefined,
+	status: (id, version) => {
+		const minor = Number(version.split(".")[1]);
+		if (id === "deploy.azure")
+			return minor >= 12 ? "available" : "needs-upgrade";
+		return minor >= 11 ? "removed" : "available";
+	},
+};
+
+const initialScope = useCapabilityScope.getState();
 
 afterEach(() => {
+	useCapabilityScope.setState(initialScope, true);
 	setCommands([]);
 	vi.unstubAllEnvs();
 	vi.restoreAllMocks();
@@ -190,5 +217,56 @@ describe("runCommand", () => {
 			}),
 		]);
 		await expect(runCommand("a.fails")).rejects.toThrow("disk full");
+	});
+
+	it("refuses a command whose capability the project's OAK version lacks, with the version gate's reason", async () => {
+		const run = vi.fn();
+		setCommands([
+			defineCommand({
+				id: "deploy.toAzure",
+				title: "Deploy to Azure",
+				capability: "deploy.azure",
+				run,
+			}),
+			defineCommand({
+				id: "a.old",
+				title: "Old",
+				capability: "framework.old",
+				run,
+			}),
+		]);
+		useCapabilityScope.setState({ catalog, version: "0.11.2" });
+		const refused = runCommand("deploy.toAzure");
+		await expect(refused).rejects.toBeInstanceOf(CommandUnavailableError);
+		await expect(refused).rejects.toThrow("Needs OAK 0.12.0");
+		await expect(runCommand("a.old")).rejects.toThrow("Removed in OAK 0.11.0");
+		expect(run).not.toHaveBeenCalled();
+		useCapabilityScope.setState({ catalog, version: "0.12.0" });
+		await runCommand("deploy.toAzure");
+		expect(run).toHaveBeenCalledOnce();
+	});
+
+	it("gates nothing with no project version, and still hides a `when`-false command before gating it", async () => {
+		const run = vi.fn();
+		setCommands([
+			defineCommand({
+				id: "deploy.toAzure",
+				title: "Deploy to Azure",
+				capability: "deploy.azure",
+				run,
+			}),
+			defineCommand({
+				id: "deploy.hidden",
+				title: "Hidden",
+				capability: "deploy.azure",
+				when: () => false,
+				run,
+			}),
+		]);
+		useCapabilityScope.setState({ catalog, version: undefined });
+		await runCommand("deploy.toAzure");
+		expect(run).toHaveBeenCalledOnce();
+		useCapabilityScope.setState({ catalog, version: "0.10.0" });
+		await expect(runCommand("deploy.hidden")).resolves.toBeUndefined();
 	});
 });

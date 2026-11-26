@@ -3,8 +3,30 @@
 // shared/ cannot import app/, so the list is handed down rather than read up. An unknown id or arguments the
 // command's schema refuses is a development error: it throws in development and tests (the source scan and the
 // manifest tests catch most first), and in production it is logged and nothing runs, so a stale id never takes
-// the shell down.
+// the shell down. A command whose kernel capability the project's OAK version lacks is refused with the version
+// gate's reason (CommandUnavailableError): it exists, but cannot run here (the palette lists it with that reason).
+import { type CapabilityGate, capabilityGate } from "../capability/capability";
 import type { AppCommand } from "./command";
+
+/** Refusal of a command whose capability the project's OAK version lacks; the message is the gate's reason. */
+export class CommandUnavailableError extends Error {
+	readonly commandId: string;
+	readonly status: "needs-upgrade" | "removed";
+	constructor(
+		commandId: string,
+		gate: Extract<CapabilityGate, { available: false }>,
+	) {
+		super(gate.reason);
+		this.name = "CommandUnavailableError";
+		this.commandId = commandId;
+		this.status = gate.status;
+	}
+}
+
+/** Whether `command` can run for the open project's OAK version (capability.tsx, capabilityGate). */
+export function commandGate(command: AppCommand): CapabilityGate {
+	return capabilityGate(command.capability);
+}
 
 let commands: readonly AppCommand[] = [];
 let byId: ReadonlyMap<string, AppCommand> = new Map();
@@ -40,8 +62,9 @@ function developmentError(message: string): Promise<void> {
 
 /**
  * Looks the command up, parses `args` with its schema and runs it. Resolves when the command has run; rejects if
- * the command itself fails. A command whose `when` is false does not run. An unknown id or bad arguments throws
- * at once in development and tests, and only logs in production.
+ * the command itself fails. A command whose `when` is false does not run (and resolves); one whose capability the
+ * project lacks does not run and rejects with a CommandUnavailableError. An unknown id or bad arguments throws at
+ * once in development and tests, and only logs in production.
  */
 export function runCommand(id: string, args?: unknown): Promise<void> {
 	const command = byId.get(id);
@@ -58,6 +81,9 @@ export function runCommand(id: string, args?: unknown): Promise<void> {
 		return developmentError(`command ${id} takes no arguments`);
 	}
 	if (command.when && !command.when()) return Promise.resolve();
+	const gate = commandGate(command);
+	if (!gate.available)
+		return Promise.reject(new CommandUnavailableError(id, gate));
 	try {
 		return Promise.resolve(command.run(parsed)).then(() => undefined);
 	} catch (err) {
