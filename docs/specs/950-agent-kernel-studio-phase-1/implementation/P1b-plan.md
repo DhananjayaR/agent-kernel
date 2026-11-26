@@ -271,7 +271,7 @@ beside each. Move `apps/desktop/src/main/bridge/registry.ts` and its test here; 
 - Ports, each an interface plus a fake in `src/ports/fakes.ts`: `CommandRunner` (`run({ executable, args,
   cwd, env?, signal }) -> { commandId, exitCode, durationMs }`, with an output callback), `ProjectFs`
   (`read(path) -> { content, revision }`, `write(path, content, baseRevision)`, refusing paths outside the root
-  with `file.outsideProject` and a stale base with `file.changedOnDisk` carrying the new content), `Watcher`
+  with `file.outsideProject` and a stale base with `file.changedOnDisk`; the error carries no content, the view re-reads), `Watcher`
   (`watch(root, onChange(paths))`), `JobRecordStore` (`started(record)`, `ended(jobId, state)`,
   `unfinished()`, `dismiss(jobId)`).
 
@@ -494,7 +494,7 @@ Task 13's generators).
 - [ ] **Step 1:** Generate the feature, then add, through the generators:
   - query `about.info` (the app's version and platform);
   - command `about.setNote { note, baseRevision } -> { revision }`, with `about.note -> { note, revision }`
-    as its query; a stale `baseRevision` answers `file.changedOnDisk` with the current note;
+    as its query; a stale `baseRevision` answers `file.changedOnDisk` (no content; the view re-reads the note);
   - job `about.demoJob` with three steps of about a second each, a `confirm` request after step 2, a stream
     line per step, `cancellable: true`, `survivesQuit: false`;
   - session kind `about.ticker`, writing a line a second to its stream until stopped, with a `burst` argument
