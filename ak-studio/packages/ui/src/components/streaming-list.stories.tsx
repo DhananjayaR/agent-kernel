@@ -428,6 +428,41 @@ export const FollowsWhenResized: Story = {
 	},
 };
 
+/**
+ * Scrolled up, then the box grows until the end is in view (a resized panel): the list is at the latest line, so it
+ * follows again and "Jump to latest" goes away.
+ */
+export const LandsAtEndWhenResized: Story = {
+	render: () => <Arriving start={14} resizable />,
+	play: async ({ canvasElement }) => {
+		const rows = tickerRows(canvasElement);
+		await waitFor(() => expect(atEnd(rows)).toBe(true));
+		await expect(rows.scrollHeight).toBeGreaterThan(rows.clientHeight);
+		rows.scrollTop = 0;
+		await within(canvasElement).findByRole("button", {
+			name: "Jump to latest",
+		});
+		await userEvent.click(
+			within(canvasElement).getByRole("button", {
+				name: "Make the list taller",
+			}),
+		);
+		await waitFor(() =>
+			expect(
+				within(canvasElement).queryByRole("button", { name: "Jump to latest" }),
+			).toBeNull(),
+		);
+		// Following again: the next lines are followed.
+		await userEvent.click(
+			within(canvasElement).getByRole("button", { name: "Add 10 lines" }),
+		);
+		await waitFor(() =>
+			expect(within(rows).getByText("Tick 24")).toBeVisible(),
+		);
+		await expect(atEnd(rows)).toBe(true);
+	},
+};
+
 /** A stream in a burst: 5 lines every 20 ms, 60 times (300 lines), then it stops, so the end state is fixed. */
 function Burst() {
 	const [lines, setLines] = useState(() => ticks(40));

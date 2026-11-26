@@ -1,9 +1,10 @@
 // The English defaults of the shared components, in one place (copy rules: sentence case; reviewed and later
 // translated in one module). Every one can be overridden where the component is used: StatusChip's `label`,
 // Combobox's `emptyText`, BuildWithAIButton's and SettingsButton's `label`, and the `strings` prop of PathChip,
-// CodeBlock, Modal, ConfirmModal, ToastRegion, ApprovalCard, JobProgressView, the background job notice, StreamingListView, CommandRow,
-// SessionControlView, CommandPaletteView and the shell (DesktopShell, ProjectSwitcher, RunControl,
-// DeployStatus, BottomPanel, StatusBar, SettingsModal, WindowControls). Placeholders such as `{port}` are filled by `fillString`.
+// CodeBlock, Modal, ConfirmModal, ToastRegion, ApprovalCard, JobProgressView, the background job notice,
+// StreamingListView, CommandRow, SessionControlView, CommandPaletteView, StateMessage, ChangedOnDiskBanner,
+// UnsavedChangesDialog, VersionNotice and the shell (DesktopShell, ProjectSwitcher, RunControl, DeployStatus,
+// BottomPanel, StatusBar, SettingsModal, WindowControls). Placeholders such as `{port}` are filled by `fillString`.
 // Features keep their own copy in their own strings module and pass it in.
 export const uiStrings = {
 	status: {
@@ -20,6 +21,8 @@ export const uiStrings = {
 		reveal: "Reveal in file manager",
 		copy: "Copy path",
 		copied: "Path copied",
+		/** The chip's text for assistive technology when it names a line. */
+		atLine: "{path}, line {line}",
 	},
 	codeBlock: {
 		copy: "Copy code",
@@ -117,6 +120,53 @@ export const uiStrings = {
 		/** Said once typing pauses: how many commands match. `{count}` is the number. */
 		matches: "{count} commands",
 		matchesOne: "1 command",
+	},
+	// The empty, cannot-read and error family (state-message.tsx): the slots' own words.
+	stateMessage: {
+		/** The disclosure that shows the raw output (masked), collapsed by default. */
+		details: "Details",
+		/** The detail's caption: the raw output, with secrets already hidden by the service. */
+		output: "Raw output",
+	},
+	// The changed-on-disk banner (changed-on-disk-banner.tsx). Views may say what changed in their own words
+	// ("The canvas was updated.").
+	changedOnDisk: {
+		updatedTitle: "File changed on disk",
+		updated: "This view now shows the file as it is on disk.",
+		conflictTitle: "File changed on disk while you were editing",
+		conflict:
+			"Your changes are kept here, not saved. Keep yours to save them over the file, or take the file as it is on disk.",
+		keepMine: "Keep mine",
+		takeTheirs: "Take theirs",
+		compare: "Compare",
+		dismiss: "Dismiss",
+	},
+	// The unsaved changes guard (unsaved-changes-dialog.tsx), for leaving a view in the app. `{what}` names what is
+	// unsaved, as the view words it ("config.yaml", "the session section").
+	unsavedChanges: {
+		title: "Unsaved changes in {what}",
+		body: "Save them before you leave, or discard them.",
+		save: "Save",
+		discard: "Discard changes",
+		stay: "Stay",
+	},
+	// The version gate (version-notice.tsx). `{feature}` is the capability's title, `{since}` the first OAK version
+	// with it, `{until}` the first without it, `{version}` the project's.
+	versionNotice: {
+		needsUpgrade: "{feature} needs OAK {since} or later",
+		removed: "{feature} was removed in OAK {until}",
+		removedUnknown: "{feature} was removed from OAK",
+		projectVersion: "This project uses OAK {version}.",
+		upgrade: "Upgrade OAK in this project to use it.",
+		readOnly: "The fields below are read-only until then.",
+		replacedBy: "Use {replacement} instead.",
+		command: "Upgrade command",
+		commandHint:
+			"Run it in a terminal in the project's folder. The Studio does not run it for you.",
+		docs: "Open the docs",
+		tag: "Needs {since}",
+		tagRemoved: "Removed in {until}",
+		tagRemovedUnknown: "Removed",
 	},
 	// The desktop shell (Task 10). The app areas are fixed; their empty states are the app's own copy.
 	shell: {
@@ -232,6 +282,18 @@ export type SessionControlStrings = {
 };
 export type CommandPaletteStrings = {
 	-readonly [K in keyof typeof uiStrings.commandPalette]: string;
+};
+export type StateMessageStrings = {
+	-readonly [K in keyof typeof uiStrings.stateMessage]: string;
+};
+export type ChangedOnDiskStrings = {
+	-readonly [K in keyof typeof uiStrings.changedOnDisk]: string;
+};
+export type UnsavedChangesStrings = {
+	-readonly [K in keyof typeof uiStrings.unsavedChanges]: string;
+};
+export type VersionNoticeStrings = {
+	-readonly [K in keyof typeof uiStrings.versionNotice]: string;
 };
 export type ShellStrings = {
 	-readonly [K in keyof typeof uiStrings.shell]: string;

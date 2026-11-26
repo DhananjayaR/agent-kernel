@@ -15,10 +15,11 @@
 //   aria-activedescendant). Typing filters (case and accents ignored, anywhere in the title). One row is always
 //   marked while anything matches: the first runnable match, on opening and after every change to the text
 //   (Backspace too), so Enter never acts on a row that is not shown as marked. ArrowUp and ArrowDown move the mark
-//   (wrapping); Enter runs the marked row, and does nothing when nothing matches; Escape closes; Tab stays inside.
-//   The pointer marks the row it moves over and a click runs it. The mark is the row's fill and the inset focus
-//   ring. The search field shows focus as Input does: its edge in the text colour, and the focus ring when focus came
-//   by keyboard (the app opens the palette with Mod+K).
+//   (wrapping) and scroll the marked row into view; Enter runs the marked row, and does nothing when nothing matches;
+//   Escape closes; Tab stays inside. The pointer marks the row it moves over without scrolling the list (a scroll
+//   would move another row under it), and a click runs it. The mark is the row's fill and the inset focus ring. The
+//   search field shows focus as Input does: its edge in the text colour, and the focus ring when focus came by
+//   keyboard (the app opens the palette with Mod+K).
 // - **Running.** The palette closes first, then runs the command, so the focus it gives back does not fight
 //   where the command moves it.
 // - **Colour.** Shortcuts and reasons are in the text colour: muted text fails contrast on a marked row's fill.
@@ -124,14 +125,13 @@ function PaletteBody({
 		() => items.filter((item) => contains(item.title, query.trim())),
 		[items, query, contains],
 	);
-	// The mark is kept by command id. What the person moved to (arrows, pointer) holds for the text it was chosen
-	// under, while that command is still listed: a new item list (the parent re-rendering) keeps it, a change to the
-	// text drops it. Otherwise the first runnable match is marked, else the first match.
-	const [chosen, setChosen] = useState<{ query: string; id: string }>();
+	// The mark is kept by command id. What the person moved to (arrows, pointer) holds while that command is still
+	// listed: a new item list (the parent re-rendering) keeps it. Any change to the text drops it (in onChange, so
+	// typing and deleting back to the same text does not bring an old choice back). Otherwise the first runnable
+	// match is marked, else the first match.
+	const [chosen, setChosen] = useState<string>();
 	const chosenIndex =
-		chosen && chosen.query === query
-			? matches.findIndex((item) => item.id === chosen.id)
-			: -1;
+		chosen === undefined ? -1 : matches.findIndex((item) => item.id === chosen);
 	const mark =
 		chosenIndex >= 0
 			? chosenIndex
@@ -142,9 +142,13 @@ function PaletteBody({
 						matches.findIndex((item) => item.unavailable === undefined),
 					);
 	const marked = matches[mark];
-	const moveMark = (index: number) => {
+	// Whether the mark last moved under the pointer: that row is in view where the pointer is, and scrolling it fully
+	// into view would move another row under the pointer (a nudge), so it is not scrolled.
+	const byPointer = useRef(false);
+	const moveMark = (index: number, pointer = false) => {
 		const item = matches[index];
-		if (item) setChosen({ query, id: item.id });
+		byPointer.current = pointer;
+		if (item) setChosen(item.id);
 	};
 	// Said (politely) when Enter or a click lands on a gated row: it cannot run, and why. `n` gives each refusal a
 	// node of its own, so pressing Enter again on the same row is said again; moving the mark clears it.
@@ -174,7 +178,7 @@ function PaletteBody({
 	const listRef = useRef<HTMLDivElement>(null);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: the marked row may have moved when the matches changed
 	useEffect(() => {
-		if (!marked) return;
+		if (!marked || byPointer.current) return;
 		listRef.current
 			?.querySelector(`[id="${optionId(marked)}"]`)
 			?.scrollIntoView?.({ block: "nearest" });
@@ -216,6 +220,8 @@ function PaletteBody({
 				onChange={(value) => {
 					typed.current = true;
 					setQuery(value);
+					setChosen(undefined);
+					byPointer.current = false;
 					setRefused(undefined);
 				}}
 				className="shrink-0"
@@ -281,7 +287,7 @@ function PaletteBody({
 									item.unavailable === undefined ? undefined : ""
 								}
 								onPointerMove={() => {
-									if (index !== mark) moveMark(index);
+									if (index !== mark) moveMark(index, true);
 								}}
 								onClick={() => run(item)}
 								className={cn(

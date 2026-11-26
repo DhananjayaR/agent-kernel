@@ -3,8 +3,9 @@
 // (controls, display, overlays and structure; Drawer is left to P6), and the desktop shell (Task 10: DesktopShell,
 // TopBar, AppTabList, ProjectSwitcher, the top bar controls, BottomPanel, StatusBar, SettingsModal), and the P1b
 // patterns (Task 15: ApprovalCard, JobProgressView, the background job notice; Task 16: SessionControlView,
-// StreamingListView, CommandRow, CommandPaletteView). The "Base component set" and
-// "Shell layout" sign-offs are pending. Exports are in path order (Biome sorts them).
+// StreamingListView, CommandRow, CommandPaletteView; Task 17: StateMessage, ChangedOnDiskBanner, UnsavedChangesDialog,
+// VersionNotice). The "Base component set" and "Shell layout" sign-offs are pending. Exports are in path order
+// (Biome sorts them).
 export const name = "@ak-studio/ui";
 
 export {
@@ -48,6 +49,10 @@ export {
 	CardTitle,
 	type CardTitleProps,
 } from "./components/card";
+export {
+	ChangedOnDiskBanner,
+	type ChangedOnDiskBannerProps,
+} from "./components/changed-on-disk-banner";
 export { Checkbox, type CheckboxProps } from "./components/checkbox";
 export { CodeBlock, type CodeBlockProps } from "./components/code-block";
 export {
@@ -184,6 +189,14 @@ export {
 export { Skeleton } from "./components/skeleton";
 export { Spinner, type SpinnerProps } from "./components/spinner";
 export {
+	ErrorBanner,
+	type ErrorSlots,
+	type StateAction,
+	StateMessage,
+	type StateMessageKind,
+	type StateMessageProps,
+} from "./components/state-message";
+export {
 	StatusBar,
 	type StatusBarProps,
 	type StatusBarState,
@@ -243,6 +256,16 @@ export {
 	type TreeProps,
 } from "./components/tree";
 export {
+	UnsavedChangesDialog,
+	type UnsavedChangesDialogProps,
+} from "./components/unsaved-changes-dialog";
+export {
+	type VersionGap,
+	VersionNotice,
+	type VersionNoticeProps,
+	VersionTag,
+} from "./components/version-notice";
+export {
 	WindowControls,
 	type WindowControlsProps,
 } from "./components/window-controls";
@@ -258,6 +281,7 @@ export type {
 	ApprovalStrings,
 	BackgroundJobStrings,
 	BottomPanelStrings,
+	ChangedOnDiskStrings,
 	CodeBlockStrings,
 	CommandPaletteStrings,
 	CommandRowStrings,
@@ -271,9 +295,12 @@ export type {
 	SessionControlStrings,
 	SettingsStrings,
 	ShellStrings,
+	StateMessageStrings,
 	StatusBarStrings,
 	StreamingListStrings,
 	ToastStrings,
+	UnsavedChangesStrings,
+	VersionNoticeStrings,
 	WindowControlsStrings,
 } from "./strings";
 export { fillString, uiStrings } from "./strings";

@@ -85,6 +85,7 @@
 				"KeepsPlaceWhileEvicting",
 				"ScrollUpDuringBurst",
 				"FollowsWhenResized",
+				"LandsAtEndWhenResized",
 				"LongLines",
 				"TenThousandLines",
 				"StreamFailed",
@@ -111,10 +112,60 @@
 				"NoMatches",
 				"VersionGated",
 				"MarksFirstRunnable",
+				"HoverKeepsScroll",
 				"MacShortcuts",
 				"EscapeCloses",
 				"Keyboard",
 				"EnterAfterBackspace"
+			]
+		},
+		{
+			"pattern": "packages/ui/src/components/state-message.tsx",
+			"stories": [
+				"Empty",
+				"CannotRead",
+				"CannotReadPartial",
+				"ErrorState",
+				"ErrorPartial",
+				"DetailOpen",
+				"Keyboard"
+			]
+		},
+		{
+			"pattern": "packages/ui/src/components/changed-on-disk-banner.tsx",
+			"stories": [
+				"Updated",
+				"UpdatedInTheViewsWords",
+				"Conflict",
+				"ConflictWithCompare",
+				"Saving",
+				"Floating",
+				"Keyboard"
+			]
+		},
+		{
+			"pattern": "packages/ui/src/components/unsaved-changes-dialog.tsx",
+			"stories": [
+				"Default",
+				"Save",
+				"Discard",
+				"EscapeStays",
+				"Saving",
+				"SaveFailed",
+				"Keyboard"
+			]
+		},
+		{
+			"pattern": "packages/ui/src/components/version-notice.tsx",
+			"stories": [
+				"Tab",
+				"TabWithoutCommand",
+				"TabRemoved",
+				"Section",
+				"SectionTag",
+				"Control",
+				"ControlRemoved",
+				"Keyboard"
 			]
 		}
 	],

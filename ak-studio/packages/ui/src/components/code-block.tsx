@@ -19,8 +19,11 @@ export type CodeBlockProps = Omit<
 	code: string;
 	/** What the code is ("Upgrade command"): the caption, which also names the code's scroll region. */
 	label: string;
-	/** Shows a copy button that calls this with the code. */
-	onCopy?: (code: string) => void;
+	/**
+	 * Shows a copy button that calls this with the code. A copy that answers a promise shows "copied" once it
+	 * resolves, and nothing if it rejects (the caller reports the failure).
+	 */
+	onCopy?: (code: string) => Promise<unknown> | undefined;
 	/** Overrides of the default copy (strings.ts). */
 	strings?: Partial<CodeBlockStrings>;
 };
@@ -69,8 +72,13 @@ export function CodeBlock({
 								)
 							}
 							onPress={() => {
-								onCopy(code);
-								setCopied(true);
+								const done = onCopy(code);
+								if (done instanceof Promise)
+									done.then(
+										() => setCopied(true),
+										() => {},
+									);
+								else setCopied(true);
 							}}
 						/>
 					</Tooltip>

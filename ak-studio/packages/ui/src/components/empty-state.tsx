@@ -1,6 +1,7 @@
 // EmptyState: a view with nothing in it yet. Says what the place is for and offers the first action (copy
 // rules). Added with the shadcn CLI as `empty` (aria-nova), restyled and reduced to one component: centred,
-// an optional icon in a 48 px disc, the title in the heading face, a muted description, then the actions.
+// an optional icon in a 48 px disc, the title in the heading face, a muted description, then any further content
+// (a version gate's upgrade command, a file and line, details), then the actions.
 import type { ReactNode } from "react";
 import { cn } from "../lib/utils";
 
@@ -13,6 +14,8 @@ export type EmptyStateProps = {
 	icon?: ReactNode;
 	/** The first action: usually one primary Button, plus an alternative. */
 	action?: ReactNode;
+	/** More content between the description and the action (an upgrade command, a file and line). */
+	children?: ReactNode;
 	/** Heading level in the page outline (default 2). */
 	headingLevel?: 2 | 3 | 4;
 	className?: string;
@@ -24,6 +27,7 @@ export function EmptyState({
 	icon,
 	action,
 	headingLevel = 2,
+	children,
 	className,
 }: EmptyStateProps) {
 	const Heading = `h${headingLevel}` as const;
@@ -47,8 +51,15 @@ export function EmptyState({
 				<Heading className="font-heading text-ui-xl font-bold text-text">
 					{title}
 				</Heading>
-				<p className="text-ui text-text-muted">{description}</p>
+				{description ? (
+					<p className="text-ui text-text-muted">{description}</p>
+				) : null}
 			</div>
+			{children ? (
+				<div className="flex w-full max-w-dialog-m flex-col items-center gap-3">
+					{children}
+				</div>
+			) : null}
 			{action ? (
 				<div className="flex flex-wrap items-center justify-center gap-2">
 					{action}

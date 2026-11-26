@@ -192,14 +192,18 @@ export const Succeeded: Story = {
 	},
 };
 
-/** Failed: what happened, then the next action (Task 17's ErrorView replaces this minimal banner). */
+/**
+ * Failed: what happened, what to do, the raw detail (collapsed) and the next action, in the error family's banner
+ * (ErrorBanner, as the renderer's ErrorView draws a StudioError).
+ */
 export const Failed: Story = {
 	args: {
 		state: "failed",
 		onShowCommands: fn(),
 		error: {
 			title: "The toolchain could not be found",
-			message: "uv is not on your PATH. Install it, then try again.",
+			description: "uv is not on your PATH. Install it, then try again.",
+			detail: "which: no uv in (/usr/local/bin:/usr/bin:/bin)",
 			action: { label: "Check again", onAction: fn() },
 		},
 	},
@@ -207,6 +211,8 @@ export const Failed: Story = {
 		const el = job(canvasElement);
 		const alert = within(el).getByRole("alert");
 		await expect(alert).toHaveTextContent("The toolchain could not be found");
+		// The detail is collapsed until asked for.
+		await expect(within(alert).getByText(/which: no uv/)).not.toBeVisible();
 		await userEvent.click(
 			within(alert).getByRole("button", { name: "Check again" }),
 		);

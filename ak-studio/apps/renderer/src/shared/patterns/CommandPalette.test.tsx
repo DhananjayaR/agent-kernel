@@ -263,6 +263,33 @@ describe("CommandPalette", () => {
 		expect(marked()).toBe("about.first");
 	});
 
+	it("drops the choice on any change to the text, even one that comes back to the same text", async () => {
+		const { commands } = fixture();
+		const user = userEvent.setup();
+		render(
+			<CommandPalette
+				isOpen
+				onOpenChange={() => {}}
+				commands={commands}
+				platform="other"
+			/>,
+		);
+		const search = screen.getByRole("combobox", { name: "Search commands" });
+		search.focus();
+		const marked = () =>
+			document.getElementById(
+				search.getAttribute("aria-activedescendant") ?? "",
+			)?.dataset.key;
+		await user.keyboard("view");
+		expect(marked()).toBe("shell.toggle");
+		await user.keyboard("{ArrowDown}");
+		expect(marked()).toBe("shell.open");
+		// Typed and deleted back to "view": the text is the same, but it changed, so the first match is marked.
+		await user.keyboard("x{Backspace}");
+		expect(search).toHaveProperty("value", "view");
+		expect(marked()).toBe("shell.toggle");
+	});
+
 	it("reports a command that fails (logged; the Shell shows it in a toast)", async () => {
 		const log = vi.spyOn(console, "error").mockImplementation(() => {});
 		const { commands, fails } = fixture();

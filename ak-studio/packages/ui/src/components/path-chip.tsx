@@ -3,7 +3,9 @@
 // middle: the folders shrink with an ellipsis and the last segment (the file name) stays whole. The full path is
 // the chip's text for assistive technology and the description of each action. Reveal and copy are optional
 // actions with tooltips; this package makes no Electron or clipboard call, the feature passes callbacks. After a
-// copy the button shows a check for a moment and a status message announces it. Copy defaults: strings.ts.
+// copy the button shows a check for a moment and a status message announces it. Copy defaults: strings.ts. A line
+// (the cannot-read pattern: "Cannot read app.py at line 42") follows the name as ":42", read as "line 42"; Copy
+// copies the path alone.
 import { IconCheck, IconCopy, IconFolderOpen } from "@tabler/icons-react";
 import {
 	type HTMLAttributes,
@@ -15,7 +17,7 @@ import {
 import { Button } from "react-aria-components";
 import { motion } from "../lib/styles";
 import { cn } from "../lib/utils";
-import { type PathChipStrings, uiStrings } from "../strings";
+import { fillString, type PathChipStrings, uiStrings } from "../strings";
 import { Tooltip } from "./tooltip";
 
 /** How long the copied check stays, in milliseconds. */
@@ -27,6 +29,8 @@ export type PathChipProps = Omit<
 > & {
 	/** The path as the user should read it: relative to the project where it can be. */
 	path: string;
+	/** A line in the file (1-based): shown after the name, not part of the copied path. */
+	line?: number;
 	/** Shows a "Reveal in file manager" button that calls this. */
 	onReveal?: () => void;
 	/** Shows a "Copy path" button that calls this with the path. */
@@ -75,6 +79,7 @@ function ChipAction({
 
 export function PathChip({
 	path,
+	line,
 	onReveal,
 	onCopy,
 	strings,
@@ -95,7 +100,7 @@ export function PathChip({
 	return (
 		<span
 			data-slot="path-chip"
-			title={path}
+			title={line === undefined ? path : `${path}:${line}`}
 			className={cn(
 				"inline-flex h-control-s max-w-full min-w-0 items-center rounded-control pl-2.5 font-mono text-ui-sm text-text",
 				"ring-1 ring-border-default ring-inset",
@@ -105,11 +110,12 @@ export function PathChip({
 			{...props}
 		>
 			<span id={pathId} className="sr-only">
-				{path}
+				{line === undefined ? path : fillString(text.atLine, { path, line })}
 			</span>
 			<span aria-hidden="true" className="flex min-w-0 whitespace-pre">
 				<span className="min-w-0 truncate">{folders}</span>
 				<span className="shrink-0">{name}</span>
+				{line === undefined ? null : <span className="shrink-0">:{line}</span>}
 			</span>
 			{hasActions ? <span className="w-1 shrink-0" /> : null}
 			{onReveal ? (

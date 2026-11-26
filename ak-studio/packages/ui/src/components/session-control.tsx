@@ -19,7 +19,7 @@ import { type HTMLAttributes, type ReactNode, useId } from "react";
 import { cn } from "../lib/utils";
 import { type SessionControlStrings, uiStrings } from "../strings";
 import { Button } from "./button";
-import { InlineBanner } from "./inline-banner";
+import { ErrorBanner, type ErrorSlots } from "./state-message";
 import { type Status, StatusChip } from "./status-chip";
 
 export type SessionControlState =
@@ -58,7 +58,7 @@ export type SessionControlViewProps = Omit<
 	/** Shows its log (the bottom panel's view of its output); "Show log" when given. */
 	onShowLog?: () => void;
 	/** Why it failed, or why a start or stop was refused: what happened, then what to do. */
-	error?: { title: string; description?: ReactNode };
+	error?: ErrorSlots;
 	/** Overrides of the default copy (strings.ts). */
 	strings?: Partial<SessionControlStrings>;
 };
@@ -139,11 +139,7 @@ export function SessionControlView({
 					))}
 				</dl>
 			) : null}
-			{error ? (
-				<InlineBanner tone="danger" title={error.title}>
-					{error.description}
-				</InlineBanner>
-			) : null}
+			{error ? <ErrorBanner error={error} /> : null}
 		</section>
 	);
 }

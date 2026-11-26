@@ -10,6 +10,7 @@ import {
 	expectInsetFocusRing,
 	expectSolidLayer,
 	expectTokenColour,
+	pointerOver,
 } from "../lib/story-checks";
 import { Button } from "./button";
 import {
@@ -343,5 +344,50 @@ export const EnterAfterBackspace: Story = {
 		await palette();
 		await userEvent.keyboard("panelx{Backspace}");
 		await expectMarked(rows()[0]);
+	},
+};
+
+/** Enough commands that the list scrolls (it shows about nine rows). */
+const many: CommandPaletteItem[] = Array.from({ length: 14 }, (_, i) => ({
+	id: `demo.command${i + 1}`,
+	title: `Demo: Command ${i + 1}`,
+}));
+
+/**
+ * The pointer over a row that is only partly in view marks it without scrolling the list: a scroll there would move
+ * another row under the pointer (a nudge). The arrow keys still bring the marked row into view.
+ */
+export const HoverKeepsScroll: Story = {
+	args: { items: many, onRun: fn() },
+	play: async ({ canvasElement }) => {
+		await open(canvasElement);
+		const list = body().getByRole("listbox", { name: "Commands" });
+		await expect(list.scrollHeight).toBeGreaterThan(list.clientHeight);
+		// The second row cut off at the top (the first is marked already, as on opening).
+		const cut = rows()[1] as HTMLElement;
+		list.scrollTop =
+			cut.getBoundingClientRect().top -
+			list.getBoundingClientRect().top +
+			list.scrollTop +
+			20;
+		const top = list.scrollTop;
+		await expect(cut.getBoundingClientRect().top).toBeLessThan(
+			list.getBoundingClientRect().top,
+		);
+		await expect(cut.getBoundingClientRect().bottom).toBeGreaterThan(
+			list.getBoundingClientRect().top,
+		);
+		await pointerOver(cut);
+		await expectMarked(cut);
+		await expect(list.scrollTop).toBe(top);
+		// The keyboard moves the mark into view: ArrowUp twice wraps to the last row, below the fold.
+		await userEvent.keyboard("{ArrowUp}{ArrowUp}");
+		const last = rows()[13] as HTMLElement;
+		await expectMarked(last);
+		await waitFor(() =>
+			expect(last.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+				list.getBoundingClientRect().bottom,
+			),
+		);
 	},
 };

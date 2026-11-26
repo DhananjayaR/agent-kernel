@@ -12,9 +12,10 @@
 //   decided by what the person does, never by the position alone: an upward wheel, ArrowUp, Page Up or Home on the
 //   rows, or grabbing the scrollbar stops it at once (when there is anything to scroll), before the next batch can
 //   snap the list back (a batch can land every frame); so does a scroll of theirs that moved up away from the end.
-//   The box growing (the browser moves the position up to fit) is not the person, and changes nothing. It resumes only when they move down to the end (by wheel,
-//   keys or the scrollbar), press End, or press "Jump to latest". The list's own scrolls (following, keeping place)
-//   never change it. While not following, lines evicted from the top of the buffer do not move what is in view.
+//   The box growing (the browser moves the position up to fit) is not the person, and does not stop it. It resumes
+//   when they move down to the end (by wheel, keys or the scrollbar), press End, or press "Jump to latest", and when
+//   the box grows until the end is in view. The list's own scrolls (following, keeping place) never change it.
+//   While not following, lines evicted from the top of the buffer do not move what is in view.
 // - **Header.** The label, a note when earlier lines were not kept ("120 earlier lines not kept": Copy then copies
 //   less than the whole output), "Copy" (the selection inside the list if there is one, else every line held; a
 //   callback: this package makes no clipboard call) and "Clear" (empties the view; the record stays).
@@ -32,7 +33,6 @@ import {
 	type KeyboardEvent,
 	memo,
 	type PointerEvent,
-	type ReactNode,
 	useCallback,
 	useEffect,
 	useId,
@@ -51,7 +51,7 @@ import {
 import { cn } from "../lib/utils";
 import { fillString, type StreamingListStrings, uiStrings } from "../strings";
 import { Button } from "./button";
-import { InlineBanner } from "./inline-banner";
+import { ErrorBanner, type ErrorSlots } from "./state-message";
 
 /** Every row's height in px (`h-5`: 20 px, 12 px monospace text). The virtualiser's estimate is exact. */
 export const STREAM_ROW_HEIGHT = 20;
@@ -91,7 +91,7 @@ export type StreamingListViewProps = Omit<
 	/** Empties the view; shows "Clear" when given. */
 	onClear?: () => void;
 	/** Why the output stopped early (the stream failed), above the rows. */
-	error?: { title: string; description?: ReactNode };
+	error?: ErrorSlots;
 	/** Overrides of the default copy (strings.ts). */
 	strings?: Partial<StreamingListStrings>;
 };
@@ -244,6 +244,18 @@ export function StreamingListView({
 		else if (moved > 0 && atEnd) follow(true);
 	};
 
+	// Not following, and the box grew until the end is in view (a resized panel): the latest line shows, so it follows
+	// again and "Jump to latest" goes. Only a change of size: the person's own small move up stays where they put it.
+	useEffect(() => {
+		const el = scrollRef.current;
+		if (!el) return;
+		const observer = new ResizeObserver(() => {
+			if (!following.current && isAtEnd(el)) follow(true);
+		});
+		observer.observe(el);
+		return () => observer.disconnect();
+	}, [follow]);
+
 	// An upward wheel stops following before the browser scrolls, so no batch in between can snap the list back.
 	const onWheel = (event: WheelEvent<HTMLElement>) => {
 		const el = scrollRef.current;
@@ -391,9 +403,7 @@ export function StreamingListView({
 			</header>
 			{error ? (
 				<div className="shrink-0 p-2">
-					<InlineBanner tone="danger" title={error.title}>
-						{error.description}
-					</InlineBanner>
+					<ErrorBanner error={error} />
 				</div>
 			) : null}
 			<div className="relative flex min-h-0 flex-1 flex-col">

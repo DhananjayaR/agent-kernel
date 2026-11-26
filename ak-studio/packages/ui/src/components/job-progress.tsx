@@ -9,15 +9,15 @@
 // it runs: "Stop" (secondary; "Stop", as drawn, because it stops a process; "Cancel" stays for dialogs), with the
 // job's own caution line where stopping is unsafe, and "Show commands" when the job ran commands (it opens the
 // Commands panel). A question the job asks shows inside it (`children`: the approval card). It ends in a one-line
-// result with "Done", "Stopped", or the error with its next action. The error here is a minimal inline banner;
-// Task 17's ErrorView replaces it. When "Stop" goes away (the job ended), focus that was on it moves to the card.
+// result with "Done", "Stopped", or the error with its next action, in the error family's banner (ErrorBanner, the
+// frame the renderer's ErrorView uses). When "Stop" goes away (the job ended), focus that was on it moves to the card.
 import type { ReactNode } from "react";
 import { useId } from "react";
 import { useKeepFocus } from "../lib/focus";
 import { cn } from "../lib/utils";
 import { fillString, type JobProgressStrings, uiStrings } from "../strings";
 import { Button } from "./button";
-import { InlineBanner } from "./inline-banner";
+import { ErrorBanner, type ErrorSlots } from "./state-message";
 import { type Status, StatusChip } from "./status-chip";
 
 export type JobProgressState =
@@ -50,12 +50,11 @@ export function formatElapsed(ms: number): string {
 	return `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
 }
 
-/** The error a failed job ended with: what happened, then what to do (an app command, run by `onAction`). */
-export type JobProgressError = {
-	title: string;
-	message?: ReactNode;
-	action?: { label: string; onAction: () => void };
-};
+/**
+ * The error a failed job ended with, in the empty, cannot-read and error family's slots: what happened, what to do,
+ * the file and line, the raw detail and the next action (an app command, run by `onAction`).
+ */
+export type JobProgressError = ErrorSlots;
 
 export type JobProgressViewProps = {
 	/** The job's title, sentence case ("Detecting the toolchain"). Its accessible name. */
@@ -78,7 +77,7 @@ export type JobProgressViewProps = {
 	/** What went wrong, once it failed. */
 	error?: JobProgressError;
 	/** A stop that could not be sent, shown under the actions. */
-	stopError?: { title: string; description?: ReactNode };
+	stopError?: ErrorSlots;
 	/** The question the job asks while it waits (the approval card). */
 	children?: ReactNode;
 	strings?: Partial<JobProgressStrings>;
@@ -194,32 +193,14 @@ export function JobProgressView({
 					) : null}
 				</div>
 			) : null}
-			{stopError && active ? (
-				<InlineBanner tone="danger" title={stopError.title}>
-					{stopError.description}
-				</InlineBanner>
-			) : null}
+			{stopError && active ? <ErrorBanner error={stopError} /> : null}
 			{state === "succeeded" && result ? <div>{result}</div> : null}
 			{state === "cancelled" ? (
 				<p aria-hidden="true" className="text-text-muted">
 					{text.cancelledResult}
 				</p>
 			) : null}
-			{state === "failed" && error ? (
-				<InlineBanner
-					tone="danger"
-					title={error.title}
-					actions={
-						error.action ? (
-							<Button variant="secondary" onPress={error.action.onAction}>
-								{error.action.label}
-							</Button>
-						) : undefined
-					}
-				>
-					{error.message}
-				</InlineBanner>
-			) : null}
+			{state === "failed" && error ? <ErrorBanner error={error} /> : null}
 			{!active && onShowCommands ? (
 				<div>
 					{/* Pulled back by the quiet button's padding, so its label lines up with the text above. */}
