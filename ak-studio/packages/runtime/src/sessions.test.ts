@@ -13,6 +13,7 @@ import {
 	sessionStop,
 	sessionsList,
 	streamRead,
+	studioEventSchema,
 } from "@ak-studio/contract";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -41,7 +42,25 @@ const ticker = defineSessionKind({
 	args: z.strictObject({}),
 	info: z.object({}),
 });
-const kinds = { "t.server": server, "t.ticker": ticker } as const;
+// Info schemas a buggy kind could have: one whose transform throws, and one that lets anything through.
+const broken = defineSessionKind({
+	kind: "t.broken",
+	args: z.strictObject({}),
+	info: z.object({}).transform(() => {
+		throw new Error("transform boom");
+	}),
+});
+const loose = defineSessionKind({
+	kind: "t.loose",
+	args: z.strictObject({}),
+	info: z.object({ value: z.unknown() }),
+});
+const kinds = {
+	"t.server": server,
+	"t.ticker": ticker,
+	"t.broken": broken,
+	"t.loose": loose,
+} as const;
 const contract = {
 	operations: {
 		"session.start": sessionStart,
@@ -77,7 +96,8 @@ function setup() {
 	const events = new EventBus({ log, masker });
 	const emitted: StudioEvent[] = [];
 	vi.spyOn(events, "emit").mockImplementation((event) => {
-		emitted.push(structuredClone(event));
+		// Every event must pass the event union, as the registry's `events` stream would check it.
+		emitted.push(studioEventSchema.parse(structuredClone(event)));
 	});
 	const streams = new StreamHub({ masker, log });
 	const scopes = new ProjectScopes({ log, masker });
@@ -587,5 +607,161 @@ describe("SessionService: the list of sessions", () => {
 				async () => ({ info: {}, stop: async () => {} }),
 			),
 		).toThrow(/t.ticker/);
+	});
+});
+
+describe("SessionService: nothing after the starter can wedge a session", () => {
+	it("stops what it started and fails with bridge.invalidOutput when the info schema's transform throws; the kind can start again", async () => {
+		const s = setup();
+		s.scopes.open("p1", { root: "/p1" });
+		const stop = vi.fn(async () => {});
+		s.sessions.define("t.broken", async () => ({ info: {}, stop }));
+		const id = await s.startSession({
+			kind: "t.broken",
+			projectId: "p1",
+			args: {},
+		});
+		await settle();
+		expect(s.current(id)).toMatchObject({
+			state: "failed",
+			error: {
+				code: ERROR_CODES.invalidOutput,
+				detail: expect.stringContaining("transform boom"),
+			},
+		});
+		expect(stop).toHaveBeenCalledOnce();
+		await expect(
+			s.registry.request("session.start", {
+				kind: "t.broken",
+				projectId: "p1",
+				args: {},
+			}),
+		).resolves.toMatchObject({ ok: true });
+		await settle();
+		await expect(s.sessions.stopAll()).resolves.toBeUndefined();
+		await expect(s.scopes.close("p1")).resolves.toBeUndefined();
+	});
+
+	it("fails with bridge.invalidOutput when the info holds something that is not data, or its getter throws", async () => {
+		const s = setup();
+		const infos: unknown[] = [
+			{ value: () => 1 },
+			{
+				get value(): unknown {
+					throw new Error("getter boom");
+				},
+			},
+		];
+		let n = 0;
+		s.sessions.define("t.loose", async () => {
+			const info = infos[n] as never;
+			n += 1;
+			return { info, stop: async () => {} };
+		});
+		const getterInfo = {
+			get info(): never {
+				throw new Error("info getter boom");
+			},
+			stop: async () => {},
+		};
+		s.sessions.define("t.ticker", async () => getterInfo);
+		for (let i = 0; i < infos.length; i++) {
+			const id = await s.startSession({ kind: "t.loose", args: {} });
+			await settle();
+			expect(s.current(id), String(i)).toMatchObject({
+				state: "failed",
+				error: { code: ERROR_CODES.invalidOutput },
+			});
+			expect(s.current(id)?.info).toBeUndefined();
+		}
+		const ticker = await s.startSession({ kind: "t.ticker", args: {} });
+		await settle();
+		expect(s.current(ticker)).toMatchObject({
+			state: "failed",
+			error: {
+				code: ERROR_CODES.invalidOutput,
+				detail: expect.stringContaining("info getter boom"),
+			},
+		});
+		expect(() => s.sessions.list()).not.toThrow();
+	});
+
+	it("still ends the session and frees its slot when announcing the end throws", async () => {
+		const s = setup();
+		const { starter, run } = parked();
+		s.sessions.define("t.server", starter);
+		const id = await s.startSession({ kind: "t.server", args: { port: 1 } });
+		run(0, { url: "u" });
+		await settle();
+		const emit = vi.mocked(s.events.emit);
+		emit.mockImplementation((event) => {
+			if (
+				event.type === "session.updated" &&
+				event.session.state === "stopped"
+			) {
+				throw new Error("send failed");
+			}
+		});
+		await s.registry.request("session.stop", { sessionId: id });
+		await settle();
+		expect(s.current(id)?.state).toBe("stopped");
+		expect(s.log).toHaveBeenCalledWith(expect.stringMatching(/send failed/));
+		await expect(
+			s.registry.request("session.start", {
+				kind: "t.server",
+				args: { port: 1 },
+			}),
+		).resolves.toMatchObject({ ok: true });
+	});
+
+	it("calls stop once when a stop arrives while it stops a session whose info failed", async () => {
+		const s = setup();
+		const stopping = deferred();
+		const stop = vi.fn(() => stopping.promise);
+		s.sessions.define("t.server", async () => ({
+			info: { url: 42 } as unknown as { url: string },
+			stop,
+		}));
+		const id = await s.startSession({ kind: "t.server", args: { port: 1 } });
+		await settle();
+		expect(stop).toHaveBeenCalledOnce();
+		await s.registry.request("session.stop", { sessionId: id });
+		stopping.resolve();
+		await settle();
+		expect(stop).toHaveBeenCalledOnce();
+		expect(s.current(id)).toMatchObject({
+			state: "failed",
+			error: { code: ERROR_CODES.invalidOutput },
+		});
+	});
+
+	it("keeps the slot after ctx.fail while starting, until the starter has settled and what it started is stopped", async () => {
+		const s = setup();
+		const { starter, calls, run } = parked();
+		s.sessions.define("t.server", starter);
+		const id = await s.startSession({ kind: "t.server", args: { port: 1 } });
+		calls[0]?.ctx.fail(new Error("crashed"));
+		expect(s.current(id)?.state).toBe("failed");
+		const again = () =>
+			s.registry.request("session.start", {
+				kind: "t.server",
+				args: { port: 1 },
+			});
+		await expect(again()).resolves.toMatchObject({
+			ok: false,
+			error: { code: ERROR_CODES.sessionAlreadyRunning },
+		});
+		run(0, { url: "u" });
+		await settle();
+		expect(calls[0]?.stop).toHaveBeenCalledOnce();
+		await expect(again()).resolves.toMatchObject({ ok: true });
+	});
+
+	it("refuses a command id that is not a non-empty string", async () => {
+		const s = setup();
+		const { starter, calls } = parked();
+		s.sessions.define("t.server", starter);
+		await s.startSession({ kind: "t.server", args: { port: 1 } });
+		expect(() => calls[0]?.ctx.addCommand("")).toThrow(TypeError);
 	});
 });

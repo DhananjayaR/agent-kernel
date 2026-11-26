@@ -253,6 +253,15 @@ describe("error codes and capabilities", () => {
 		}
 	});
 
+	it("lists project.notOpen for every job kind whose input has a projectId (JobService refuses a closed project)", () => {
+		for (const [name, op] of allJobKinds) {
+			const shape = (op.input as { shape?: Record<string, unknown> }).shape;
+			if (shape && "projectId" in shape) {
+				expect(op.errors, name).toContain(ERROR_CODES.projectNotOpen);
+			}
+		}
+	});
+
 	it("lists only domain codes: the bridge's own codes and internal.unexpected are implicit for every operation", () => {
 		const implicit = (code: string) =>
 			code.startsWith("bridge.") || code === ERROR_CODES.internal;

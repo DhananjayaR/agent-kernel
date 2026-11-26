@@ -199,7 +199,11 @@ export function command<
 	return Object.freeze(shaped("command", def));
 }
 
-/** Finite work that is slow, cancellable or has steps. Answers `{ jobId }` at once; JobService runs it. */
+/**
+ * Finite work that is slow, cancellable or has steps. Answers `{ jobId }` at once; JobService runs it. A job
+ * whose input has a `projectId` belongs to that project: JobService refuses it with `project.notOpen` when the
+ * project is not open, so such a kind lists `project.notOpen` in `errors` (a contract test).
+ */
 export function job<
 	const Name extends string,
 	Input extends z.ZodType,

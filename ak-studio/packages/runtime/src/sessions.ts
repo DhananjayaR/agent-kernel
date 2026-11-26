@@ -10,6 +10,8 @@ import {
 	isStudioFailure,
 	type ProjectId,
 	parseInput,
+	parseSafely,
+	type SafeParseResult,
 	type Session,
 	type SessionId,
 	type SessionKind,
@@ -25,9 +27,10 @@ import {
 	sessionKinds as studioSessionKinds,
 	toStudioError,
 } from "@ak-studio/contract";
-import { z } from "zod";
+import type { z } from "zod";
 import type { EventBus } from "./events";
 import { defaultLog, type Log, maskedLog } from "./host";
+import { describe, toData } from "./plain";
 import type { RequestRegistrar } from "./registry";
 import type { ProjectScope, ProjectScopes } from "./scope";
 import type { SecretMasker } from "./secrets";
@@ -94,10 +97,15 @@ export interface SessionServiceOptions<
 interface Entry {
 	session: Session;
 	kind: SessionKind;
-	/** One per kind per project: the key in `#active` while the session has not ended. */
+	/**
+	 * One per kind per project: the key in `#active` until the session has ended and its starter has settled (a
+	 * session that failed while starting keeps the slot until what it started is stopped).
+	 */
 	slot: string;
 	controller: AbortController;
+	/** Set once the session is running: what `stop` stops. */
 	handle: SessionHandle | undefined;
+	starterSettled: boolean;
 	ended: boolean;
 	/** Resolves once the session has ended. */
 	done: Promise<void>;
@@ -168,9 +176,7 @@ export class SessionService<Kinds extends SessionKindMap = SessionKinds> {
 
 	/** Every session of this run still listed: the live ones and the newest ended ones, oldest first. */
 	list(): Session[] {
-		return [...this.#sessions.values()].map((entry) =>
-			structuredClone(entry.session),
-		);
+		return [...this.#sessions.values()].map((entry) => snapshot(entry.session));
 	}
 
 	/** Stops every live session at once; resolves once they have all ended (quit uses it). */
@@ -228,6 +234,7 @@ export class SessionService<Kinds extends SessionKindMap = SessionKinds> {
 			slot,
 			controller: new AbortController(),
 			handle: undefined,
+			starterSettled: false,
 			ended: false,
 			done,
 			markDone,
@@ -255,6 +262,26 @@ export class SessionService<Kinds extends SessionKindMap = SessionKinds> {
 		starter: SessionStarter,
 		args: unknown,
 	): Promise<void> {
+		try {
+			await this.#runStarter(entry, starter, args);
+		} catch (err) {
+			// Nothing after the starter may leave the session starting with its slot held.
+			this.#end(
+				entry,
+				"failed",
+				this.#internal(`starting the session failed: ${describe(err)}`),
+			);
+		} finally {
+			entry.starterSettled = true;
+			this.#releaseSlot(entry);
+		}
+	}
+
+	async #runStarter(
+		entry: Entry,
+		starter: SessionStarter,
+		args: unknown,
+	): Promise<void> {
 		let handle: SessionHandle;
 		try {
 			handle = await starter(args, this.#context(entry));
@@ -269,17 +296,21 @@ export class SessionService<Kinds extends SessionKindMap = SessionKinds> {
 			await this.#quietStop(entry, handle);
 			return;
 		}
-		entry.handle = handle;
 		if (entry.session.state === "stopping") {
 			await this.#stopHandle(entry, handle);
 			return;
 		}
-		const info = entry.kind.info.safeParse(handle.info);
-		if (!info.success) {
+		// The info must match the kind and be plain data (it is copied into every event and list). A failure
+		// stops what was started; `handle` is not kept until then, so a stop meanwhile cannot stop it twice.
+		const parsed = readInfo(entry.kind, handle);
+		const data = parsed.success ? toData(parsed.data) : undefined;
+		if (!data?.ok) {
 			const error = this.#masker.maskError({
 				code: ERROR_CODES.invalidOutput,
 				message: strings.sessionInvalidInfo,
-				detail: z.prettifyError(info.error),
+				detail: parsed.success
+					? `the info is not plain data: ${data?.detail ?? ""}`
+					: parsed.detail,
 			});
 			this.#log(
 				`${entry.session.kind} failed with ${error.code}: ${error.detail ?? ""}`,
@@ -288,7 +319,8 @@ export class SessionService<Kinds extends SessionKindMap = SessionKinds> {
 			this.#end(entry, "failed", error);
 			return;
 		}
-		entry.session.info = info.data;
+		entry.handle = handle;
+		entry.session.info = data.value;
 		entry.session.state = "running";
 		this.#emit(entry);
 	}
@@ -306,6 +338,11 @@ export class SessionService<Kinds extends SessionKindMap = SessionKinds> {
 				},
 			},
 			addCommand: (commandId) => {
+				if (typeof commandId !== "string" || commandId.length === 0) {
+					throw new TypeError(
+						"addCommand needs a command id (a non-empty string)",
+					);
+				}
 				if (entry.ended) return;
 				session.commandIds.push(commandId);
 				this.#emit(entry);
@@ -345,7 +382,7 @@ export class SessionService<Kinds extends SessionKindMap = SessionKinds> {
 			await handle.stop();
 		} catch (err) {
 			this.#log(
-				`stopping ${entry.session.kind} (${entry.session.id}) failed: ${err instanceof Error ? err.message : String(err)}`,
+				`stopping ${entry.session.kind} (${entry.session.id}) failed: ${describe(err)}`,
 			);
 		}
 	}
@@ -354,47 +391,100 @@ export class SessionService<Kinds extends SessionKindMap = SessionKinds> {
 		if (entry.ended) return;
 		entry.ended = true;
 		const { session } = entry;
-		session.state = state;
-		if (error) session.error = error;
-		if (session.streamId !== undefined) this.#streams.end(session.streamId);
-		if (this.#active.get(entry.slot) === entry) this.#active.delete(entry.slot);
-		this.#emit(entry);
-		entry.markDone();
-		this.#ended.push(session.id);
-		while (this.#ended.length > ENDED_SESSIONS_KEPT) {
-			const id = this.#ended.shift() as SessionId;
-			const streamId = this.#sessions.get(id)?.session.streamId;
-			this.#sessions.delete(id);
-			if (streamId !== undefined) this.#streams.release(streamId);
+		try {
+			session.state = state;
+			if (error) session.error = error;
+			if (session.streamId !== undefined) this.#streams.end(session.streamId);
+			this.#emit(entry);
+		} catch (err) {
+			this.#log(`ending session ${session.id} went wrong: ${describe(err)}`);
+		} finally {
+			// Whatever happened above, the slot is freed (once its starter has settled) and waiters resume.
+			this.#releaseSlot(entry);
+			entry.markDone();
+			this.#ended.push(session.id);
+			while (this.#ended.length > ENDED_SESSIONS_KEPT) {
+				const id = this.#ended.shift() as SessionId;
+				const streamId = this.#sessions.get(id)?.session.streamId;
+				this.#sessions.delete(id);
+				if (streamId !== undefined) this.#streams.release(streamId);
+			}
 		}
+	}
+
+	/** Frees the kind-and-project slot of a session that has ended and whose starter has settled. */
+	#releaseSlot(entry: Entry): void {
+		if (!entry.ended || !entry.starterSettled) return;
+		if (this.#active.get(entry.slot) === entry) this.#active.delete(entry.slot);
 	}
 
 	/** The error a failing session carries: a StudioFailure's own, or `session.failed`; valid and masked. */
 	#failure(err: unknown): StudioError {
-		let error: StudioError;
-		if (isStudioFailure(err)) {
-			const valid = studioErrorSchema.safeParse(err.error);
-			error = valid.success
-				? valid.data
-				: toStudioError(
-						new Error(
-							`the session failed with an error that is not a valid StudioError (code ${String(err.error.code)})`,
-						),
-					);
-		} else {
-			error = {
+		if (!isStudioFailure(err)) {
+			return this.#masker.maskError({
 				code: ERROR_CODES.sessionFailed,
 				message: strings.sessionFailed,
-				detail: err instanceof Error ? err.message : String(err),
-			};
+				detail: describe(err),
+			});
 		}
-		return this.#masker.maskError(error);
+		const valid = parseSafely(studioErrorSchema, err.error);
+		const data = valid.success ? toData(valid.data) : undefined;
+		return data?.ok
+			? this.#masker.maskError(data.value as StudioError)
+			: this.#internal(
+					`the session failed with an error that is not a valid StudioError (code ${describe(err.error.code)})`,
+				);
+	}
+
+	/** An `internal.unexpected` error with `detail`, masked. */
+	#internal(detail: string): StudioError {
+		return this.#masker.maskError(toStudioError(new Error(detail)));
 	}
 
 	#emit(entry: Entry): void {
-		this.#events.emit({
-			type: "session.updated",
-			session: structuredClone(entry.session),
+		try {
+			this.#events.emit({
+				type: "session.updated",
+				session: snapshot(entry.session),
+			});
+		} catch (err) {
+			this.#log(
+				`announcing session ${entry.session.id} failed: ${describe(err)}`,
+			);
+		}
+	}
+}
+
+/**
+ * A copy that later changes to the session do not reach. Every field is plain data by construction (info and
+ * errors pass `toData` before they are stored), so the copy does not fail; if it ever did, the copy leaves out
+ * the info and the error's extras rather than throw.
+ */
+function snapshot(session: Session): Session {
+	try {
+		return structuredClone(session);
+	} catch {
+		const { info: _info, error, ...rest } = session;
+		const plain: Session = structuredClone({
+			...rest,
+			commandIds: [...rest.commandIds],
 		});
+		if (error) {
+			plain.error = { code: error.code, message: error.message };
+			if (error.detail !== undefined) plain.error.detail = error.detail;
+		}
+		return plain;
+	}
+}
+
+/** The handle's `info`, parsed against the kind's schema; a getter that throws is a parse failure. */
+function readInfo(kind: SessionKind, handle: SessionHandle): SafeParseResult {
+	try {
+		return parseSafely(kind.info, handle.info);
+	} catch (err) {
+		return {
+			success: false,
+			detail: `reading the info threw: ${describe(err)}`,
+		};
 	}
 }

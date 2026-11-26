@@ -257,11 +257,17 @@ export function toStudioError(err: unknown): StudioError {
 	};
 }
 
-/** `schema.safeParse(raw)`, with a throwing refine, transform or getter caught as an error message. */
-function safeParse(
-	schema: z.ZodType,
-	raw: unknown,
-): { success: true; data: unknown } | { success: false; detail: string } {
+/** What `parseSafely` answers: the parsed value, or zod's summary of why it failed. */
+export type SafeParseResult =
+	| { success: true; data: unknown }
+	| { success: false; detail: string };
+
+/**
+ * `schema.safeParse(raw)` that never throws: zod's `safeParse` throws when a refine, transform or getter does, and
+ * that throw is caught here as a failure whose detail says so. Everything that parses a value it did not build
+ * (the registry, JobService, SessionService) uses this.
+ */
+export function parseSafely(schema: z.ZodType, raw: unknown): SafeParseResult {
 	try {
 		const parsed = schema.safeParse(raw);
 		return parsed.success
@@ -281,7 +287,7 @@ export function parseInput(
 	name: string,
 	raw: unknown,
 ): BridgeResult<unknown> {
-	const parsed = safeParse(schema, raw);
+	const parsed = parseSafely(schema, raw);
 	if (parsed.success) return ok(parsed.data);
 	return fail({
 		code: ERROR_CODES.invalidInput,
@@ -315,7 +321,7 @@ export async function runOperation(
 	} catch (err) {
 		return fail(toStudioError(err));
 	}
-	const output = safeParse(op.output, result);
+	const output = parseSafely(op.output, result);
 	if (output.success) return ok(output.data);
 	return fail(invalidOutput(op.name, output.detail));
 }
@@ -347,7 +353,7 @@ export function startStream(
 	};
 	const emit = (event: unknown): void => {
 		if (!open) return;
-		const parsed = safeParse(stream.event, event);
+		const parsed = parseSafely(stream.event, event);
 		if (parsed.success) {
 			send({ ok: true, event: parsed.data });
 			return;

@@ -18,6 +18,7 @@ import {
 	type StudioEvent,
 	StudioFailure,
 	streamRead,
+	studioEventSchema,
 } from "@ak-studio/contract";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -57,7 +58,32 @@ const apply = job({
 	cancellable: false,
 	survivesQuit: true,
 });
-const kinds = { "t.demo": demo, "t.apply": apply } as const;
+// Result schemas a buggy kind could have: one whose refine throws, and one that lets anything through.
+const refined = job({
+	name: "t.refined",
+	input: z.strictObject({}),
+	result: z.object({ total: z.number() }).refine(() => {
+		throw new Error("refine boom");
+	}),
+	title: "Refined",
+	cancellable: true,
+	survivesQuit: false,
+});
+const loose = job({
+	name: "t.loose",
+	input: z.strictObject({}),
+	result: z.object({ value: z.unknown() }),
+	title: "Loose",
+	cancellable: true,
+	survivesQuit: false,
+});
+const kinds = {
+	"t.demo": demo,
+	"t.apply": apply,
+	"t.refined": refined,
+	"t.loose": loose,
+} as const;
+type KindName = keyof typeof kinds;
 const contract = {
 	operations: {
 		"job.cancel": jobCancel,
@@ -67,6 +93,8 @@ const contract = {
 		"jobs.list": jobsList,
 		"t.demo": demo,
 		"t.apply": apply,
+		"t.refined": refined,
+		"t.loose": loose,
 	},
 	streams: { events: eventsStream, "stream.read": streamRead },
 };
@@ -98,7 +126,8 @@ function setup(options: { records?: JobRecordStore } = {}) {
 	const events = new EventBus({ log, masker });
 	const emitted: StudioEvent[] = [];
 	vi.spyOn(events, "emit").mockImplementation((event) => {
-		emitted.push(structuredClone(event));
+		// Every event must pass the event union, as the registry's `events` stream would check it.
+		emitted.push(studioEventSchema.parse(structuredClone(event)));
 	});
 	const streams = new StreamHub({ masker, log });
 	const scopes = new ProjectScopes({ log, masker });
@@ -133,29 +162,32 @@ type Setup = ReturnType<typeof setup>;
 
 /** Serves the test kinds (a kind the test did not define gets a runner that succeeds) and starts the registry. */
 function serve(s: Setup): Setup {
-	const ensure = (name: "t.demo" | "t.apply") => {
+	const ensure = (name: KindName) => {
 		try {
-			s.jobs.define(name, async () => ({ total: 0 }));
+			s.jobs.define(name, async () => ({ total: 0 }) as never);
 		} catch {
 			// The test defined it.
 		}
 	};
-	ensure("t.demo");
-	ensure("t.apply");
+	for (const name of Object.keys(kinds) as KindName[]) ensure(name);
 	s.registry.handle("t.demo", s.jobs.handler("t.demo"));
 	s.registry.handle("t.apply", s.jobs.handler("t.apply"));
+	s.registry.handle("t.refined", s.jobs.handler("t.refined"));
+	s.registry.handle("t.loose", s.jobs.handler("t.loose"));
 	s.registry.start();
 	return s;
 }
 
 async function start(
 	s: Setup,
-	name: "t.demo" | "t.apply",
+	name: KindName,
 	input: Record<string, unknown> = {},
 ): Promise<string> {
 	const result = await s.registry.request(name, input);
 	if (!result.ok)
 		throw new Error(`${result.error.code}: ${result.error.message}`);
+	// A job's runner starts once its crash record is written: let that happen.
+	await settle();
 	return (result.value as { jobId: string }).jobId;
 }
 
@@ -649,6 +681,15 @@ describe("JobService: cancel", () => {
 		await expect(second).rejects.toBe(ctx.signal.reason);
 		expect(current(s, jobId)?.request).toBeUndefined();
 		expect(current(s, jobId)?.state).toBe("running");
+		// The renderer learns it too: the last event drops the request.
+		expect(states(s, jobId)).toEqual([
+			"queued",
+			"running",
+			"waiting-for-user",
+			"running",
+		]);
+		const last = s.emitted.at(-1);
+		expect(last?.type === "job.updated" && last.job.request).toBe(undefined);
 		await expect(ctx.ask(request)).rejects.toBe(ctx.signal.reason);
 		calls[0]?.finish.reject(ctx.signal.reason);
 		await settle();
@@ -792,7 +833,7 @@ describe("JobService: project scopes and quitting", () => {
 		});
 	});
 
-	it("plans a quit: unfinished jobs that survive quit block it; the others are to cancel", async () => {
+	it("plans a quit: started jobs that survive quit block it; the others, and every queued job, are to cancel", async () => {
 		const s = setup();
 		const demoRuns = parked();
 		const applyRuns = parked();
@@ -806,12 +847,14 @@ describe("JobService: project scopes and quitting", () => {
 		const plan = s.jobs.quitPlan();
 		expect(plan.blocking.map((j) => [j.id, j.state])).toEqual([
 			[applyId, "running"],
+		]);
+		expect(plan.toCancel.map((j) => [j.id, j.state])).toEqual([
+			[demoId, "running"],
 			[queuedApply, "queued"],
 		]);
-		expect(plan.toCancel.map((j) => j.id)).toEqual([demoId]);
 		demoRuns.calls[0]?.finish.resolve({ total: 1 });
 		await settle();
-		expect(s.jobs.quitPlan().toCancel).toEqual([]);
+		expect(s.jobs.quitPlan().toCancel.map((j) => j.id)).toEqual([queuedApply]);
 	});
 
 	it("cancelAll cancels the jobs it is given, even ones that cannot be cancelled, and resolves once they have ended and their records are written", async () => {
@@ -1018,5 +1061,139 @@ describe("JobService: the list of jobs", () => {
 		).rejects.toThrow();
 		expect(s.emitted.length).toBe(before);
 		expect(current(s, jobId)?.commandIds).toEqual([]);
+	});
+});
+
+describe("JobService: nothing after the runner can wedge a job", () => {
+	/** Starts two jobs of `name`: the first with `runner`, the second queued behind it. */
+	async function twoInALane(name: "t.refined" | "t.loose", value: unknown) {
+		const s = setup();
+		let n = 0;
+		s.jobs.define(name, async () => {
+			n += 1;
+			return (n === 1 ? value : { value: "fine" }) as never;
+		});
+		serve(s);
+		const first = await start(s, name);
+		const second = await start(s, name);
+		await settle();
+		return { s, first, second };
+	}
+
+	it("fails with bridge.invalidOutput when the result schema's refine throws, and the lane moves on", async () => {
+		const { s, first, second } = await twoInALane("t.refined", { total: 1 });
+		expect(current(s, first)).toMatchObject({
+			state: "failed",
+			error: {
+				code: ERROR_CODES.invalidOutput,
+				detail: expect.stringContaining("refine boom"),
+			},
+		});
+		expect(states(s, second)).toContain("running");
+		expect((s.records as InMemoryJobRecordStore).data.has(first)).toBe(false);
+		await expect(s.jobs.cancelAll(s.jobs.list())).resolves.toBeUndefined();
+	});
+
+	it("fails with bridge.invalidOutput when the result holds something that is not data, and the lane moves on", async () => {
+		const { s, first, second } = await twoInALane("t.loose", {
+			value: () => 1,
+		});
+		expect(current(s, first)).toMatchObject({
+			state: "failed",
+			error: {
+				code: ERROR_CODES.invalidOutput,
+				detail: expect.stringContaining("not plain data"),
+			},
+		});
+		expect(current(s, first)?.result).toBeUndefined();
+		expect(current(s, second)).toMatchObject({
+			state: "succeeded",
+			result: { value: "fine" },
+		});
+		expect(() => s.jobs.list()).not.toThrow();
+	});
+
+	it("fails with bridge.invalidOutput when a getter on the result throws", async () => {
+		const { s, first } = await twoInALane("t.loose", {
+			get value(): unknown {
+				throw new Error("getter boom");
+			},
+		});
+		expect(current(s, first)).toMatchObject({
+			state: "failed",
+			error: { code: ERROR_CODES.invalidOutput },
+		});
+	});
+
+	it("still ends the job, records its end and frees its lane when announcing the end throws", async () => {
+		const s = setup();
+		const { runner, calls } = parked();
+		s.jobs.define("t.demo", runner);
+		s.scopes.open("p1", { root: "/p1" });
+		serve(s);
+		const first = await start(s, "t.demo", { projectId: "p1" });
+		const second = await start(s, "t.demo", { projectId: "p1" });
+		const emit = vi.mocked(s.events.emit);
+		const recordEvent = emit.getMockImplementation();
+		emit.mockImplementation((event) => {
+			if (event.type === "job.updated" && event.job.state === "succeeded") {
+				throw new Error("send failed");
+			}
+			recordEvent?.(event);
+		});
+		calls[0]?.finish.resolve({ total: 1 });
+		await settle();
+		expect(current(s, first)?.state).toBe("succeeded");
+		expect(current(s, second)?.state).toBe("running");
+		expect((s.records as InMemoryJobRecordStore).data.has(first)).toBe(false);
+		expect(s.log).toHaveBeenCalledWith(expect.stringMatching(/send failed/));
+		// Closing the project ends what is left: nothing waits forever.
+		calls[1]?.finish.reject(new Error("aborted"));
+		await expect(s.scopes.close("p1")).resolves.toBeUndefined();
+	});
+
+	it("starts the next queued job when the head fails", async () => {
+		const s = setup();
+		const { runner, calls } = parked();
+		s.jobs.define("t.demo", runner);
+		serve(s);
+		const first = await start(s, "t.demo");
+		const second = await start(s, "t.demo");
+		calls[0]?.finish.reject(new Error("broken"));
+		await settle();
+		expect(current(s, first)?.state).toBe("failed");
+		expect(current(s, second)?.state).toBe("running");
+	});
+
+	it("starts the runner only once the start record is written", async () => {
+		const written = deferred();
+		const store = new InMemoryJobRecordStore();
+		const started = store.started.bind(store);
+		store.started = async (record) => {
+			await written.promise;
+			await started(record);
+		};
+		const s = setup({ records: store });
+		const { runner, calls } = parked();
+		s.jobs.define("t.demo", runner);
+		serve(s);
+		const jobId = await start(s, "t.demo");
+		expect(current(s, jobId)?.state).toBe("running");
+		expect(calls).toHaveLength(0);
+		written.resolve();
+		await settle();
+		expect(calls).toHaveLength(1);
+		expect(store.data.has(jobId)).toBe(true);
+	});
+
+	it("refuses a command id that is not a non-empty string", async () => {
+		const s = setup();
+		const { runner, calls } = parked();
+		s.jobs.define("t.demo", runner);
+		serve(s);
+		await start(s, "t.demo");
+		const ctx = calls[0]?.ctx as JobContext;
+		expect(() => ctx.addCommand("")).toThrow(TypeError);
+		expect(() => ctx.addCommand(42 as unknown as string)).toThrow(TypeError);
 	});
 });

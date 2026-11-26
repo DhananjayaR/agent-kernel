@@ -10,6 +10,7 @@ import {
 	DEFAULT_SHELL_LAYOUT,
 	lookup,
 	operations,
+	parseSafely,
 	platformSchema,
 	runOperation,
 	shellLayoutSchema,
@@ -194,6 +195,39 @@ describe("the operations map", () => {
 		expect(lookup(operations, "__proto__")).toBeUndefined();
 		expect(lookup(operations, "toString")).toBeUndefined();
 		expect(lookup(operations, 42)).toBeUndefined();
+	});
+});
+
+describe("parseSafely", () => {
+	it("answers the parsed value, or zod's summary, and never throws, even when a refine, transform or getter throws", () => {
+		expect(parseSafely(z.object({ a: z.number() }), { a: 1, b: 2 })).toEqual({
+			success: true,
+			data: { a: 1 },
+		});
+		expect(parseSafely(z.number(), "x")).toMatchObject({ success: false });
+		const throwing = [
+			z.number().refine(() => {
+				throw new Error("refine boom");
+			}),
+			z.number().transform(() => {
+				throw new Error("transform boom");
+			}),
+		];
+		for (const schema of throwing) {
+			expect(parseSafely(schema, 1)).toEqual({
+				success: false,
+				detail: expect.stringMatching(/^validation threw: .* boom$/),
+			});
+		}
+		const getter = {
+			get a(): number {
+				throw new Error("getter boom");
+			},
+		};
+		expect(parseSafely(z.object({ a: z.number() }), getter)).toEqual({
+			success: false,
+			detail: "validation threw: getter boom",
+		});
 	});
 });
 

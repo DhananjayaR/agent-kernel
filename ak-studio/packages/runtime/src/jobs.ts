@@ -21,6 +21,7 @@ import {
 	type jobsInterrupted,
 	type jobsList,
 	type ProjectId,
+	parseSafely,
 	type StreamChannel,
 	type StudioError,
 	StudioFailure,
@@ -30,9 +31,10 @@ import {
 	type UserRequest,
 	userRequestSchema,
 } from "@ak-studio/contract";
-import { z } from "zod";
+import type { z } from "zod";
 import type { EventBus } from "./events";
 import { defaultLog, type Log, maskedLog } from "./host";
+import { describe, toData } from "./plain";
 import type { JobRecord, JobRecordStore } from "./ports/jobRecordStore";
 import type { RequestHandler, RequestRegistrar } from "./registry";
 import type { ProjectScope, ProjectScopes } from "./scope";
@@ -103,11 +105,14 @@ export interface JobServiceOptions<Kinds extends JobKindMap = JobKinds> {
 	log?: Log;
 }
 
-/** What quitting has to deal with: the unfinished jobs, split by `survivesQuit` (each snapshot carries its state). */
+/** What quitting has to deal with: jobs it may cancel, and started jobs that must finish first. */
 export interface QuitPlan {
-	/** Unfinished jobs that do not survive quit: cancelled on quit. */
+	/**
+	 * Every queued job, and started jobs that do not survive quit: cancelled on quit. A queued job has touched
+	 * nothing, so it is safe to cancel whatever its kind; left queued, it would start while quit waits.
+	 */
 	toCancel: Job[];
-	/** Unfinished jobs that survive quit (killing them risks damage): quit waits for them, or is overridden. */
+	/** Started jobs that survive quit (killing them risks damage): quit waits for them, or is overridden. */
 	blocking: Job[];
 }
 
@@ -244,9 +249,8 @@ export class JobService<Kinds extends JobKindMap = JobKinds> {
 		const plan: QuitPlan = { toCancel: [], blocking: [] };
 		for (const entry of this.#jobs.values()) {
 			if (entry.ended) continue;
-			(entry.job.survivesQuit ? plan.blocking : plan.toCancel).push(
-				snapshot(entry.job),
-			);
+			const blocks = entry.started && entry.job.survivesQuit;
+			(blocks ? plan.blocking : plan.toCancel).push(snapshot(entry.job));
 		}
 		return plan;
 	}
@@ -329,11 +333,16 @@ export class JobService<Kinds extends JobKindMap = JobKinds> {
 		entry.startedAt = this.#now();
 		entry.job.state = "running";
 		this.#emit(entry);
-		this.#writeRecord(entry);
 		void this.#run(entry);
 	}
 
 	async #run(entry: Entry): Promise<void> {
+		// The crash record is on disk before the runner can start anything (a failed write is logged, not fatal).
+		await this.#writeRecord(entry);
+		if (entry.controller.signal.aborted) {
+			this.#end(entry, "cancelled");
+			return;
+		}
 		let outcome: { ok: true; value: unknown } | { ok: false; err: unknown };
 		try {
 			outcome = {
@@ -343,27 +352,48 @@ export class JobService<Kinds extends JobKindMap = JobKinds> {
 		} catch (err) {
 			outcome = { ok: false, err };
 		}
+		try {
+			this.#settle(entry, outcome);
+		} catch (err) {
+			// Nothing after the runner may leave the job running and its lane blocked.
+			this.#end(entry, "failed", {
+				error: this.#internal(`ending the job failed: ${describe(err)}`),
+			});
+		}
+	}
+
+	/** Ends a job whose runner has settled: cancelled, failed, or succeeded with its parsed result. */
+	#settle(
+		entry: Entry,
+		outcome: { ok: true; value: unknown } | { ok: false; err: unknown },
+	): void {
 		if (entry.ended) return;
 		if (entry.controller.signal.aborted) {
 			this.#end(entry, "cancelled");
-		} else if (!outcome.ok) {
-			this.#end(entry, "failed", { error: this.#failure(entry, outcome.err) });
-		} else {
-			const parsed = entry.op.result.safeParse(outcome.value);
-			if (parsed.success) {
-				this.#end(entry, "succeeded", { result: parsed.data });
-			} else {
-				const error = this.#masker.maskError({
-					code: ERROR_CODES.invalidOutput,
-					message: strings.jobInvalidResult,
-					detail: z.prettifyError(parsed.error),
-				});
-				this.#log(
-					`${entry.op.name} failed with ${error.code}: ${error.detail ?? ""}`,
-				);
-				this.#end(entry, "failed", { error });
-			}
+			return;
 		}
+		if (!outcome.ok) {
+			this.#end(entry, "failed", { error: this.#failure(entry, outcome.err) });
+			return;
+		}
+		// The result must match the kind and be plain data (it is copied into every event and list).
+		const parsed = parseSafely(entry.op.result, outcome.value);
+		const data = parsed.success ? toData(parsed.data) : undefined;
+		if (data?.ok) {
+			this.#end(entry, "succeeded", { result: data.value });
+			return;
+		}
+		const error = this.#masker.maskError({
+			code: ERROR_CODES.invalidOutput,
+			message: strings.jobInvalidResult,
+			detail: parsed.success
+				? `the result is not plain data: ${data?.detail ?? ""}`
+				: parsed.detail,
+		});
+		this.#log(
+			`${entry.op.name} failed with ${error.code}: ${error.detail ?? ""}`,
+		);
+		this.#end(entry, "failed", { error });
 	}
 
 	#context(entry: Entry): JobContext {
@@ -386,6 +416,11 @@ export class JobService<Kinds extends JobKindMap = JobKinds> {
 				},
 			},
 			addCommand: (commandId) => {
+				if (typeof commandId !== "string" || commandId.length === 0) {
+					throw new TypeError(
+						"addCommand needs a command id (a non-empty string)",
+					);
+				}
 				if (entry.ended) return;
 				job.commandIds.push(commandId);
 				this.#emit(entry);
@@ -405,19 +440,23 @@ export class JobService<Kinds extends JobKindMap = JobKinds> {
 			);
 		}
 		this.#requestCount += 1;
-		const parsed = userRequestSchema.safeParse({
+		const parsed = parseSafely(userRequestSchema, {
 			...request,
 			id: `request-${this.#requestCount}`,
 		});
 		if (!parsed.success) {
 			return Promise.reject(
 				new Error(
-					`job ${entry.job.id} asked an invalid request: ${z.prettifyError(parsed.error)}`,
+					`job ${entry.job.id} asked an invalid request: ${parsed.detail}`,
 				),
 			);
 		}
 		return new Promise<JobAnswer>((resolve, reject) => {
-			entry.asks.push({ request: parsed.data, resolve, reject });
+			entry.asks.push({
+				request: parsed.data as UserRequest,
+				resolve,
+				reject,
+			});
 			if (entry.asks.length === 1) this.#openNext(entry);
 		});
 	}
@@ -503,19 +542,25 @@ export class JobService<Kinds extends JobKindMap = JobKinds> {
 		if (entry.ended) return;
 		entry.ended = true;
 		const { job } = entry;
-		job.state = state;
-		if (outcome.result !== undefined) job.result = outcome.result;
-		if (outcome.error !== undefined) job.error = outcome.error;
-		this.#denyAsks(entry, new Error(`job ${job.id} has ended`));
-		if (job.streamId !== undefined) this.#streams.end(job.streamId);
-		const recorded = entry.started
-			? this.#queueRecordWrite(() => this.#records.ended(job.id, state))
-			: Promise.resolve();
-		void recorded.then(entry.markDone);
-		this.#emit(entry);
-		this.#leaveLane(entry);
-		this.#ended.push(job.id);
-		this.#trimEnded();
+		try {
+			job.state = state;
+			if (outcome.result !== undefined) job.result = outcome.result;
+			if (outcome.error !== undefined) job.error = outcome.error;
+			this.#denyAsks(entry, new Error(`job ${job.id} has ended`));
+			if (job.streamId !== undefined) this.#streams.end(job.streamId);
+			this.#emit(entry);
+		} catch (err) {
+			this.#log(`ending job ${job.id} went wrong: ${describe(err)}`);
+		} finally {
+			// Whatever happened above, the end is recorded and the lane moves on.
+			const recorded = entry.started
+				? this.#queueRecordWrite(() => this.#records.ended(job.id, state))
+				: Promise.resolve();
+			void recorded.then(entry.markDone);
+			this.#leaveLane(entry);
+			this.#ended.push(job.id);
+			this.#trimEnded();
+		}
 	}
 
 	#leaveLane(entry: Entry): void {
@@ -544,16 +589,13 @@ export class JobService<Kinds extends JobKindMap = JobKinds> {
 	/** The error a failed runner leaves: its own StudioError, or internal.unexpected; valid and masked. */
 	#failure(entry: Entry, err: unknown): StudioError {
 		const raw = toStudioError(err);
-		const valid = studioErrorSchema.safeParse(raw);
-		const error = this.#masker.maskError(
-			valid.success
-				? valid.data
-				: toStudioError(
-						new Error(
-							`the job failed with an error that is not a valid StudioError (code ${String(raw.code)})`,
-						),
-					),
-		);
+		const valid = parseSafely(studioErrorSchema, raw);
+		const data = valid.success ? toData(valid.data) : undefined;
+		const error = data?.ok
+			? this.#masker.maskError(data.value as StudioError)
+			: this.#internal(
+					`the job failed with an error that is not a valid StudioError (code ${String(raw.code)})`,
+				);
 		const exempt =
 			error.code.startsWith("bridge.") || error.code === ERROR_CODES.internal;
 		if (!exempt && !entry.op.errors.includes(error.code as never)) {
@@ -566,7 +608,7 @@ export class JobService<Kinds extends JobKindMap = JobKinds> {
 
 	// ---- Records and events ----
 
-	#writeRecord(entry: Entry): void {
+	#writeRecord(entry: Entry): Promise<void> {
 		const { job } = entry;
 		const record: JobRecord = {
 			jobId: job.id,
@@ -576,21 +618,28 @@ export class JobService<Kinds extends JobKindMap = JobKinds> {
 			commandIds: [...job.commandIds],
 			...(job.projectId === undefined ? {} : { projectId: job.projectId }),
 		};
-		void this.#queueRecordWrite(() => this.#records.started(record));
+		return this.#queueRecordWrite(() => this.#records.started(record));
 	}
 
 	/** Runs `write` after every earlier write; a failure is logged, never thrown. */
 	#queueRecordWrite(write: () => Promise<void>): Promise<void> {
 		this.#recordWrites = this.#recordWrites.then(write).catch((err) => {
-			this.#log(
-				`writing a job record failed: ${err instanceof Error ? err.message : String(err)}`,
-			);
+			this.#log(`writing a job record failed: ${describe(err)}`);
 		});
 		return this.#recordWrites;
 	}
 
 	#emit(entry: Entry): void {
-		this.#events.emit({ type: "job.updated", job: snapshot(entry.job) });
+		try {
+			this.#events.emit({ type: "job.updated", job: snapshot(entry.job) });
+		} catch (err) {
+			this.#log(`announcing job ${entry.job.id} failed: ${describe(err)}`);
+		}
+	}
+
+	/** An `internal.unexpected` error with `detail`, masked. */
+	#internal(detail: string): StudioError {
+		return this.#masker.maskError(toStudioError(new Error(detail)));
 	}
 
 	#isOwn(jobId: JobId): boolean {
@@ -619,9 +668,26 @@ function notFound(jobId: JobId): StudioFailure {
 	});
 }
 
-/** A copy that later changes to the job do not reach (events and lists hold these). */
+/**
+ * A copy that later changes to the job do not reach (events and lists hold these). Every field is plain data by
+ * construction (results and errors pass `toData` before they are stored), so the copy does not fail; if it ever
+ * did, the copy leaves out the result and the error's extras rather than throw.
+ */
 function snapshot(job: Job): Job {
-	return structuredClone(job);
+	try {
+		return structuredClone(job);
+	} catch {
+		const { result: _result, error, ...rest } = job;
+		const plain: Job = structuredClone({
+			...rest,
+			commandIds: [...rest.commandIds],
+		});
+		if (error) {
+			plain.error = { code: error.code, message: error.message };
+			if (error.detail !== undefined) plain.error.detail = error.detail;
+		}
+		return plain;
+	}
 }
 
 /** Why `answer` does not fit `request`, or undefined when it does. */
