@@ -131,8 +131,8 @@ feature F?**
       (with `until` and `replacedBy`).
 - [ ] One renderer hook and one component for the version-unavailable pattern from the design gate.
 - [ ] **Supported floor.** Studio declares the oldest OAK version it opens with full support.
-      Proposed: the latest minor at the time P2 ships. Below the floor the project opens read-only with a
-      banner. The floor is recorded in the README decision log.
+      Decided 26 Nov 2026: **0.10** (the current minor; `ak-py` is 0.10.2). Below the floor the project opens
+      read-only with a banner. The floor is recorded in the README decision log.
 - [ ] **Seed entries**, enough to prove the mechanism in this phase:
   - The eight frameworks under `ak-py/src/agentkernel/framework/`.
   - The Terraform targets under `ak-deployment/`, with Azure Functions as the worked example of a removal
@@ -186,12 +186,15 @@ These are the first real features, so the skills are checked against them.
 
 ## Open decisions
 
-- The supported floor version.
+- The supported floor version. **Decided 26 Nov 2026:** 0.10.
 - Whether the catalog later moves into the `agentkernel` package itself (for example an `ak` subcommand that
   prints it), so the kernel owns its own feature list. Older versions would still need the Studio-side
   catalog. Decide after P3, when the catalog's real shape is known.
 - How the Studio handles a project whose version is **newer** than the Studio knows. Proposed: treat unknown
-  newer versions as the latest known, with a "Studio update available" notice.
+  newer versions as the latest known, with a "Studio update available" notice. **Decided 26 Nov 2026:** as
+  proposed.
+- Windows and macOS. **Decided 26 Nov 2026:** stay deferred to the re-entry point in the README; the manual
+  pass under Verification is marked Deferred until then.
 
 ## Risks
 
