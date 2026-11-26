@@ -284,3 +284,123 @@ export const FromAMenuItem: Story = {
 		await waitFor(() => expect(trigger).toHaveFocus());
 	},
 };
+
+/**
+ * Confirm by name without destructive (a job that creates real infrastructure): the primary action enables only
+ * when the name is typed exactly, and gets the typed name.
+ */
+export const ConfirmByName: Story = {
+	args: {
+		title: "Create the state backend?",
+		children:
+			"An S3 bucket and a DynamoDB table are created for the Terraform state.",
+		affects: ["AWS account 1234-5678-9012", "eu-west-1"],
+		confirmName: "support-triage",
+		confirmLabel: "Create backend",
+		defaultOpen: true,
+		trigger: <Button>Create backend</Button>,
+	},
+	play: async ({ args }) => {
+		const el = await alertDialog();
+		const field = within(el).getByRole("textbox", {
+			name: "Type support-triage to confirm",
+		});
+		await waitFor(() => expect(field).toHaveFocus());
+		const action = within(el).getByRole("button", { name: "Create backend" });
+		await expect(action).toHaveAttribute("data-variant", "primary");
+		await expect(action).toBeDisabled();
+		await expect(
+			within(el)
+				.getAllByRole("listitem")
+				.map((item) => item.textContent),
+		).toEqual(["AWS account 1234-5678-9012", "eu-west-1"]);
+		await userEvent.keyboard("support-triage");
+		await expect(action).toBeEnabled();
+		await userEvent.click(action);
+		await expect(args.onConfirm).toHaveBeenCalledWith("support-triage");
+	},
+};
+
+/**
+ * Answering a job (the connected Approval's modal frame): the caller keeps it open while the answer is on its way
+ * and shows a refused one; Cancel, labelled with the job's deny, and Escape call `onCancel`.
+ */
+function AnsweringJob({
+	onConfirm,
+	onCancel,
+}: {
+	onConfirm: (name?: string) => void;
+	onCancel: () => void;
+}) {
+	const [isOpen, setOpen] = useState(true);
+	const [pending, setPending] = useState<"confirm" | "cancel">();
+	const [refused, setRefused] = useState(false);
+	return (
+		<>
+			<Button onPress={() => setOpen(true)}>Show the question</Button>
+			<ConfirmModal
+				isOpen={isOpen}
+				onOpenChange={() => {}}
+				title="Run the last step?"
+				confirmLabel="Run the last step"
+				strings={{ cancel: "Stop the job" }}
+				pending={pending}
+				error={
+					refused
+						? {
+								title: "The job is no longer waiting",
+								description: "It ended or was answered elsewhere.",
+							}
+						: undefined
+				}
+				onConfirm={(name) => {
+					onConfirm(name);
+					setPending("confirm");
+					setTimeout(() => {
+						setPending(undefined);
+						setRefused(true);
+					}, 50);
+				}}
+				onCancel={() => {
+					onCancel();
+					setOpen(false);
+				}}
+			>
+				The demo job has run two of its three steps. Nothing outside the app
+				changes.
+			</ConfirmModal>
+		</>
+	);
+}
+
+export const AnswersAJob: Story = {
+	// React Aria announces a focused button's pending state through its live announcer, pointing at the button;
+	// answering removes the button, and the announcer keeps the stale pointer for 7 s. axe checks after the play
+	// function, inside those 7 s, so the announcer's node (not the story) is left out of the check.
+	parameters: { a11y: { context: { exclude: ["[data-live-announcer]"] } } },
+	args: { onCancel: fn() },
+	render: (args) => (
+		<AnsweringJob
+			onConfirm={args.onConfirm}
+			onCancel={args.onCancel ?? (() => {})}
+		/>
+	),
+	play: async ({ args }) => {
+		const el = await alertDialog();
+		await userEvent.click(
+			within(el).getByRole("button", { name: "Run the last step" }),
+		);
+		await expect(args.onConfirm).toHaveBeenCalledOnce();
+		// Still open: the answer was refused, said inline.
+		await waitFor(() =>
+			expect(within(el).getByRole("alert")).toHaveTextContent(
+				"The job is no longer waiting",
+			),
+		);
+		await expect(el).toBeInTheDocument();
+		await expect(args.onCancel).not.toHaveBeenCalled();
+		await userEvent.keyboard("{Escape}");
+		await expect(args.onCancel).toHaveBeenCalledOnce();
+		await waitFor(() => expect(el).not.toBeInTheDocument());
+	},
+};

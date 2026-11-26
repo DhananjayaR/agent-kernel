@@ -1,6 +1,63 @@
 {
 	"$comment": "Read by tools/check-stories.mjs (pnpm lint). required: for a glob of component files, the story export names each stories file must have (the design gate's states; Tasks 15 to 17 add them with their patterns). coveredBy: a component shown inside another stories file. exempt: a component file with no stories, and why.",
-	"required": [],
+	"required": [
+		{
+			"pattern": "packages/ui/src/components/job-progress.tsx",
+			"stories": [
+				"Running",
+				"JustStarted",
+				"Queued",
+				"NotCancellable",
+				"StopCaution",
+				"ShowCommands",
+				"Stopping",
+				"StopRefused",
+				"Waiting",
+				"Succeeded",
+				"Failed",
+				"Cancelled",
+				"Stacked",
+				"Keyboard"
+			]
+		},
+		{
+			"pattern": "packages/ui/src/components/approval.tsx",
+			"stories": [
+				"Default",
+				"WithAffects",
+				"ConfirmByName",
+				"DenyWithoutName",
+				"Pending",
+				"Refused",
+				"Approved",
+				"Denied",
+				"Keyboard"
+			]
+		},
+		{
+			"pattern": "packages/ui/src/components/confirm-modal.tsx",
+			"stories": [
+				"Default",
+				"Destructive",
+				"DestructiveCancel",
+				"Controlled",
+				"ConfirmByName",
+				"AnswersAJob"
+			]
+		},
+		{
+			"pattern": "packages/ui/src/components/background-job-notice.tsx",
+			"stories": ["TabIcons", "Toasts"]
+		},
+		{
+			"pattern": "packages/ui/src/components/status-chip.tsx",
+			"stories": ["Default", "IconOnly"]
+		},
+		{
+			"pattern": "packages/ui/src/components/desktop-shell.tsx",
+			"stories": ["At1220WithBadges", "BadgesComeAndGo"]
+		}
+	],
 	"coveredBy": {
 		"packages/ui/src/components/bottom-panel.tsx": "packages/ui/src/components/desktop-shell.stories.tsx",
 		"packages/ui/src/components/project-switcher.tsx": "packages/ui/src/components/top-bar-controls.stories.tsx"

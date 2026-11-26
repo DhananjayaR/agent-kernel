@@ -232,7 +232,7 @@ export function TopBar({
 export type AppTabListProps = {
 	/** The tabs, in order; omitted, the five app tabs (Canvas, Code, Config, Test & trace, Deploy). */
 	tabs?: readonly DesktopShellTab[];
-	/** A Badge after a tab's label (the background job notice), by tab id. */
+	/** The background job notice after a tab's label (a JobTabIcon: a state icon, not a count), by tab id. */
 	badges?: Partial<Record<string, ReactNode>>;
 	/** Overrides of the default copy (strings.ts). */
 	strings?: Partial<ShellStrings>;
@@ -375,7 +375,7 @@ export type DesktopShellProps<T extends string = AppTabId> = {
 	windowControls?: ReactNode;
 	/** Space (px) kept free at the top bar's left for the macOS traffic lights (about 76); default none. */
 	leadingInset?: number;
-	/** A Badge after a tab's label, by tab. */
+	/** The background job notice after a tab's label (a JobTabIcon: a state icon, not a count), by tab. */
 	tabBadges?: Partial<Record<T, ReactNode>>;
 	/** The BottomPanel; omitted, the tab content takes the whole height. */
 	bottomPanel?: ReactNode;

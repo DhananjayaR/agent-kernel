@@ -22,7 +22,7 @@ import {
 	expectTokenColour,
 	tabTo,
 } from "../lib/story-checks";
-import { Badge } from "./badge";
+import { JobTabIcon } from "./background-job-notice";
 import { type AppTabId, AppTabList, isAppTabId, TopBar } from "./desktop-shell";
 import { ProjectSwitcher } from "./project-switcher";
 import { StatusBar } from "./status-bar";
@@ -303,7 +303,7 @@ export const NoProject: Story = {
 };
 
 /**
- * Badges on the tabs (background job notices) at 1220 px with the worst case: the full form no longer fits, so
+ * Background job notices on the tabs (a state icon each: finished, waiting) at 1220 px with the worst case: the full form no longer fits, so
  * the top bar turns compact rather than pushing a control past the edge.
  */
 export const At1220WithBadges: Story = {
@@ -315,8 +315,8 @@ export const At1220WithBadges: Story = {
 		deploy: "deployed",
 		deployedAgo: "3 days ago",
 		tabBadges: {
-			"test-trace": <Badge>2</Badge>,
-			deploy: <Badge>1</Badge>,
+			"test-trace": <JobTabIcon event="finished" />,
+			deploy: <JobTabIcon event="waiting" />,
 		},
 	},
 	play: async ({ canvasElement }) => {
@@ -325,9 +325,13 @@ export const At1220WithBadges: Story = {
 			expect(topBar(canvasElement)).toHaveAttribute("data-compact"),
 		);
 		await expectTopBarHolds(canvasElement);
+		// A state icon, not a count (design gate row (a)): the tab's name says which kind of attention.
 		await expect(
-			within(canvasElement).getByRole("tab", { name: /Deploy/ }),
-		).toHaveTextContent("Deploy1");
+			within(canvasElement).getByRole("tab", { name: /^Deploy/ }),
+		).toHaveAccessibleName(/^Deploy\s?Needs your answer$/);
+		await expect(
+			within(canvasElement).getByRole("tab", { name: /^Test & trace/ }),
+		).toHaveAccessibleName(/^Test & trace\s?Finished$/);
 	},
 };
 
@@ -344,7 +348,10 @@ function BadgesComeAndGoShell() {
 				deployedAgo="3 days ago"
 				tabBadges={
 					badges
-						? { "test-trace": <Badge>2</Badge>, deploy: <Badge>1</Badge> }
+						? {
+								"test-trace": <JobTabIcon event="failed" />,
+								deploy: <JobTabIcon event="waiting" />,
+							}
 						: undefined
 				}
 			/>

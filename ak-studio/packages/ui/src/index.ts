@@ -1,10 +1,28 @@
 // @ak-studio/ui: the Studio's design system. Tokens are in theme.css (imported by the consumer's stylesheet).
 // The components below are the base set proposed for the P1a design gate (Task 9): the ones P2 and P3 use
 // (controls, display, overlays and structure; Drawer is left to P6), and the desktop shell (Task 10: DesktopShell,
-// TopBar, AppTabList, ProjectSwitcher, the top bar controls, BottomPanel, StatusBar, SettingsModal). The "Base
-// component set" and "Shell layout" sign-offs are pending. Exports are in path order (Biome sorts them).
+// TopBar, AppTabList, ProjectSwitcher, the top bar controls, BottomPanel, StatusBar, SettingsModal), and the P1b
+// patterns (Task 15: ApprovalCard, JobProgressView, the background job notice). The "Base component set" and
+// "Shell layout" sign-offs are pending. Exports are in path order (Biome sorts them).
 export const name = "@ak-studio/ui";
 
+export {
+	ApprovalCard,
+	type ApprovalCardProps,
+	ApprovalDetails,
+	type ApprovalDetailsProps,
+	type ApprovalError,
+	ApprovalNameField,
+	type ApprovalNameFieldProps,
+	nameMatches,
+} from "./components/approval";
+export {
+	type BackgroundJobEvent,
+	type BackgroundJobNoticeInput,
+	backgroundJobNotice,
+	JobTabIcon,
+	type JobTabIconProps,
+} from "./components/background-job-notice";
 export { Badge, type BadgeProps } from "./components/badge";
 export {
 	BOTTOM_PANEL_TABS,
@@ -83,6 +101,16 @@ export {
 	type InlineBannerProps,
 } from "./components/inline-banner";
 export { Input, type InputProps } from "./components/input";
+export {
+	ELAPSED_SHOWN_FROM_MS,
+	formatElapsed,
+	type JobProgressError,
+	JobProgressStack,
+	type JobProgressStackProps,
+	type JobProgressState,
+	JobProgressView,
+	type JobProgressViewProps,
+} from "./components/job-progress";
 export {
 	Menu,
 	MenuItem,
@@ -193,10 +221,13 @@ export {
 } from "./components/window-controls";
 export { cn } from "./lib/utils";
 export type {
+	ApprovalStrings,
+	BackgroundJobStrings,
 	BottomPanelStrings,
 	CodeBlockStrings,
 	ConfirmModalStrings,
 	DeployStatusStrings,
+	JobProgressStrings,
 	ModalStrings,
 	PathChipStrings,
 	ProjectSwitcherStrings,

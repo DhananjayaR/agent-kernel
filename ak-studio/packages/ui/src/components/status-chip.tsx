@@ -2,6 +2,9 @@
 // word, a bare dot or a Badge. Written by hand (shadcn has no equivalent). 24 px, the 8 px control
 // radius, a decorative hairline; each state has its own icon and label, so it is never colour alone (the status colours are close
 // to the primary one), and the icon takes the state's text colour.
+// `iconOnly`: the state's icon alone, 16 px, with the label kept as visually hidden text (its accessible name, read
+// with whatever it sits in: an app tab reads "Deploy Needs your answer"). For a tight slot where a word would not
+// fit, the background job notice's tab icon (P1b design gate row (a)); the icon still differs per state.
 import {
 	IconCircleCheck,
 	IconCircleDashed,
@@ -49,16 +52,38 @@ export type StatusChipProps = Omit<
 	 * "Missing" for not set up, "Wrong version" for failed). The icon stays the state's.
 	 */
 	label?: string;
+	/** The icon alone, with the label as visually hidden text (a tab's state icon). */
+	iconOnly?: boolean;
 };
 
 export function StatusChip({
 	status,
 	label,
+	iconOnly = false,
 	className,
 	...props
 }: StatusChipProps) {
 	const { Icon, iconClass } = STATES[status];
 	const defaultLabel = uiStrings.status[status];
+	if (iconOnly)
+		return (
+			<span
+				data-slot="status-chip"
+				data-status={status}
+				data-icon-only=""
+				className={cn("inline-flex size-4 shrink-0", className)}
+				{...props}
+			>
+				<Icon
+					aria-hidden="true"
+					className={cn(
+						"size-4 shrink-0 motion-reduce:animate-none",
+						iconClass,
+					)}
+				/>
+				<span className="sr-only">{label ?? defaultLabel}</span>
+			</span>
+		);
 	return (
 		<span
 			data-slot="status-chip"

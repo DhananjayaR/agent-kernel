@@ -66,3 +66,36 @@ export const Relabelled: Story = {
 		</div>
 	),
 };
+
+/**
+ * Icon only (the background job notice's tab icon): each state keeps its own icon, so waiting, finished and failed
+ * differ by shape, not colour alone; the label is the accessible name, as visually hidden text.
+ */
+export const IconOnly: Story = {
+	render: () => (
+		<div className="flex flex-wrap items-center gap-4">
+			<StatusChip iconOnly status="waiting" label="Needs your answer" />
+			<StatusChip iconOnly status="passed" label="Finished" />
+			<StatusChip iconOnly status="failed" label="Failed" />
+		</div>
+	),
+	play: async ({ canvasElement }) => {
+		const chips = [
+			...canvasElement.querySelectorAll<HTMLElement>("[data-slot=status-chip]"),
+		];
+		await expect(chips.map((chip) => chip.textContent)).toEqual([
+			"Needs your answer",
+			"Finished",
+			"Failed",
+		]);
+		const icons = new Set<string>();
+		for (const chip of chips) {
+			await expectHeight(chip, 16);
+			// The words are for assistive technology only: one 16 px icon shows.
+			const words = chip.querySelector(".sr-only") as HTMLElement;
+			await expect(words.getBoundingClientRect().width).toBeLessThanOrEqual(1);
+			icons.add(chip.querySelector("svg")?.getAttribute("class") ?? "");
+		}
+		await expect(icons.size).toBe(3);
+	},
+};
