@@ -8,7 +8,6 @@ import {
 	IconRocket,
 } from "@tabler/icons-react";
 import { type ReactNode, useEffect, useState } from "react";
-import { expect } from "storybook/test";
 import { Badge } from "../components/badge";
 import { BottomPanel, type BottomPanelTabId } from "../components/bottom-panel";
 import {
@@ -313,29 +312,4 @@ export function FixtureShell({
 			{content ?? <TabEmptyState tab={selected} />}
 		</DesktopShell>
 	);
-}
-
-/**
- * Nothing in `root` reaches past its right edge, and the page does not scroll sideways: the layout rule "nothing
- * scrolls the page sideways", checked on every element (an item clipped by `overflow: hidden` counts as a failure
- * too, so the top bar cannot hide a control).
- */
-export async function expectNoSidewaysOverflow(
-	root: HTMLElement,
-	/** Parts allowed to cut their content at the edge (named in the component's own rule). */
-	except?: string,
-): Promise<void> {
-	await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
-		window.innerWidth,
-	);
-	const edge = root.getBoundingClientRect().right + 0.5;
-	const over: string[] = [];
-	for (const el of root.querySelectorAll<HTMLElement>("*")) {
-		if (el.closest(".sr-only") || el.getClientRects().length === 0) continue;
-		if (except && el.closest(except)) continue;
-		const right = el.getBoundingClientRect().right;
-		if (right > edge)
-			over.push(`${el.tagName.toLowerCase()}.${el.className} (${right})`);
-	}
-	await expect(over, `past the right edge at ${edge}`).toEqual([]);
 }

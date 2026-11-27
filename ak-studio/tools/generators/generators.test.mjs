@@ -456,7 +456,8 @@ describe("the generators, run in a copy of the workspace", () => {
 			/jobs\.define\(\s*"release-notes\.publishNotes",\s*\(input, ctx\) =>\s*this\.publishNotes\(input, ctx\),?\s*\)/,
 		);
 		// The service test's serve() keeps the FakeClock it builds the service with, serves job.cancel (through
-		// JobService's own operations) and stream.read, and returns what a test moves, cancels and reads with.
+		// JobService's own operations) and stream.read, and returns what a test moves, cancels and reads with:
+		// runUntil moves the clock until a job reaches a state, stepOnce waits for a pending sleep before moving it.
 		const serviceTest = readFileSync(
 			join(
 				copy,
@@ -469,8 +470,11 @@ describe("the generators, run in a copy of the workspace", () => {
 		expect(serviceTest).toContain("jobs.register(collect as never);");
 		expect(serviceTest).toContain("streams.register(registry as never);");
 		expect(serviceTest).toMatch(
-			/return \{\s*registry,\s*jobs,\s*sessions,\s*streams,\s*events,\s*scopes,\s*clock,\s*lines,\s*names,\s*\};/,
+			/return \{\s*registry,\s*jobs,\s*sessions,\s*streams,\s*events,\s*scopes,\s*clock,\s*lines,\s*runUntil,\s*stepOnce,\s*names,\s*\};/,
 		);
+		// A job's case moves the clock until the job ends (runUntil), so it still passes once the runner sleeps.
+		expect(serviceTest).toContain('await runUntil("succeeded")');
+		expect(serviceTest).toMatch(/clock\.sleeping\)\.toBeGreaterThan\(0\)/);
 	}, 120_000);
 
 	it("refuse to make the same feature, operation or component twice, writing nothing", () => {

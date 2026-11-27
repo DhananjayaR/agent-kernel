@@ -167,6 +167,8 @@ export const serviceTest = (
 import {
 	type Contract,
 	contract,
+	type Job,
+	type JobId,
 	type OperationMap,
 	type StreamChunk,
 } from "@ak-studio/contract";
@@ -198,7 +200,8 @@ import { ${f.pascal}Service } from "./${f.pascal}Service";
 
 /**
  * A started registry serving exactly what ${f.pascal}Service registers (and the shared job, session and stream
- * operations), the core services behind it, the FakeClock it waits on, and \`lines\`, which reads a stream.
+ * operations), the core services behind it, the FakeClock it waits on, \`lines\`, which reads a stream, and
+ * \`runUntil\` and \`stepOnce\`, which move the clock for a job.
  */
 function serve() {
 	const log = vi.fn();
@@ -268,6 +271,29 @@ function serve() {
 		await vi.waitFor(() => expect(batches).toBeGreaterThan(0));
 		return texts;
 	};
+	/**
+	 * Moves the clock on a second at a time until the job \`jobId\` (default: the oldest listed) is in \`state\`, and
+	 * answers it. A job that asks the user stops at \`waiting-for-user\` until the test answers with \`job.respond\`.
+	 */
+	const runUntil = async (
+		state: Job["state"],
+		jobId?: JobId,
+	): Promise<Job> => {
+		for (let second = 0; second < 1000; second += 1) {
+			const job = jobs.list().find((j) => jobId === undefined || j.id === jobId);
+			if (job?.state === state) return job;
+			await clock.advance(1000);
+		}
+		throw new Error(\`the job never reached \${state}\`);
+	};
+	/**
+	 * One step of a runner that sleeps on the clock: waits until a sleep is pending (moving the clock before the
+	 * runner reaches its sleep moves nothing), then moves the clock on by \`ms\`.
+	 */
+	const stepOnce = async (ms: number): Promise<void> => {
+		await vi.waitFor(() => expect(clock.sleeping).toBeGreaterThan(0));
+		await clock.advance(ms);
+	};
 	return {
 		registry,
 		jobs,
@@ -277,6 +303,8 @@ function serve() {
 		scopes,
 		clock,
 		lines,
+		runUntil,
+		stepOnce,
 		names,
 	};
 }
@@ -308,16 +336,14 @@ export function serviceCase(x) {
 	if (shape === "job")
 		return `
 	it("runs one ${op} job${project ? " for an open project" : ""} to its result", async () => {
-		const { registry, jobs${project ? ", scopes" : ""} } = serve();${open}
+		const { registry, runUntil${project ? ", scopes" : ""} } = serve();${open}
 		const started = await registry.request("${op}", ${input(x)});
 		expect(started).toMatchObject({
 			ok: true,
 			value: { jobId: expect.any(String) },
 		});
-		await vi.waitFor(() =>
-			expect(jobs.list()[0]?.state).toBe("succeeded"),
-		);
-		expect(jobs.list()[0]?.result).toEqual({});
+		// runUntil moves the clock until the job ends, so the test still passes once the runner sleeps per step.
+		expect((await runUntil("succeeded")).result).toEqual({});
 	});
 `;
 	if (project)

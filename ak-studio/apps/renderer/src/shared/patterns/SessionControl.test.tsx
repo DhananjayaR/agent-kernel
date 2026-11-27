@@ -3,11 +3,11 @@
 // stop through the one button, the key facts from the session's info, a start the service refuses, a failed
 // session's own error, and "Show log" through an app command.
 import type { Session } from "@ak-studio/contract";
-import { FakeClock } from "@ak-studio/runtime";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type ConnectedMock, connectMock } from "../../test/connectedMock";
+import { FakeClock } from "../bridge/mockTransport";
 import { defineCommand } from "../commands/command";
 import { getCommands, setCommands } from "../commands/runCommand";
 import { applySessions } from "../sessions/sessionStore";

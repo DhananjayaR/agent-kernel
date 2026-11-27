@@ -9,11 +9,13 @@ import {
 	type InterruptedJob,
 	StudioFailure,
 } from "@ak-studio/contract";
-import { FakeClock } from "@ak-studio/runtime";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { MockTransportOptions } from "../../../shared/bridge/mockTransport";
+import {
+	FakeClock,
+	type MockTransportOptions,
+} from "../../../shared/bridge/mockTransport";
 import { useStreamStore } from "../../../shared/streams/streamStore";
 import { MockApp, type MockRouter } from "../../../test/MockApp";
 import { AboutScreen } from "./AboutScreen";

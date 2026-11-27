@@ -3,12 +3,12 @@
 // `startedAt`, and ClockProvider gives the pattern the same clock, so the elapsed time is exact. Also the parts the
 // demo job cannot reach (a failed job, commands, a job that cannot be stopped), from jobs put in the store.
 import type { Job } from "@ak-studio/contract";
-import { FakeClock } from "@ak-studio/runtime";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type ConnectedMock, connectMock } from "../../test/connectedMock";
+import { FakeClock } from "../bridge/mockTransport";
 import { defineCommand } from "../commands/command";
 import { getCommands, setCommands } from "../commands/runCommand";
 import { applyJobs, startJob } from "../jobs/jobStore";

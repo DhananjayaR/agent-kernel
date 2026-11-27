@@ -2,9 +2,9 @@
 // does (the feature's service behind a real registry). The job is followed as a view follows it: `useJob` over the
 // events subscription, `useStream` for its lines. The mock's clock is a FakeClock, so its one-second steps run when
 // the test moves it. Also the Task 8 carry: useStartJob and useJob on a real job kind.
-import { FakeClock } from "@ak-studio/runtime";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { FakeClock } from "../../../shared/bridge/mockTransport";
 import { cancelJob, respondToJob, useJob } from "../../../shared/jobs/jobStore";
 import { useStream } from "../../../shared/streams/streamStore";
 import { type ConnectedMock, connectMock } from "../../../test/connectedMock";

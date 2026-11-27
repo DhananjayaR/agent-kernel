@@ -10,7 +10,6 @@ import {
 } from "storybook/test";
 import {
 	atViewport,
-	expectNoSidewaysOverflow,
 	FixtureShell,
 	longProject,
 	supportTriageStatus,
@@ -19,6 +18,7 @@ import {
 import {
 	expectFocusRing,
 	expectHeight,
+	expectNoOverflow,
 	expectTokenColour,
 	tabTo,
 } from "../lib/story-checks";
@@ -105,7 +105,7 @@ async function expectTopBarHolds(canvasElement: HTMLElement, except?: string) {
 	await expect(r.left).toBeGreaterThanOrEqual(box.left);
 	await expect(r.right).toBeLessThanOrEqual(box.right);
 	await expect(last.scrollWidth).toBeLessThanOrEqual(last.clientWidth);
-	await expectNoSidewaysOverflow(shell(canvasElement), except);
+	await expectNoOverflow(shell(canvasElement), except);
 }
 
 /**
@@ -654,7 +654,7 @@ export const OptionTabsOnOwnRow: Story = {
 		await expect(tabs.getBoundingClientRect().top).toBeGreaterThanOrEqual(
 			bar.getBoundingClientRect().bottom,
 		);
-		await expectNoSidewaysOverflow(shell(canvasElement));
+		await expectNoOverflow(shell(canvasElement));
 	},
 };
 

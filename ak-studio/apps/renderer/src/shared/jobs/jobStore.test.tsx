@@ -18,6 +18,7 @@ import {
 	respondToJob,
 	startJob,
 	useJob,
+	useJobIdsToShow,
 	useJobStore,
 	useStartJob,
 } from "./jobStore";
@@ -102,6 +103,44 @@ describe("useJob", () => {
 		expect(result.current).toBeUndefined();
 		rerender({ id: undefined });
 		expect(result.current).toBeUndefined();
+	});
+});
+
+describe("useJobIdsToShow", () => {
+	it("answers the live jobs of the kinds and the newest whatever its state, oldest first", () => {
+		const { result } = renderHook(() => useJobIdsToShow(["t.demo", "t.other"]));
+		expect(result.current).toEqual([]);
+		act(() => {
+			applyJobs([
+				job("a", 1, { state: "succeeded" }),
+				job("b", 1, { state: "waiting-for-user" }),
+				job("c", 1, { kind: "t.elsewhere" }),
+				job("d", 1, { state: "failed", kind: "t.other" }),
+			]);
+		});
+		// a ended and is not the newest; c is another kind; d ended but is the newest of the kinds.
+		expect(result.current).toEqual(["b", "d"]);
+		act(() => {
+			applyJobs([job("e", 1, { state: "queued" })]);
+		});
+		// A new run: the ended d gives way to it.
+		expect(result.current).toEqual(["b", "e"]);
+		act(() => {
+			applyJobs([job("b", 2, { state: "cancelled" })]);
+		});
+		expect(result.current).toEqual(["e"]);
+	});
+
+	it("keeps the same array while the list is unchanged", () => {
+		applyJobs([job("a", 1)]);
+		const { result } = renderHook(() => useJobIdsToShow(["t.demo"]));
+		const first = result.current;
+		act(() => {
+			applyJobs([
+				job("a", 2, { progress: { step: 1, steps: 3, label: "Checking" } }),
+			]);
+		});
+		expect(result.current).toBe(first);
 	});
 });
 

@@ -2,9 +2,9 @@
 // feature's service behind a real registry, a FakeClock for its ticks), followed as a view follows it: the session
 // from the store over the events subscription, its lines with `useStream`. A 10,000-line burst reaches the view in
 // a few batches after the first tick, one store update each, never one per line.
-import { FakeClock } from "@ak-studio/runtime";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { FakeClock } from "../../../shared/bridge/mockTransport";
 import {
 	STREAM_BUFFER_LINES,
 	useStream,

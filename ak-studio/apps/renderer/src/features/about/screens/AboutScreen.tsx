@@ -7,16 +7,16 @@
 //   ChangedOnDisk when the note changed under the edits (Keep mine, Take theirs); UnsavedChangesGuard while it is
 //   dirty (leaving the tab asks; the label reaches main's quit dialog). "Change it elsewhere" writes the note as
 //   another window would, so the stale-write banner can be seen (one window has no second writer otherwise).
-// - **Jobs** (a job): "Run the demo job", then JobProgress for the demo jobs in the job store (the live ones and
-//   the newest that ended), with the question as the inline approval, and the newest job's output in a
-//   StreamingList. Read from the store by kind, never from the id `start` answered, so a job started from the
-//   palette, or one a reload reattached to, shows too.
+// - **Jobs** (a job): "Run the demo job", then JobProgress for the demo jobs `useJobIdsToShow` reads from the job
+//   store (the live ones and the newest, whatever its state), with the question as the inline approval, and the
+//   newest job's output in a StreamingList. Read from the store by kind, never from the id `start` answered, so a
+//   job started from the palette, or one a reload reattached to, shows too.
 // - **Ticker** (a session): SessionControl over `about.ticker`, with a switch for the 10,000-line burst, and its
 //   output in a StreamingList.
 //
 // InterruptedJobs heads the screen: a demo job an earlier run left unfinished (the app was killed) shows there until
 // dismissed.
-import type { Job, JobId, StudioError } from "@ak-studio/contract";
+import type { StudioError } from "@ak-studio/contract";
 import {
 	Button,
 	Card,
@@ -28,7 +28,7 @@ import {
 	Textarea,
 } from "@ak-studio/ui";
 import { type ReactNode, useId, useState } from "react";
-import { useJobStore } from "../../../shared/jobs/jobStore";
+import { useJobIdsToShow, useJobStore } from "../../../shared/jobs/jobStore";
 import { ChangedOnDisk } from "../../../shared/patterns/ChangedOnDisk";
 import { ErrorView } from "../../../shared/patterns/ErrorView";
 import { InterruptedJobs } from "../../../shared/patterns/InterruptedJobs";
@@ -47,17 +47,11 @@ import { useAboutNote } from "../api/useAboutNote";
 import { useAboutSetNote } from "../api/useAboutSetNote";
 import { aboutStrings } from "../strings";
 
-const DEMO_JOB = "about.demoJob";
 const TICKER = "about.ticker";
 /** The burst the switch asks for: the spec's 10,000-line check. */
 const BURST_LINES = 10_000;
-const DEMO_KINDS = [DEMO_JOB] as const;
-
-const ACTIVE: ReadonlySet<Job["state"]> = new Set([
-	"queued",
-	"running",
-	"waiting-for-user",
-]);
+/** The job kinds this screen shows (the manifest's `jobs`). */
+const DEMO_KINDS = ["about.demoJob"] as const;
 
 export function AboutScreen() {
 	return (
@@ -219,26 +213,11 @@ function NoteSection() {
 	);
 }
 
-/** The demo jobs to show: every live one and the newest that ended, in the order they started. */
-function useDemoJobIds(): JobId[] {
-	const key = useJobStore((state) => {
-		const jobs = Object.values(state.jobs).filter(
-			(job) => job.kind === DEMO_JOB,
-		);
-		const last = jobs[jobs.length - 1];
-		return jobs
-			.filter((job) => job === last || ACTIVE.has(job.state))
-			.map((job) => job.id)
-			.join(" ");
-	});
-	return key === "" ? [] : key.split(" ");
-}
-
 /** The job: start it, its progress and question, and its output. */
 function DemoJobSection() {
 	const text = aboutStrings.job;
 	const demo = useAboutDemoJob();
-	const jobIds = useDemoJobIds();
+	const jobIds = useJobIdsToShow(DEMO_KINDS);
 	const newest = useJobStore((state) => {
 		const id = jobIds[jobIds.length - 1];
 		return id === undefined ? undefined : state.jobs[id]?.streamId;

@@ -86,6 +86,34 @@ export async function expectNoFocusRing(el: Element): Promise<void> {
 	await expect(getComputedStyle(el).outlineStyle).toBe("none");
 }
 
+/**
+ * Nothing overflows `el` sideways: no descendant reaches past its right edge, it has nothing to scroll sideways
+ * (`scrollWidth` within `clientWidth`, so text that overflows its own box counts too), and the page does not
+ * scroll sideways. For the layout rule "nothing scrolls the page sideways" and a long value that must wrap. A
+ * descendant clipped by `overflow: hidden` counts as overflowing; `sr-only` text and anything not rendered do
+ * not. `except` is a selector for parts allowed to cut their content at the edge (named in the component's rule).
+ */
+export async function expectNoOverflow(
+	el: HTMLElement,
+	except?: string,
+): Promise<void> {
+	await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+		window.innerWidth,
+	);
+	await expect(el.scrollWidth).toBeLessThanOrEqual(el.clientWidth);
+	const edge = el.getBoundingClientRect().right + 0.5;
+	const over: string[] = [];
+	for (const child of el.querySelectorAll<HTMLElement>("*")) {
+		if (child.closest(".sr-only") || child.getClientRects().length === 0)
+			continue;
+		if (except && child.closest(except)) continue;
+		const right = child.getBoundingClientRect().right;
+		if (right > edge)
+			over.push(`${child.tagName.toLowerCase()}.${child.className} (${right})`);
+	}
+	await expect(over, `past the right edge at ${edge}`).toEqual([]);
+}
+
 /** The rendered height in CSS pixels. */
 export async function expectHeight(el: Element, px: number): Promise<void> {
 	await expect(el.getBoundingClientRect().height).toBe(px);

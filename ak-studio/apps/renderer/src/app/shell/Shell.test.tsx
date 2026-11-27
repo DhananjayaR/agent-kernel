@@ -7,7 +7,6 @@
 // palette: Ctrl+K opens it (from a text field too), it lists the commands with their features' titles, runs one,
 // and holds Ctrl+J off while open; a popover (not a modal) does not.
 import { studioError } from "@ak-studio/contract";
-import { FakeClock } from "@ak-studio/runtime";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,6 +14,7 @@ import { StudioFailure, setTransport } from "../../shared/bridge/client";
 import {
 	createMockTransport,
 	defaultMockHandlers,
+	FakeClock,
 } from "../../shared/bridge/mockTransport";
 import { runCommand } from "../../shared/commands/runCommand";
 import { errorStrings } from "../../shared/errors/strings";

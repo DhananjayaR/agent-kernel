@@ -3,7 +3,7 @@
 // P2's Commands view lists them; here they are shown in a list as it will.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
-import { tokenColour } from "../lib/story-checks";
+import { expectNoOverflow, tokenColour } from "../lib/story-checks";
 import { CommandRow } from "./command-row";
 
 const meta = {
@@ -184,8 +184,7 @@ export const List: Story = {
 		await expect(chipOf(ended)).toHaveTextContent("Ended");
 		await expect(chipOf(ended)).toHaveAttribute("data-status", "not-set-up");
 		await expect(ended).toHaveTextContent("Took 410 ms");
-		await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
-			window.innerWidth,
-		);
+		// The long command wraps inside the list; nothing is cut off at its edge.
+		await expectNoOverflow(within(canvasElement).getByRole("list"));
 	},
 };
