@@ -282,6 +282,29 @@ bottom panel showed a stub scroll bar (`278fc9fe`, with a check).
   integers above 2^53, THIRD-PARTY-NOTICES).
 - For the owner: `.mcp.json` sits at the repository root (Task 19 minor 1).
 
+### Final review (27 Nov 2026)
+
+Verdict: ready for P2 with follow-ups. No critical findings. All six suites pass on the final tree (lint,
+typecheck, unit tests, 620 Storybook tests, 35 end-to-end tests, 622 screenshots). Follow-ups for P2:
+
+- **About's removal.** About backs about half the end-to-end tests and the skills' worked example. Before it is
+  deleted, P2's first features take over those proofs, and the skills' sample tasks are rerun.
+- **One `ProjectFs` per project scope.** The feature services' dependencies hold one instance built before any
+  project opens; `ProjectFs` has a fixed root.
+- **A `CapabilityChecker` in main and in the mock** before the first operation declares a capability (today it
+  would stop both from starting), with the capability-id test moved and boundary rules for `kernel-catalog`.
+- **Masking.** A line assembler between `CommandRunner`'s output and `StreamHub.write`, since process output
+  arrives in chunks that can split a secret; and masking of progress, request, result, info and command-record
+  text.
+- **Commands panel.** A recorded-command store and reattach list (`command.recorded` events are not handled yet);
+  `shell.showCommands` filtered to a job.
+- **Projects.** Closing a project with running jobs asks, as quitting does, with a timeout; a current-project
+  accessor for hooks made with `--project`; interrupted-job records filtered by project; the unsaved list per
+  window.
+- **`CatalogProvider` mounted** with `upgradeCommand` and a docs opener (`shell.openExternal` on an allow-listed
+  host); real ports on desktop.
+- **CI.** The first CI run on three systems, with the screenshot baselines regenerated on CI's Linux.
+
 ## Risks
 
 | Risk | Default |
