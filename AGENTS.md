@@ -5,14 +5,15 @@ Guidance for AI coding agents (Claude Code, Cursor, Copilot, Codex, Windsurf, et
 the [README](README.md) and [kernel.yaala.ai/docs](https://kernel.yaala.ai/docs) instead — this
 file is for contributors to this repo.
 
-## Two skill sets — don't confuse them
+## Skill sets — don't confuse them
 
-This repo ships two unrelated sets of "skills," named similarly but serving opposite audiences:
+This repo ships unrelated sets of "skills," named similarly but serving different audiences:
 
 | Skill set | Location | Audience | Purpose |
 | --- | --- | --- | --- |
 | **Dev skills** | [.agents/skills/ak-dev-*](.agents/skills/) | You, working on this repo | Architecture, testing conventions, code quality, and step-by-step guides for adding a new framework adapter / guardrail / knowledge base / messaging integration / tracing provider / multimodal storage / sandbox provider / queue transport to OAK core |
 | **Bundled skills** | [ak-py/src/agentkernel/skills/](ak-py/src/agentkernel/skills/) (`ak-init`, `ak-build`, `ak-add-capabilities`, `ak-add-integration`, `ak-cloud-deploy`, `ak-test`) | End users of the `agentkernel` PyPI package | Shipped *inside* the package so a downstream developer's coding assistant can scaffold and extend agents built *with* OAK |
+| **Studio skills** | [ak-studio/.agents/skills/ak-studio-*](ak-studio/.agents/skills/) (`ak-studio-architecture`, `ak-studio-new-feature`, `ak-studio-ui`; guide in [ak-studio/AGENTS.md](ak-studio/AGENTS.md)) | You, working on OAK Studio in `ak-studio/` | Architecture, adding a feature with the generators, and the UI rules of the Electron desktop app; loaded only for work in `ak-studio/` |
 
 If a task is about changing OAK's own source, use the dev skills under `.agents/skills/`.
 Never edit the bundled skills to document a dev-only workflow, and never edit the dev skills to

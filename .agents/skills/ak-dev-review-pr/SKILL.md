@@ -86,6 +86,7 @@ Then route from the PR's changed file paths to the specialized skills. Take the 
 | `pipeline/transport/`: queue transports, transport factory | `ak-dev-new-queue-transport` |
 | `docs/`, `README.md`, `ak-py/README.md`, deployment/example READMEs (repo root) | `ak-dev-sync-docs-from-branch`: use its docs-surface map to check the right surfaces were updated, including the React landing and features pages (the landing page's inventories live under `docs/src/components/HomeSections/` (`integrations.data.tsx`, `index.tsx`, `Deployment.tsx`, `Announcement.tsx`) and in `ArchitectureOverview/data.tsx`; the features page's inventories live in `docs/src/pages/features.tsx`) when the change alters the inventory of frameworks, integrations, providers, transports, deployment targets, or headline capabilities |
 | `.agents/skills/` or `ak-py/src/agentkernel/skills/` (user skills) | `ak-dev-sync-skills-from-branch` — use its conventions to judge skill content and placement |
+| `ak-studio/**` (OAK Studio, the Electron app) | `ak-studio-architecture`, `ak-studio-ui` and `ak-studio-new-feature` from `ak-studio/.agents/skills/`, then dimension 7 below. For a Studio-only PR they replace `ak-dev-architecture` and `ak-dev-testing-conventions` as the rubric (those cover the Python core); keep `ak-dev-code-quality` for commits and PR conventions only |
 
 A PR can match several rows — load every matching skill. If the PR touches one of these areas only incidentally (e.g. a mechanical rename brushing `trace/`), a skim of the skill's checklist is enough; when the PR *adds or substantially modifies* that kind of component, walk the guide's checklist step by step and flag every step the PR skipped (missing factory registration, missing config section, missing optional-dependency extra, missing exports, missing tests, missing example).
 
@@ -184,6 +185,54 @@ Walk the requirements checklist extracted in Step 3 — from the spec documents 
 - Behavior implemented beyond the spec is flagged as a `[question]` — either the spec should grow or the code should shrink.
 - When a `plan.md` exists, the PR maps to its iterations — a PR that implements half of one iteration and a third of another warrants a `[question]` about the intended slicing.
 - Tests exercise the behaviors the spec promises, not just the code that happens to exist.
+
+### 7. Studio (`ak-studio/`)
+
+When the PR touches `ak-studio/`, review it against the three Studio skills (loaded in Step 2). The skills are the
+maintained source; `architecture.md` and sections 1 and 2 of `conventions-and-skills.md` under
+`docs/specs/950-agent-kernel-studio-phase-1/implementation/` are frozen records. Check:
+
+- **Layers and boundaries.** `packages/ui` imports no `@ak-studio/contract` and fetches nothing; `packages/runtime`
+  imports no Node built-in or `electron`; a feature imports no other feature and nothing from `app/`; the renderer
+  reaches `@ak-studio/runtime` only in `shared/bridge/`; Electron's values only in the main and preload entry
+  points. An exemption added to `.dependency-cruiser.cjs` or `biome.json` to let a change through is a
+  `[blocker]`.
+- **Contract shapes.** Each operation is a `query`, `command` or `job` (a session kind with `defineSessionKind`)
+  matching what it does: a command that regularly runs past a second should be a job. Inputs are `z.strictObject`
+  and bounded, outputs plain `z.object`; `errors` lists only domain codes; a feature's contract file imports
+  `./shapes`, `./domain`, `./errors`, never `./operations`. A write carries `baseRevision` and fails with
+  `file.changedOnDisk` carrying no content. Data lives with its owner: no server data in a feature store, no
+  optimistic cache writes, query keys from the feature's `keys(...)`, invalidation by `domain.changed` from the
+  service. A new error code has its title and an `ERROR_PRESENTATIONS` entry.
+- **Generators used.** New features, operations and components start from `pnpm new:feature`, `pnpm new:operation`
+  and `pnpm new:component`; a hand-written skeleton that differs from the generator's output is a finding. A change
+  to a rule changes the skill and the generator in the same PR.
+- **Patterns used, not reinvented.** Screens are built from the catalogue in `ak-studio-ui` through the connected
+  wrappers in `apps/renderer/src/shared/patterns/` (`JobProgress`, `ErrorView`, `ChangedOnDisk`,
+  `UnsavedChangesGuard`, `CapabilityGate`, ...). A local spinner, confirm dialog, error box, version check or
+  status colour where a pattern exists is a finding; a new pattern needs the design gate first.
+- **Visual rules.** Role tokens only, no arbitrary values or inline colours (`check-classes`, `check-palette`),
+  `rounded-control` for controls, Tabler icons at 16 or 20 px and `aria-hidden`, `mono-literal` for commands and
+  paths, one primary action per view, `relative` on every scroll container.
+- **Copy.** Sentence case; "OAK" (the full name only in titles); "Claude Agent" for the Studio's feature and
+  "Claude Code" only for the user's installed program; buttons say what happens; errors say what happened and what
+  to do next; empty states say what the place is for; no placeholder copy; every string in the feature's or
+  package's strings module.
+- **Stories, axe and baselines.** Every new or changed component and screen has a story per state with play
+  functions (and the names `tools/story-requirements.json` requires for a pattern); `pnpm test:storybook` passes
+  in both themes with axe; new or changed visual baselines under `tests/visual/__screenshots__/linux/` are
+  committed and look right (open the changed PNGs in the PR).
+- **Tests.** Services through a real `ServiceRegistry` with fakes and a `FakeClock`; hooks against the mock
+  transport; generated tests updated for the real schemas rather than left asserting `{}`; a screen that ships has
+  steps in `tests/e2e/browser.spec.ts` and `tests/e2e/electron.spec.ts`.
+- **Design gate sign-off.** A PR that adds or changes a screen's UI cites the phase document's sign-off row for that
+  screen (`design-process.md`). UI built before its gate is signed off is a `[blocker]`, unless the PR says it is a
+  prototype for the gate.
+- **No secrets across the bridge.** No operation output, job result, session info or event has a `key`, `apiKey`
+  or `token` field; raw output and error detail go through `SecretMasker`; a secret value typed by the user travels
+  once, renderer to main, and is never logged; nothing reads or stores Claude Code's credentials.
+- **Pinned dependencies.** Every new package is pinned exactly and recorded in the P0 decision record
+  (`P0-technology-selection.md`).
 
 ## Step 5: Verify Findings
 

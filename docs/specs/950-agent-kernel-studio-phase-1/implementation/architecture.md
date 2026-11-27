@@ -4,6 +4,12 @@
 [P1b](P1b-data-layer-and-patterns.md), followed by every later phase. After approval the
 `ak-studio-architecture` skill is the maintained source and this file is the frozen design record.
 
+> **Frozen on 27 November 2026 (P1b Task 19).** This document is the design record and is no longer updated. The
+> maintained source is the
+> [`ak-studio-architecture` skill](../../../../ak-studio/.agents/skills/ak-studio-architecture/SKILL.md). Where the
+> two differ, the skill and the code win: for example, operations are declared with `name`, not `id`, and domain
+> changes are one `domain.changed` event with a `domain` field.
+
 Every screen in the Studio reads project files, runs commands, follows streams and waits on long jobs. If each
 feature solves those problems its own way, the code drifts, and code written by a coding agent drifts
 fastest. This document fixes **one way** to do each of them, so that features look the same whoever writes

@@ -15,6 +15,10 @@ written down and enforced, not left to taste. This document sets:
 
 ## 1. Ground rules
 
+> **Frozen on 27 November 2026 (P1b Task 19).** This section is the design record and is no longer updated. The
+> maintained ground rules are in the
+> [`ak-studio-ui` skill](../../../../ak-studio/.agents/skills/ak-studio-ui/SKILL.md); where the two differ, the skill wins.
+
 ### Meaning first: one component per meaning
 
 Component names are working names until the P1a design gate.
@@ -103,6 +107,10 @@ Component names are working names until the P1a design gate.
   most severe state. Untested ranks above drafted because it looks finished but has no evidence.
 
 ## 2. UX patterns catalogue
+
+> **Frozen on 27 November 2026 (P1b Task 19).** This section is the design record and is no longer updated. The
+> maintained pattern catalogue is in the
+> [`ak-studio-ui` skill](../../../../ak-studio/.agents/skills/ak-studio-ui/SKILL.md), with the story that shows each built pattern; where the two differ, the skill wins.
 
 Every screen is assembled from these patterns. A screen that needs something not listed adds it here first,
 through the design gate, so the next screen can reuse it.

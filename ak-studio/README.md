@@ -59,6 +59,12 @@ pnpm test:packaged  # start and check the packaged app in release/ (run pnpm pac
 
 Members: `apps/desktop`, `apps/renderer`, `packages/contract`, `packages/runtime`, `packages/ui`, `packages/kernel-catalog`.
 
+**Coding agents** start from [AGENTS.md](AGENTS.md), which names the three Studio skills in
+[.agents/skills/](.agents/skills/). `.claude/skills` is a symbolic link to that folder, as at the repository root.
+**On Windows, a clone needs symbolic links enabled in git** (`git config --global core.symlinks true` before
+cloning, with Developer Mode on or as an administrator); without them the link is checked out as a plain text file
+and Claude Code does not find the skills.
+
 `test:storybook`, `test:visual` and `test:e2e` need Playwright's Chromium (`pnpm exec playwright install chromium` once; on a
 fresh Linux machine `pnpm exec playwright install --with-deps chromium`).
 
