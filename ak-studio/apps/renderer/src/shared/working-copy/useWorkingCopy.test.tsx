@@ -237,4 +237,50 @@ describe("useWorkingCopy", () => {
 		});
 		expect(outcome).toEqual({ clean: false, conflict: false, error: failure });
 	});
+
+	it("rejects a save with no revision once, leaving no unhandled rejection behind", async () => {
+		const { result } = renderHook(() =>
+			useWorkingCopy<string>({
+				value: undefined,
+				revision: undefined,
+				write: vi.fn(),
+			}),
+		);
+		act(() => result.current.setDraft("mine"));
+		await act(async () => {
+			await expect(result.current.save()).rejects.toThrow(
+				"no revision to save against",
+			);
+		});
+		// A second save is not stuck behind the first.
+		await act(async () => {
+			await expect(result.current.save()).rejects.toThrow();
+		});
+	});
+
+	it("a save called during a save waits, then writes again when the copy changed meanwhile", async () => {
+		const answer = deferred<{ revision: Revision }>();
+		const write = vi
+			.fn<WorkingCopyOptions<string>["write"]>()
+			.mockImplementationOnce(() => answer.promise)
+			.mockResolvedValueOnce({ revision: R3 });
+		const { result } = setup(write);
+		act(() => result.current.setDraft("mine"));
+		act(() => {
+			void result.current.save();
+		});
+		act(() => result.current.setDraft("mine, more"));
+		let second: Promise<unknown> = Promise.resolve();
+		act(() => {
+			second = result.current.save();
+		});
+		await act(async () => answer.resolve({ revision: R2 }));
+		let outcome: unknown;
+		await act(async () => {
+			outcome = await second;
+		});
+		expect(write).toHaveBeenCalledTimes(2);
+		expect(write).toHaveBeenLastCalledWith("mine, more", R2);
+		expect(outcome).toEqual({ clean: true, conflict: false, error: undefined });
+	});
 });

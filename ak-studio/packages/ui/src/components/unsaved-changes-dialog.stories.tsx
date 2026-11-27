@@ -165,6 +165,27 @@ export const Saving: Story = {
 	},
 };
 
+/** A save running far too long: Stay is offered again with a note (nothing is lost); Discard stays off. */
+export const SavingTooLong: Story = {
+	args: { saving: true, pending: true, stuck: true },
+	play: async ({ canvasElement, args }) => {
+		const dialog = await open(canvasElement);
+		await expect(dialog).toHaveTextContent(
+			"Saving is taking longer than it should. You can stay here: your changes are kept.",
+		);
+		await expect(
+			within(dialog).getByRole("button", { name: "Discard changes" }),
+		).toBeDisabled();
+		const stay = within(dialog).getByRole("button", { name: "Stay" });
+		await expect(stay).toBeEnabled();
+		await userEvent.click(stay);
+		await expect(args.onStay).toHaveBeenCalledOnce();
+		await waitFor(() => expect(trigger(canvasElement)).toHaveFocus());
+		// For the screenshot: open again.
+		await open(canvasElement);
+	},
+};
+
 /** Several views unsaved at once: one dialog names them all, with each file; Save, Discard and Stay answer for all. */
 export const SeveralItems: Story = {
 	args: {

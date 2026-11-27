@@ -10,8 +10,9 @@
 //   save runs: the save's answer decides). A click on
 //   the scrim does nothing, so a stray click can neither lose work nor leave.
 // - **A save that fails** keeps the dialog open with the error under the body (what happened, what to do), so the
-//   person can try again, discard, or stay. While it runs, Stay and Discard are disabled and a second Save does
-//   nothing; Save shows its pending state once the save has run 300 ms.
+//   person can try again, discard, or stay. While a save runs (this dialog's, or one a view started), Stay, Discard
+//   and Escape do nothing; Save shows its pending state once the save has run 300 ms (and ignores presses then).
+//   A save that runs far too long (`stuck`) offers Stay again, with a note, so the person is never trapped.
 //
 // An alert dialog built on Modal: focus moves into it (onto the dialog, never onto Discard) and returns to where it
 // was when it closes. Presentational: the renderer's UnsavedChangesGuard opens it from the router's blocker.
@@ -35,10 +36,16 @@ export type UnsavedChangesDialogProps = {
 	/** Cancels the navigation (Stay, Escape). */
 	onStay: () => void;
 	/**
-	 * The save is running: Stay and Discard are disabled at once, so a Discard cannot be reversed by the write landing
-	 * after it.
+	 * A save is running (this dialog's, or one a view started): Stay, Discard and Escape do nothing, so a Discard
+	 * cannot be reversed by the write landing after it. Save stays pressable when it is not pending: the caller
+	 * waits for the running save.
 	 */
 	saving?: boolean;
+	/**
+	 * The save has run far longer than it should: Stay (and Escape) is offered again, with a note, so the person is
+	 * never trapped; staying keeps every change and holds nothing. Discard stays off.
+	 */
+	stuck?: boolean;
 	/** The save has run 300 ms (the shared pending timing): Save shows its pending state. */
 	pending?: boolean;
 	/** The save failed: shown under the body; the dialog stays open. */
@@ -54,6 +61,7 @@ export function UnsavedChangesDialog({
 	onDiscard,
 	onStay,
 	saving = false,
+	stuck = false,
 	pending = false,
 	error,
 	strings,
@@ -64,7 +72,7 @@ export function UnsavedChangesDialog({
 			isOpen={isOpen}
 			onOpenChange={(open) => {
 				// Escape stays, except while the save runs (as Stay is disabled then): the answer comes from the save.
-				if (!open && !saving) onStay();
+				if (!open && (!saving || stuck)) onStay();
 			}}
 			title={fillString(text.title, { what })}
 			role="alertdialog"
@@ -72,19 +80,17 @@ export function UnsavedChangesDialog({
 			isDismissable={false}
 			actions={() => (
 				<>
-					<Button variant="secondary" isDisabled={saving} onPress={onStay}>
+					<Button
+						variant="secondary"
+						isDisabled={saving && !stuck}
+						onPress={onStay}
+					>
 						{text.stay}
 					</Button>
 					<Button variant="secondary" isDisabled={saving} onPress={onDiscard}>
 						{text.discard}
 					</Button>
-					<Button
-						variant="primary"
-						isPending={pending}
-						onPress={() => {
-							if (!saving) onSave();
-						}}
-					>
+					<Button variant="primary" isPending={pending} onPress={onSave}>
 						{text.save}
 					</Button>
 				</>
@@ -104,6 +110,7 @@ export function UnsavedChangesDialog({
 						</div>
 					) : null}
 					<p>{text.body}</p>
+					{saving && stuck ? <p>{text.stuck}</p> : null}
 				</Text>
 				{error ? <ErrorBanner error={error} /> : null}
 			</div>

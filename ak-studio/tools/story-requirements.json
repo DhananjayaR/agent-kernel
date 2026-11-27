@@ -153,6 +153,7 @@
 				"Discard",
 				"EscapeStays",
 				"Saving",
+				"SavingTooLong",
 				"SeveralItems",
 				"SaveFailed",
 				"Keyboard"

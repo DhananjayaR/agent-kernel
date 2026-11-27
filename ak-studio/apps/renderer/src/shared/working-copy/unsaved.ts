@@ -1,5 +1,5 @@
 // What is unsaved in this window, for the "nothing is lost silently" rule (conventions-and-skills.md, behaviour
-// rules). Each guard (useUnsavedGuard) adds a label while its view is dirty. While anything is unsaved, the page's
+// rules). Each guard (useUnsavedLabel) adds a label while its view is dirty. While anything is unsaved, the page's
 // `beforeunload` is refused (Electron answers with its native prompt, P1b ruling 11), and main is kept told of the
 // labels through `app.setUnsaved`, so the quit rule asks about them before it cancels any job. One registry for the
 // window, so main gets one list, not one per view.

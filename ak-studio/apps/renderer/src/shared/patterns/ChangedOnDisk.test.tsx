@@ -39,6 +39,9 @@ function Editor(props: {
 			<button type="button" onClick={() => copy.setDraft("mine")}>
 				Edit
 			</button>
+			<button type="button" onClick={() => copy.discard()}>
+				Discard
+			</button>
 		</div>
 	);
 }
@@ -166,5 +169,23 @@ describe("ChangedOnDisk", () => {
 		expect(banner.textContent).toContain("The canvas was updated.");
 		await user.click(screen.getByRole("button", { name: "Dismiss" }));
 		expect(onDismiss).toHaveBeenCalledOnce();
+	});
+
+	it("clears a kept banner when the copy is dropped by other means (the view's Discard)", async () => {
+		const write = vi.fn<WorkingCopyOptions<string>["write"]>(() =>
+			Promise.reject(
+				new StudioFailure({
+					code: ERROR_CODES.unavailable,
+					message: "Restart the app, then keep yours again.",
+				}),
+			),
+		);
+		const { user } = await conflicted(write);
+		await user.click(screen.getByRole("button", { name: "Keep mine" }));
+		await screen.findByRole("alert");
+		await user.click(screen.getByRole("button", { name: "Discard" }));
+		await vi.waitFor(() => expect(screen.queryByRole("status")).toBeNull());
+		expect(screen.queryByRole("alert")).toBeNull();
+		expect(screen.getByText("Showing: theirs v2")).toBeTruthy();
 	});
 });

@@ -11,7 +11,7 @@ export const patternStrings = {
 	},
 	/** A save from the unsaved changes dialog found the file changed on disk: its description (what to do). */
 	saveConflict:
-		"The file was saved elsewhere while you were editing. Stay to keep yours or take theirs, or discard your changes.",
+		"The file behind {what} changed while you were editing. Stay to keep yours or take theirs, or discard your changes.",
 	/** Several unsaved views named together in one dialog: "{first} and {last}", the rest joined with ", ". */
 	unsavedJoin: "{first} and {last}",
 	unsavedJoinComma: ", ",

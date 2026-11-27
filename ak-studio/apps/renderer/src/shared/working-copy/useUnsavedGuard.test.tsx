@@ -16,11 +16,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { setTransport } from "../bridge/client";
 import { createMockTransport } from "../bridge/mockTransport";
 import { UNSAVED_REPORT_DELAY_MS, unsavedWork } from "./unsaved";
-import { useUnsavedGuard } from "./useUnsavedGuard";
+import { useUnsavedBlocker, useUnsavedLabel } from "./useUnsavedGuard";
 
 function Editor() {
 	const [dirty, setDirty] = useState(false);
-	const guard = useUnsavedGuard("Config: session section", dirty);
+	useUnsavedLabel("Config: session section", dirty);
+	const guard = useUnsavedBlocker(dirty);
 	const navigate = useNavigate();
 	return (
 		<div>
@@ -83,7 +84,7 @@ afterEach(() => {
 	setTransport(undefined);
 });
 
-describe("useUnsavedGuard", () => {
+describe("useUnsavedLabel and useUnsavedBlocker", () => {
 	it("lets the person leave and unload freely while nothing is unsaved", async () => {
 		setTransport(createMockTransport());
 		const user = userEvent.setup();

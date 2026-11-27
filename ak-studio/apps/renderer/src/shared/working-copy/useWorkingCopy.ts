@@ -123,9 +123,11 @@ export function useWorkingCopy<T>(
 		const s = state.current;
 		const running = run(copy).then(outcome);
 		s.inflight = running;
-		void running.finally(() => {
+		// Cleared either way; the rejection itself is the caller's (so this branch adds no unhandled one).
+		const clear = () => {
 			if (s.inflight === running) s.inflight = undefined;
-		});
+		};
+		running.then(clear, clear);
 		return running;
 	};
 
@@ -174,6 +176,21 @@ export function useWorkingCopy<T>(
 		}
 	};
 
+	/**
+	 * Writes the copy; while a save runs, waits for it, and if the copy changed meanwhile (edits made during that
+	 * save, with no conflict or error), writes again, so "clean" is never answered for an unsaved copy.
+	 */
+	const save = async (): Promise<SaveOutcome> => {
+		const st = state.current;
+		if (st.saving && st.inflight) {
+			const first = await st.inflight;
+			if (first.clean || first.conflict || first.error) return first;
+			return save();
+		}
+		if (!st.copy || st.copy.written) return outcome();
+		return write(st.copy);
+	};
+
 	const s = state.current;
 	const showPending = usePendingAfter(s.saving, s.saves);
 	return {
@@ -204,12 +221,7 @@ export function useWorkingCopy<T>(
 			}
 			rerender();
 		},
-		async save() {
-			const st = state.current;
-			if (st.saving && st.inflight) return st.inflight;
-			if (!st.copy || st.copy.written) return outcome();
-			return write(st.copy);
-		},
+		save,
 		discard() {
 			drop(state.current);
 			rerender();

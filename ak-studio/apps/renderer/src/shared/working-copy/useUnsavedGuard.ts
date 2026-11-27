@@ -1,16 +1,14 @@
-// The unsaved-changes guard (conventions-and-skills.md: "nothing is lost silently"). While `dirty`, the view's
-// label is in the window's unsaved list (unsaved.ts: reload and close are refused through `beforeunload`, and
-// main's quit rule names the label), and leaving the route is held by TanStack Router's blocker. The answer is the
-// blocker's state: while `status` is "blocked", the view shows the unsaved-changes prompt and calls `proceed()` to
-// leave or `reset()` to stay.
-//
-// The two halves are exported apart for patterns/UnsavedChangesGuard.tsx, where every dirty view lists its label
-// but only one guard holds the blocker, so leaving with several unsaved views asks once, naming them all.
+// The two halves of the unsaved-changes guard (conventions-and-skills.md: "nothing is lost silently"), for
+// patterns/UnsavedChangesGuard.tsx only (views mount that component, never these hooks):
+// - `useUnsavedLabel`: while `dirty`, the view's label is in the window's unsaved list (unsaved.ts: reload and close
+//   are refused through `beforeunload`, and main's quit rule names the label).
+// - `useUnsavedBlocker`: TanStack Router's blocker, held by one guard for every unsaved view (patterns/
+//   unsavedGuards.ts), so leaving asks once. Its state is the answer: while `status` is "blocked", the dialog shows
+//   and the guard calls `proceed()` to leave or `reset()` to stay. It is the app's only router blocker (a test
+//   checks), so a `proceed()` always navigates.
 import { useBlocker } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { unsavedWork } from "./unsaved";
-
-export type UnsavedGuard = ReturnType<typeof useUnsavedBlocker>;
 
 /** One function for every render: a new one each render would re-register the blocker each render. */
 const blockAlways = () => true;
@@ -32,10 +30,4 @@ export function useUnsavedLabel(label: string, dirty: boolean): void {
 		if (!dirty) return;
 		return unsavedWork.add(label);
 	}, [label, dirty]);
-}
-
-/** Registers `label` (e.g. "Config: session section") as unsaved while `dirty`, and guards leaving the route. */
-export function useUnsavedGuard(label: string, dirty: boolean): UnsavedGuard {
-	useUnsavedLabel(label, dirty);
-	return useUnsavedBlocker(dirty);
 }

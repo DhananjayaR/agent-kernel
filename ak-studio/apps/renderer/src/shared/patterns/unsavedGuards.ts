@@ -4,7 +4,9 @@
 // so a Discard on the first followed by a Stay on the second would drop work and stay.
 //
 // Each guard adds its entry while its copy is dirty (in the order they became dirty) and removes it when clean or
-// unmounted. One guard owns the router's blocker: the one already asking (`asking`), else the first entry.
+// unmounted, and says while its copy is saving (a save the view started: an explicit Save, an autosave, Keep mine),
+// so the dialog does not offer Discard or Stay while a write that would undo them is on its way. One guard owns the
+// router's blocker: the one already asking (`asking`), else the first entry.
 import type { SaveOutcome } from "../working-copy/useWorkingCopy";
 
 /** One dirty view, as the dialog names it and acts on it. */
@@ -21,6 +23,8 @@ export interface GuardEntry {
 
 export interface GuardsSnapshot {
 	readonly entries: readonly GuardEntry[];
+	/** A view's own save is running (its entry's write is on its way). */
+	readonly saving: boolean;
 	/** The guard whose dialog is open (its blocker is answering a navigation). */
 	readonly asking: string | undefined;
 }
@@ -28,12 +32,14 @@ export interface GuardsSnapshot {
 class UnsavedGuards {
 	#entries = new Map<string, GuardEntry>();
 	#asking: string | undefined;
-	#snapshot: GuardsSnapshot = { entries: [], asking: undefined };
+	#saving = new Set<string>();
+	#snapshot: GuardsSnapshot = { entries: [], saving: false, asking: undefined };
 	#listeners = new Set<() => void>();
 
 	#changed(): void {
 		this.#snapshot = {
 			entries: [...this.#entries.values()],
+			saving: this.#saving.size > 0,
 			asking: this.#asking,
 		};
 		for (const listener of this.#listeners) listener();
@@ -48,6 +54,14 @@ class UnsavedGuards {
 			this.#entries.delete(entry.id);
 			this.#changed();
 		};
+	}
+
+	/** Says whether `id`'s copy is saving. */
+	setSaving(id: string, saving: boolean): void {
+		if (this.#saving.has(id) === saving) return;
+		if (saving) this.#saving.add(id);
+		else this.#saving.delete(id);
+		this.#changed();
 	}
 
 	/** Marks `id` as the guard asking (or no one). */

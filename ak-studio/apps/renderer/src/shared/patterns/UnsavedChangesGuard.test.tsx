@@ -12,18 +12,19 @@ import {
 	RouterProvider,
 	useNavigate,
 } from "@tanstack/react-router";
-import { act, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { StudioFailure, setTransport } from "../bridge/client";
 import { createMockTransport } from "../bridge/mockTransport";
 import { errorStrings } from "../errors/strings";
+import { PENDING_DELAY_MS } from "../query/pending";
 import { unsavedWork } from "../working-copy/unsaved";
 import {
 	useWorkingCopy,
 	type WorkingCopyOptions,
 } from "../working-copy/useWorkingCopy";
-import { UnsavedChangesGuard } from "./UnsavedChangesGuard";
+import { SAVE_STUCK_MS, UnsavedChangesGuard } from "./UnsavedChangesGuard";
 
 afterEach(() => {
 	setTransport(undefined);
@@ -31,6 +32,7 @@ afterEach(() => {
 
 const R1: Revision = "1".repeat(64);
 const R2: Revision = "2".repeat(64);
+const R3: Revision = "3".repeat(64);
 
 function Editor({ write }: { write: WorkingCopyOptions<string>["write"] }) {
 	const copy = useWorkingCopy({ value: "theirs", revision: R1, write });
@@ -104,6 +106,14 @@ function Section({
 			<button type="button" onClick={() => copy.setDraft(`${name} mine`)}>
 				Edit {name}
 			</button>
+			<button
+				type="button"
+				onClick={() => {
+					void copy.save();
+				}}
+			>
+				Save {name}
+			</button>
 		</div>
 	);
 }
@@ -111,9 +121,11 @@ function Section({
 function TwoSections({
 	writeA,
 	writeB,
+	fileB,
 }: {
 	writeA: WorkingCopyOptions<string>["write"];
 	writeB: WorkingCopyOptions<string>["write"];
+	fileB: string;
 }) {
 	const navigate = useNavigate();
 	return (
@@ -123,11 +135,7 @@ function TwoSections({
 				file="src/support/config.yaml"
 				write={writeA}
 			/>
-			<Section
-				name="the session section"
-				file="src/support/sessions.yaml"
-				write={writeB}
-			/>
+			<Section name="the session section" file={fileB} write={writeB} />
 			<button
 				type="button" // The app registers its own routes; this test router has others.
 				onClick={() => void navigate({ to: "/other" } as never)}
@@ -138,10 +146,11 @@ function TwoSections({
 	);
 }
 
-/** Two views edited, then leaving: one dialog for both. */
-async function leaveWithTwo(
+/** Two views on one page, rendered. */
+async function renderTwo(
 	writeA: WorkingCopyOptions<string>["write"],
 	writeB: WorkingCopyOptions<string>["write"],
+	fileB = "src/support/sessions.yaml",
 ) {
 	setTransport(createMockTransport());
 	const user = userEvent.setup();
@@ -150,7 +159,9 @@ async function leaveWithTwo(
 		createRoute({
 			getParentRoute: () => rootRoute,
 			path: "/",
-			component: () => <TwoSections writeA={writeA} writeB={writeB} />,
+			component: () => (
+				<TwoSections writeA={writeA} writeB={writeB} fileB={fileB} />
+			),
 		}),
 		createRoute({
 			getParentRoute: () => rootRoute,
@@ -169,6 +180,15 @@ async function leaveWithTwo(
 	await user.click(
 		screen.getByRole("button", { name: "Edit the session section" }),
 	);
+	return { user, router };
+}
+
+/** Two views edited, then leaving: one dialog for both. */
+async function leaveWithTwo(
+	writeA: WorkingCopyOptions<string>["write"],
+	writeB: WorkingCopyOptions<string>["write"],
+) {
+	const { user, router } = await renderTwo(writeA, writeB);
 	await user.click(screen.getByRole("button", { name: "Leave" }));
 	const dialog = await screen.findByRole("alertdialog", {
 		name: "Unsaved changes in config.yaml and the session section",
@@ -178,6 +198,18 @@ async function leaveWithTwo(
 	expect(dialog.textContent).toContain("src/support/config.yaml");
 	expect(dialog.textContent).toContain("src/support/sessions.yaml");
 	return { user, router, dialog };
+}
+
+/** A write that waits for the test to answer it. */
+function deferredWrite() {
+	let answer: (value: { revision: Revision }) => void = () => {};
+	const write = vi.fn(
+		(_draft: string, _base: Revision) =>
+			new Promise<{ revision: Revision }>((resolve) => {
+				answer = resolve;
+			}),
+	);
+	return { write, answer: (value: { revision: Revision }) => answer(value) };
 }
 
 const written = async () => ({ revision: R2 });
@@ -425,5 +457,148 @@ describe("UnsavedChangesGuard with two unsaved views", () => {
 			name: "Unsaved changes in config.yaml and the session section",
 		});
 		expect(screen.getAllByRole("alertdialog")).toHaveLength(1);
+	});
+
+	it("holds Discard, Stay and Escape while a view's own save runs; the choices return once it lands", async () => {
+		const a = deferredWrite();
+		const writeB = vi.fn(written);
+		const { user, router } = await renderTwo(a.write, writeB);
+		// The view saves itself (Keep mine, an explicit Save, an autosave), and the person leaves before it lands.
+		await user.click(screen.getByRole("button", { name: "Save config.yaml" }));
+		await user.click(screen.getByRole("button", { name: "Leave" }));
+		const dialog = await screen.findByRole("alertdialog", {
+			name: "Unsaved changes in config.yaml and the session section",
+		});
+		expect(
+			within(dialog).getByRole("button", { name: "Discard changes" }),
+		).toHaveProperty("disabled", true);
+		expect(within(dialog).getByRole("button", { name: "Stay" })).toHaveProperty(
+			"disabled",
+			true,
+		);
+		await user.keyboard("{Escape}");
+		expect(screen.getByRole("alertdialog")).toBeTruthy();
+		await act(async () => a.answer({ revision: R2 }));
+		const after = await screen.findByRole("alertdialog", {
+			name: "Unsaved changes in the session section",
+		});
+		expect(
+			within(after).getByRole("button", { name: "Discard changes" }),
+		).toHaveProperty("disabled", false);
+		expect(router.state.location.pathname).toBe("/");
+	});
+
+	it("names each file once when two views show the same file, and names the view whose save conflicts", async () => {
+		const writeB = vi.fn(() =>
+			Promise.reject(
+				new StudioFailure({
+					code: ERROR_CODES.fileChangedOnDisk,
+					message: "The file changed on disk.",
+				}),
+			),
+		);
+		const { user, router } = await renderTwo(
+			vi.fn(written),
+			writeB,
+			"src/support/config.yaml",
+		);
+		await user.click(screen.getByRole("button", { name: "Leave" }));
+		const dialog = await screen.findByRole("alertdialog", {
+			name: "Unsaved changes in config.yaml and the session section",
+		});
+		expect(dialog.querySelectorAll("[data-slot=path-chip]")).toHaveLength(1);
+		await user.click(within(dialog).getByRole("button", { name: "Save" }));
+		// The second view's base is stale once the first wrote the file: a conflict, naming that view.
+		const alert = await within(
+			await screen.findByRole("alertdialog", {
+				name: "Unsaved changes in the session section",
+			}),
+		).findByRole("alert");
+		expect(alert.textContent).toContain(errorStrings.titles.fileChangedOnDisk);
+		expect(alert.textContent).toContain(
+			"The file behind the session section changed while you were editing.",
+		);
+		expect(alert.textContent).toContain("src/support/config.yaml");
+		expect(router.state.location.pathname).toBe("/");
+	});
+});
+
+describe("UnsavedChangesGuard while a view's own save runs", () => {
+	it("leaves by itself when every copy turns clean while it asks", async () => {
+		const a = deferredWrite();
+		const b = deferredWrite();
+		const { user } = await renderTwo(a.write, b.write);
+		await user.click(screen.getByRole("button", { name: "Save config.yaml" }));
+		await user.click(
+			screen.getByRole("button", { name: "Save the session section" }),
+		);
+		await user.click(screen.getByRole("button", { name: "Leave" }));
+		await screen.findByRole("alertdialog");
+		await act(async () => {
+			a.answer({ revision: R2 });
+			b.answer({ revision: R2 });
+		});
+		expect(await screen.findByText("Other view")).toBeTruthy();
+	});
+
+	it("a dialog Save waits for a running save, and writes again if the copy changed meanwhile", async () => {
+		let first: (value: { revision: Revision }) => void = () => {};
+		const writeA = vi
+			.fn<WorkingCopyOptions<string>["write"]>()
+			.mockImplementationOnce(
+				() =>
+					new Promise((resolve) => {
+						first = resolve;
+					}),
+			)
+			.mockResolvedValueOnce({ revision: R3 });
+		const { user } = await renderTwo(writeA, vi.fn(written));
+		await user.click(screen.getByRole("button", { name: "Save config.yaml" }));
+		// An edit while that save runs: the copy changes under it.
+		await user.click(screen.getByRole("button", { name: "Edit config.yaml" }));
+		await user.click(screen.getByRole("button", { name: "Leave" }));
+		const dialog = await screen.findByRole("alertdialog");
+		await user.click(within(dialog).getByRole("button", { name: "Save" }));
+		await act(async () => first({ revision: R2 }));
+		expect(await screen.findByText("Other view")).toBeTruthy();
+		expect(writeA).toHaveBeenCalledTimes(2);
+		expect(writeA).toHaveBeenLastCalledWith("config.yaml mine", R2);
+		expect(screen.queryByRole("alert")).toBeNull();
+	});
+
+	it("offers Stay again when a save runs far too long; staying keeps the work", async () => {
+		const a = deferredWrite();
+		const { router } = await renderTwo(a.write, vi.fn(written));
+		// Fake timeouts from before the save starts, so its pending clocks are fake; presses by fireEvent.
+		vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+		let stay: HTMLElement;
+		let dialog: HTMLElement;
+		try {
+			fireEvent.click(screen.getByRole("button", { name: "Save config.yaml" }));
+			fireEvent.click(screen.getByRole("button", { name: "Leave" }));
+			await act(async () => {
+				await vi.advanceTimersByTimeAsync(10);
+			});
+			dialog = screen.getByRole("alertdialog");
+			stay = within(dialog).getByRole("button", { name: "Stay" });
+			expect(stay).toHaveProperty("disabled", true);
+			await act(async () => {
+				await vi.advanceTimersByTimeAsync(PENDING_DELAY_MS + SAVE_STUCK_MS);
+			});
+		} finally {
+			vi.useRealTimers();
+		}
+		expect(stay).toHaveProperty("disabled", false);
+		expect(dialog.textContent).toContain(
+			"Saving is taking longer than it should.",
+		);
+		fireEvent.click(stay);
+		await vi.waitFor(() =>
+			expect(screen.queryByRole("alertdialog")).toBeNull(),
+		);
+		expect(router.state.location.pathname).toBe("/");
+		expect(
+			screen.getByText("the session section shows: the session section mine"),
+		).toBeTruthy();
 	});
 });

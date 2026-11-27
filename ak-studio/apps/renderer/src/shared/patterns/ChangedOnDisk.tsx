@@ -30,7 +30,13 @@ export interface ChangedOnDiskProps {
 	/** The view's working copy, when it has one. */
 	workingCopy?: Pick<
 		WorkingCopy<unknown>,
-		"conflict" | "keepMine" | "takeTheirs" | "saving" | "showPending" | "error"
+		| "conflict"
+		| "keepMine"
+		| "takeTheirs"
+		| "saving"
+		| "showPending"
+		| "error"
+		| "dirty"
 	>;
 	/** The view re-read the file after a change made outside the app, with no working copy to keep. */
 	changed?: boolean;
@@ -59,9 +65,19 @@ export function ChangedOnDisk({
 	const conflict = workingCopy?.conflict ?? false;
 	const saving = workingCopy?.saving ?? false;
 	const failure = workingCopy?.error;
+	const dirty = workingCopy?.dirty ?? false;
 	useEffect(() => {
-		if (kept && !conflict && !saving && !failure && !rejected) setKept(false);
-	}, [kept, conflict, saving, failure, rejected]);
+		if (!kept) return;
+		// Resolved: the write was confirmed, or the copy turned clean or was dropped by any means (Take theirs, the
+		// view's Discard, its own save).
+		if (
+			(!conflict && !saving && !failure && !rejected) ||
+			(!dirty && !saving)
+		) {
+			setKept(false);
+			setRejected(undefined);
+		}
+	}, [kept, conflict, saving, failure, rejected, dirty]);
 
 	const common = {
 		file,

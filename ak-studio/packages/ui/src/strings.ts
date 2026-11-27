@@ -149,6 +149,9 @@ export const uiStrings = {
 		save: "Save",
 		discard: "Discard changes",
 		stay: "Stay",
+		/** A save that runs far longer than it should: Stay is offered again. */
+		stuck:
+			"Saving is taking longer than it should. You can stay here: your changes are kept.",
 	},
 	// The version gate (version-notice.tsx). `{feature}` is the capability's title, `{since}` the first OAK version
 	// with it, `{until}` the first without it, `{version}` the project's.
