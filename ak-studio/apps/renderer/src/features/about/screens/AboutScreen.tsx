@@ -63,12 +63,13 @@ export function AboutScreen() {
 	return (
 		<div className="relative h-full overflow-auto">
 			<div className="mx-auto flex max-w-3xl flex-col gap-6 p-6">
-				<header className="flex flex-col gap-1">
+				{/* A div, not a <header>: the shell's top bar is the window's one banner landmark. */}
+				<div className="flex flex-col gap-1">
 					<h2 className="font-heading text-ui-xl font-bold text-text">
 						{aboutStrings.title}
 					</h2>
 					<p className="text-ui text-text-muted">{aboutStrings.intro}</p>
-				</header>
+				</div>
 				<InterruptedJobs kinds={DEMO_KINDS} />
 				<InfoSection />
 				<NoteSection />
