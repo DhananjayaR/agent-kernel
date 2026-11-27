@@ -163,11 +163,12 @@ export function registerLines(x) {
 export const serviceTest = (
 	f,
 	runtimeImport,
-) => `${comment(`${f.pascal}Service's tests: each operation it registers, answered through a real ServiceRegistry (input and output parsed against the contract, as the app serves them), with the core services behind it and a project the tests can open.`)}
+) => `${comment(`${f.pascal}Service's tests: each operation it registers, answered through a real ServiceRegistry (input and output parsed against the contract, as the app serves them), with the core services behind it and a project the tests can open. The registry also serves the shared job and session operations and \`stream.read\`, so a test cancels a job (\`job.cancel\`) and reads its output as the renderer does; the clock is a FakeClock the tests move. Extend \`serve()\` to return anything else a test needs.`)}
 import {
 	type Contract,
 	contract,
 	type OperationMap,
+	type StreamChunk,
 } from "@ak-studio/contract";
 ${
 	runtimeImport === "@ak-studio/runtime"
@@ -195,7 +196,10 @@ import { StreamHub } from "../streams";`
 }
 import { ${f.pascal}Service } from "./${f.pascal}Service";
 
-/** A started registry serving exactly what ${f.pascal}Service registers, and the core services behind it. */
+/**
+ * A started registry serving exactly what ${f.pascal}Service registers (and the shared job, session and stream
+ * operations), the core services behind it, the FakeClock it waits on, and \`lines\`, which reads a stream.
+ */
 function serve() {
 	const log = vi.fn();
 	const masker = new SecretMasker();
@@ -211,10 +215,11 @@ function serve() {
 		log,
 	});
 	const sessions = new SessionService({ events, streams, scopes, masker, log });
+	const clock = new FakeClock();
 	const handlers = new Map<string, (input: never) => unknown>();
 	new ${f.pascal}Service({
 		app: { version: "1.2.3", platform: "linux" },
-		clock: new FakeClock(),
+		clock,
 		jobs,
 		sessions,
 		streams,
@@ -226,20 +231,54 @@ function serve() {
 			handlers.set(name, handler as (input: never) => unknown);
 		},
 	});
+	const names = [...handlers.keys()];
+	// The shared operations the renderer answers, cancels, starts and stops with (job.cancel, jobs.list, ...).
+	const core = new Map<string, (input: never) => unknown>();
+	const collect = {
+		handle: (name: string, handler: (input: never) => unknown) => {
+			core.set(name, handler);
+		},
+	};
+	jobs.register(collect as never);
+	sessions.register(collect as never);
 	const served: Contract = {
 		operations: Object.fromEntries(
-			[...handlers.keys()].map((name) => [
+			[...names, ...core.keys()].map((name) => [
 				name,
 				contract.operations[name as keyof typeof contract.operations],
 			]),
 		) as OperationMap,
-		streams: {},
+		streams: { "stream.read": contract.streams["stream.read"] },
 	};
 	const registry = new ServiceRegistry({ contract: served, masker, log });
-	for (const [name, handler] of handlers)
+	for (const [name, handler] of [...handlers, ...core])
 		registry.handle(name, handler as never);
+	streams.register(registry as never);
 	registry.start();
-	return { registry, jobs, scopes, names: [...handlers.keys()] };
+	/** The lines of a stream so far (a job's or session's \`streamId\`), read as the renderer reads them. */
+	const lines = async (streamId: string | undefined): Promise<string[]> => {
+		const texts: string[] = [];
+		let batches = 0;
+		registry.subscribe("stream.read", { streamId }, (message) => {
+			if (!message.ok) throw new Error(message.error.code);
+			batches += 1;
+			for (const chunk of (message.event as { chunks: StreamChunk[] }).chunks)
+				texts.push(chunk.text);
+		});
+		await vi.waitFor(() => expect(batches).toBeGreaterThan(0));
+		return texts;
+	};
+	return {
+		registry,
+		jobs,
+		sessions,
+		streams,
+		events,
+		scopes,
+		clock,
+		lines,
+		names,
+	};
 }
 
 describe("${f.pascal}Service", () => {
@@ -247,6 +286,14 @@ describe("${f.pascal}Service", () => {
 		const { names } = serve();
 		expect(names.length).toBeGreaterThan(0);
 		for (const name of names) expect(name.startsWith("${f.kebab}.")).toBe(true);
+	});
+
+	it("serves the shared job and session operations beside them", async () => {
+		const { registry } = serve();
+		expect(await registry.request("jobs.list", {})).toEqual({
+			ok: true,
+			value: { jobs: [] },
+		});
 	});
 });
 `;

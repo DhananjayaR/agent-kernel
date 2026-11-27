@@ -6,7 +6,8 @@
 //   node tools/check-classes.mjs [dir ...]   (default: apps/renderer/src packages/ui/src, relative to ak-studio/)
 //
 // What fails:
-// - an arbitrary value, `utility-[value]` (`p-[13px]`, `bg-[#fff]`, `w-[calc(100%-2rem)]`), or an arbitrary
+// - an arbitrary value, `utility-[value]` (`p-[13px]`, `bg-[#fff]`, `w-[calc(100%-2rem)]`, a grid template such as
+//   `grid-cols-[max-content_minmax(0,1fr)]`), or an arbitrary
 //   property, `[prop:value]`. An arbitrary variant (`data-[state=open]:`) is not a value and passes;
 // - the variable shorthand `utility-(--name)` for any variable not in ALLOWED_VARIABLES: it reads a value from
 //   outside the closed scale just as `[...]` does;
@@ -53,9 +54,11 @@ export const ALLOWS_INLINE_COLOUR = ["packages/ui/src/tokens.stories.tsx"];
 
 /** The arbitrary-value class patterns (also used by check-palette). */
 export const ARBITRARY_VALUE_PATTERNS = [
-	// utility-[value]. A bracket followed by ':' (or by '/name:' for a named group or peer) is an arbitrary
-	// variant such as data-[state=open]: or group-data-[open]/menu:, not a value.
-	/(?<![\w-])-?[a-z][a-z0-9-]*-\[[^\]\s]+\](?!:|\/[\w-]+:)/g,
+	// utility-[value], any utility and any value: `p-[13px]`, `grid-cols-[max-content_minmax(0,1fr)]` (underscores
+	// stand for spaces), and a value holding one level of brackets, such as a grid template's named lines
+	// (`grid-cols-[[full-start]_1fr_[full-end]]`), reported whole. A bracket followed by ':' (or by '/name:' for a
+	// named group or peer) is an arbitrary variant such as data-[state=open]: or group-data-[open]/menu:, not a value.
+	/(?<![\w-])-?[a-z][a-z0-9-]*-\[(?:[^[\]\s]|\[[^[\]\s]*\])+\](?!:|\/[\w-]+:)/g,
 	// [property:value] arbitrary property.
 	/(?<![\w-])\[[a-z-]+:[^\]\s]+\](?!:|\/[\w-]+:)/g,
 ];

@@ -26,7 +26,8 @@ the skills, whenever a skill or a generator changes; it must pass with no hand e
 From `ak-studio/` (Node 24.22.1, pnpm 12.4.1; `pnpm install --frozen-lockfile` once):
 
 ```bash
-pnpm lint            # Biome, check-palette, check-classes, check-stories, compile-schemas, depcruise, self-tests
+pnpm format          # Biome's formatting and safe fixes, written; run after any hand edit
+pnpm lint            # Biome, check-classes, check-palette, check-stories, compile-schemas, depcruise, self-tests
 pnpm typecheck       # tsc -b over every member
 pnpm test            # unit tests of every member, the tools' tests and the generator test
 pnpm test:storybook  # every story, dark and light, with axe (needs Playwright's Chromium)
@@ -37,7 +38,7 @@ pnpm new:operation <feature> <name> --shape query|command|job [--desktop] [--pro
 pnpm new:component <name> [--group <group>]
 ```
 
-Run `pnpm lint`, `pnpm typecheck` and `pnpm test` before every commit; add `test:storybook` and `test:visual` when a
+Run `pnpm format`, then `pnpm lint`, `pnpm typecheck` and `pnpm test`, before every commit; add `test:storybook` and `test:visual` when a
 story, component or screen changed, and `test:e2e` when a screen or app code changed. [README.md](README.md) has
 every script, the tooling's details and the known limits of each check.
 

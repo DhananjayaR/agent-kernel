@@ -24,7 +24,7 @@ const run = (...args) =>
 const tokens = (violations) => violations.map((v) => [v.kind, v.token]);
 
 describe("check-classes", () => {
-	it("reports each planted arbitrary value, including the variable shorthand", () => {
+	it("reports each planted arbitrary value, including grid templates and the variable shorthand", () => {
 		const { violations } = checkClasses(["bad"], fixture);
 		expect(
 			tokens(violations.filter((v) => v.file.endsWith("Arbitrary.tsx"))),
@@ -34,6 +34,9 @@ describe("check-classes", () => {
 			["arbitrary value", "w-[calc(100%-2rem)]"],
 			["arbitrary value", "[mask-type:luminance]"],
 			["arbitrary value", "gap-(--my-gap)"],
+			["arbitrary value", "grid-cols-[max-content_minmax(0,1fr)]"],
+			["arbitrary value", "grid-rows-[auto_1fr_auto]"],
+			["arbitrary value", "grid-cols-[[full-start]_minmax(0,1fr)_[full-end]]"],
 		]);
 	});
 
@@ -66,6 +69,7 @@ describe("check-classes", () => {
 		const r = run("bad");
 		expect(r.status).toBe(1);
 		expect(r.stderr).toContain("p-[13px]");
+		expect(r.stderr).toContain("grid-cols-[max-content_minmax(0,1fr)]");
 		expect(r.stderr).toContain("style color:");
 	});
 

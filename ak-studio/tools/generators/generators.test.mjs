@@ -455,6 +455,22 @@ describe("the generators, run in a copy of the workspace", () => {
 		expect(service).toMatch(
 			/jobs\.define\(\s*"release-notes\.publishNotes",\s*\(input, ctx\) =>\s*this\.publishNotes\(input, ctx\),?\s*\)/,
 		);
+		// The service test's serve() keeps the FakeClock it builds the service with, serves job.cancel (through
+		// JobService's own operations) and stream.read, and returns what a test moves, cancels and reads with.
+		const serviceTest = readFileSync(
+			join(
+				copy,
+				"packages/runtime/src/release-notes/ReleaseNotesService.test.ts",
+			),
+			"utf8",
+		);
+		expect(serviceTest).toMatch(/const clock = new FakeClock\(\);/);
+		expect(serviceTest).toMatch(/^\t\tclock,$/m);
+		expect(serviceTest).toContain("jobs.register(collect as never);");
+		expect(serviceTest).toContain("streams.register(registry as never);");
+		expect(serviceTest).toMatch(
+			/return \{\s*registry,\s*jobs,\s*sessions,\s*streams,\s*events,\s*scopes,\s*clock,\s*lines,\s*names,\s*\};/,
+		);
 	}, 120_000);
 
 	it("refuse to make the same feature, operation or component twice, writing nothing", () => {

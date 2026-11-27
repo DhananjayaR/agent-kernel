@@ -27,8 +27,9 @@ packaged). The icon is a full-bleed square; the macOS rounded-square template is
 ```bash
 cd ak-studio
 pnpm install --frozen-lockfile   # also fetches the Electron binary (apps/desktop postinstall)
-pnpm lint        # Biome (warnings fail) and its self-test, check-palette, check-classes, check-stories (each with its
-                 # self-test), compile-schemas --check, depcruise and its self-test
+pnpm format      # Biome's formatting and safe fixes, written (biome check --write .); run after any hand edit
+pnpm lint        # Biome (warnings fail) and its self-test, check-classes, check-palette, check-stories (each with its
+                 # self-test), compile-schemas --check, depcruise and its self-test; it stops at the first failure
 pnpm typecheck   # tsc -b over all members
 pnpm test        # every member's unit tests (Vitest), the tools' own tests and the generator test
 pnpm new:feature <name>                       # a feature folder in the renderer, listed in app/features.ts
