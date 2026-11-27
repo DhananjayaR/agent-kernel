@@ -145,6 +145,7 @@ function NoteSection() {
 			setNote.mutateAsync({ note: draft, baseRevision }),
 		reread: () => note.refetch(),
 	});
+	const [saveError, setSaveError] = useState<StudioError>();
 	const [elsewhere, setElsewhere] = useState(false);
 	const changeElsewhere = async () => {
 		const current = note.data;
@@ -177,9 +178,7 @@ function NoteSection() {
 			/>
 			<ChangedOnDisk file={text.file} workingCopy={copy} />
 			{note.error ? <ErrorView error={note.error.error} /> : null}
-			{copy.error && !copy.conflict ? (
-				<ErrorView error={copy.error.error} placement="banner" />
-			) : null}
+			{saveError ? <ErrorView error={saveError} placement="banner" /> : null}
 			<Textarea
 				label={text.label}
 				rows={3}
@@ -191,7 +190,12 @@ function NoteSection() {
 				<Button
 					variant="primary"
 					onPress={() => {
-						void copy.save();
+						setSaveError(undefined);
+						// A conflict shows as the banner above; any other failure of this Save, here. (Keep mine's
+						// own failure is ChangedOnDisk's to show.)
+						void copy.save().then((outcome) => {
+							if (!outcome.conflict) setSaveError(outcome.error?.error);
+						});
 					}}
 					isDisabled={!copy.dirty || copy.conflict}
 					isPending={copy.showPending}

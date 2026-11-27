@@ -96,6 +96,33 @@ describe("AboutScreen", () => {
 		expect(field).toHaveProperty("value", "hello");
 	});
 
+	it("shows a save that failed for another reason under the note, keeping the edits", async () => {
+		const { user, section } = renderAbout({
+			handlers: {
+				"about.setNote": () => {
+					throw new StudioFailure({
+						code: ERROR_CODES.internal,
+						message: "The note could not be saved. Try again.",
+					});
+				},
+			},
+		});
+		const note = await section("Note");
+		const field = within(note).getByRole("textbox", { name: "Note" });
+		await waitFor(() => expect(field).toHaveProperty("disabled", false));
+		await user.type(field, "kept");
+		await user.click(within(note).getByRole("button", { name: "Save note" }));
+		await waitFor(() =>
+			expect(note.textContent).toContain(
+				"The note could not be saved. Try again.",
+			),
+		);
+		expect(field).toHaveProperty("value", "kept");
+		expect(
+			within(note).queryByRole("button", { name: "Keep mine" }),
+		).toBeNull();
+	});
+
 	it("shows the stale-write banner when the note changed elsewhere; Keep mine writes mine, Take theirs drops it", async () => {
 		const { user, section } = renderAbout();
 		const note = await section("Note");

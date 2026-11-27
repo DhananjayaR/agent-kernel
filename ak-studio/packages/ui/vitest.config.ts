@@ -12,6 +12,15 @@ const storybookProject = (
 	plugins: [
 		storybookTest({ configDir: ".storybook", initialGlobals: { theme } }),
 	],
+	// The renderer's stories (indexed too, P1b-plan ruling 16) import packages this one does not depend on (the query
+	// and router libraries, zod, zustand). Crawling the story files up front lets Vite pre-bundle those at start,
+	// rather than find them mid-run and reload the page under a running test (a cold cache's first run failed so).
+	optimizeDeps: {
+		entries: [
+			"src/**/*.stories.tsx",
+			"../../apps/renderer/src/**/*.stories.tsx",
+		],
+	},
 	test: {
 		name: `storybook-${theme}`,
 		browser: {
