@@ -57,8 +57,9 @@ runtime services → `contract`; desktop → `runtime`, `contract`.
   (a type-only import is allowed anywhere in desktop). Everything else in main (services, the quit rule, the menu)
   takes Electron's values as arguments, so it is tested without Electron.
 - Unit tests in the renderer may import `@ak-studio/runtime` (for its constants); nothing else in the renderer
-  outside `shared/bridge/` may, stories included. So a renderer test or story imports `FakeClock` from
-  `shared/bridge/mockTransport`, which re-exports the runtime's: one import that works in both.
+  outside `shared/bridge/` may, stories included. So a new renderer test or story imports `FakeClock` from
+  `shared/bridge/mockTransport`, which re-exports the runtime's: one import that works in both. (The existing
+  tests, `AboutScreen.test.tsx` among them, import it from `@ak-studio/runtime`; that is allowed too.)
 - Enforced by dependency-cruiser (`.dependency-cruiser.cjs`, `pnpm depcruise`, proved by `pnpm depcruise:selftest`)
   and Biome's `noNodejsModules` and restricted imports (`biome.json`). Both run in `pnpm lint`. A rule broken
   means the design is wrong; do not add an exemption.
@@ -362,9 +363,11 @@ base cannot both win. The empty string's revision is
 
 - **Revisions in tests.** In the service test, compute each expected revision with the same helper
   (`await padRevision("hello")`) rather than hard-coding a digest; check the helper once against the empty string's
-  revision above. A renderer hook test cannot import the helper (the runtime's index does not export feature
-  services' helpers): take the base revision from a read, `await backend.registry.request("<feature>.<read>", {})`
-  on the `createMockBackend()` it sets as the transport, and check the answered revision against the next read's.
+  revision above. A renderer hook test cannot import the helper (`@ak-studio/runtime` does not export feature
+  services' helpers): take the base revision from a read through the mock's typed transport,
+  `const { revision } = await backend.transport.request("<feature>.<read>", {})` (`backend` from
+  `createMockBackend()`, or `connectMock().backend`), and check the write's answered revision against the next
+  read's. (About's own hook test writes the two digests out; do not copy that.)
 
 - In the view: `useWorkingCopy({ value, revision, write, reread })`, with `ChangedOnDisk` and
   `UnsavedChangesGuard` over it (see `NoteSection` in `features/about/screens/AboutScreen.tsx`).

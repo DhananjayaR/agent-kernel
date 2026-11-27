@@ -33,7 +33,7 @@ written only on the revision it was read at.
      `domain.changed` for `scratch-pad`. Expected revisions are computed with the service's revision helper, not
      written out as digests.
    - The two generated hook tests, updated for the real input and output (the write's test takes its base revision
-     from a read).
+     from a read through the mock's transport, as the skill says).
 5. The screen stays as the generator wrote it. No new error code, no session, no capability.
 
 ## Done means

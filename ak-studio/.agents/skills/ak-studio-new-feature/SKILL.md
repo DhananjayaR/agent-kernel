@@ -157,11 +157,9 @@ Build it from the patterns (`ak-studio-ui`), in this order of preference: a conn
 | Nothing yet                  | `StateMessage` or `EmptyState`: what the place is for and the first action                                                                                                                                                      |
 
 - **Head a screen** with a `div` holding an `h2` and one sentence, as `AboutScreen` does; never a `<header>`. A
-  screen's stories and tests render it without the shell, where a `<header>` is a banner landmark, and any second
-  one fails axe (`landmark-no-duplicate-banner`); in the app, the shell's top bar is the window's one banner.
-- **Put each part of a screen in a labelled section**, `<section aria-labelledby={id}>` (About's `Section`), and
-  every `StreamingList` inside one: `StreamingList` brings its own `<header>`, which is a second banner landmark
-  outside a section.
+  screen's stories render it without the shell (and its `<main>`), where a `<header>` is a banner landmark.
+  `StreamingList` renders a `<header>` of its own, so a screen `<header>` beside one is a second banner and fails
+  axe (`landmark-no-duplicate-banner`, `landmark-unique`).
 - All copy comes from `strings.ts`. One primary button per view. A scrolling area is `relative h-full overflow-auto`.
 - A press that starts work shows its pending state after 300 ms (`usePendingAfter(flag, callId)`), as
   `DemoJobSection` in `apps/renderer/src/features/about/screens/AboutScreen.tsx` does.
@@ -264,7 +262,7 @@ Other refusals:
 - Hand-writing a feature folder, a contract file or a service instead of running the generator.
 - Leaving the generated `{}` schemas and tests as they are.
 - A job test that waits on a `FakeClock` nobody moves (it times out).
-- A `<header>` in a screen, or a `StreamingList` outside a labelled `<section>`.
+- A `<header>` in a screen.
 - `getByText` on a job's step line (it is there twice), or looking for `StreamingList` rows in a unit test.
 - Reading `job.input` (there is none): check the result.
 - Extending the generated `Default` story or bare manifest test instead of replacing them.
