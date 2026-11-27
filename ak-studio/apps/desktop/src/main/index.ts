@@ -34,6 +34,7 @@ import {
 } from "./security";
 import { PREFERENCES_FILE } from "./services/AppService";
 import { registerServices, type Services } from "./services/registerServices";
+import { defineTestJobs, type TestJobs, testJobKinds } from "./testJobs";
 import {
 	clampWindowState,
 	MIN_SIZE,
@@ -44,10 +45,12 @@ import {
 } from "./window";
 
 /**
- * Read-only hooks for the Electron smoke test (Task 7), read with Playwright's `electronApp.evaluate`. Present
- * only in development and e2e builds (`__STUDIO_DEV__`), run unpackaged, started with AK_STUDIO_TEST_HOOKS=1.
+ * Hooks for the Electron e2e (tests/e2e/electron.spec.ts), called with Playwright's `electronApp.evaluate`. Present
+ * only in development and e2e builds (`__STUDIO_DEV__`), run unpackaged, started with AK_STUDIO_TEST_HOOKS=1. The
+ * request gate's counter is read-only; the test job kind (testJobs.ts, a job that survives quit) is started and
+ * finished here, as no operation in the contract can start it.
  */
-export interface StudioTestHooks {
+export interface StudioTestHooks extends TestJobs {
 	cancelledRequestCount(): number;
 	cancelledRequestUrls(): readonly string[];
 }
@@ -58,6 +61,11 @@ declare global {
 // A release build: packaged (checked at run time), or a production build (`__STUDIO_DEV__` false, set at build
 // time). Either check alone makes it one, so a packaged app that `app.isPackaged` misjudges still counts.
 const releaseBuild = app.isPackaged || !__STUDIO_DEV__;
+
+// The e2e test hooks: compiled out of the production build (`__STUDIO_DEV__` false, so this folds to false and every
+// branch that tests it with `__STUDIO_DEV__` goes), refused at run time when packaged, and off unless asked for.
+const testHooksOn =
+	__STUDIO_DEV__ && !app.isPackaged && process.env.AK_STUDIO_TEST_HOOKS === "1";
 
 // A release build refuses the remote-debugging switches (the DevTools protocol, unauthenticated; no fuse covers
 // it). Checked first and synchronously, so the app exits (below, before the single-instance lock) before
@@ -130,6 +138,8 @@ const appContents = new WeakSet<WebContents>();
 let quitGate: QuitGate | undefined;
 /** The registered services (startBridge creates them); the window clears the unsaved list when its page reloads. */
 let services: Services | undefined;
+/** The test job kind's controls, while the test hooks are on (startBridge defines it). */
+let testJobs: TestJobs | undefined;
 
 /** The main process's log: the registry, the services and the quit rule report here (masked where it matters). */
 const log: Log = (message) => console.error(`[studio] ${message}`);
@@ -245,6 +255,7 @@ function startBridge(): void {
 		window: () => mainWindow,
 		jobRecordsDir: join(app.getPath("userData"), JOB_RECORDS_FOLDER),
 		log,
+		...(__STUDIO_DEV__ && testHooksOn ? { jobKinds: testJobKinds() } : {}),
 		app: {
 			version: app.getVersion(),
 			platform: process.platform,
@@ -256,6 +267,7 @@ function startBridge(): void {
 		},
 	});
 	services = registered;
+	if (__STUDIO_DEV__ && testHooksOn) testJobs = defineTestJobs(registered.jobs);
 	nativeTheme.themeSource = registered.app.theme;
 	registry.start();
 	quitGate = new QuitGate({
@@ -331,14 +343,11 @@ function start(): void {
 			return;
 		}
 		// Compiled out of the production build (`__STUDIO_DEV__` false); refused at run time when packaged.
-		if (
-			__STUDIO_DEV__ &&
-			!app.isPackaged &&
-			process.env.AK_STUDIO_TEST_HOOKS === "1"
-		) {
+		if (__STUDIO_DEV__ && testHooksOn && testJobs) {
 			globalThis.__akStudioTestHooks = {
 				cancelledRequestCount: () => gate.cancelledCount,
 				cancelledRequestUrls: () => gate.cancelledUrls,
+				...testJobs,
 			};
 		}
 

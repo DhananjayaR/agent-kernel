@@ -37,8 +37,12 @@ const EXIT_TIMEOUT_MS = 15_000;
 const READY_LINES = ["[studio] window shown", "[studio] bridge ready"];
 const FAILURE_LINES = ["refusing to start", "could not load"];
 const REFUSAL_LINE = "is not accepted by a packaged or production build";
-/** Strings only main's development and test-hook code holds; the production bundle must not. */
-const DEV_ONLY_STRINGS = ["AK_STUDIO_TEST_HOOKS", "ELECTRON_RENDERER_URL"];
+/** Strings only main's development and test-hook code holds (the test job kind's name too); the production bundle must not. */
+const DEV_ONLY_STRINGS = [
+	"AK_STUDIO_TEST_HOOKS",
+	"ELECTRON_RENDERER_URL",
+	"test.survivesQuit",
+];
 const NOTICES_FILE = "THIRD-PARTY-NOTICES.txt";
 const ICON_FILE = "icon.png";
 

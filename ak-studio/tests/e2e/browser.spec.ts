@@ -1,5 +1,18 @@
 // The renderer in a plain browser: no `window.studio`, so it runs on the mock transport.
 import { expect, type Page, test } from "@playwright/test";
+import {
+	checkInfo,
+	checkJobApproved,
+	checkJobCancelled,
+	checkJobDenied,
+	checkNoteStaleWrite,
+	checkPaletteRunsDemoJob,
+	checkTicker,
+	newestJob,
+	openAbout,
+	STEP_TIMEOUT,
+	section,
+} from "./aboutSteps";
 
 // The mock transport's fixture version (apps/renderer/src/shared/bridge/mockTransport.ts, MOCK_VERSION). Not imported:
 // the renderer's source is not loaded into the test runner.
@@ -12,6 +25,9 @@ const TABS = [
 	["Test & trace", "test-trace", /P8.*P9/],
 	["Deploy", "deploy", /P10/],
 ] as const;
+
+/** About's temporary tab, after the product tabs; it goes with the About feature when P2 lands. */
+const ABOUT_TAB = "About";
 
 const appVersion = (page: Page) =>
 	page.locator('[data-slot="app-version-number"]');
@@ -35,7 +51,7 @@ test("the shell renders on the mock transport", async ({ page }) => {
 	);
 	await expect(
 		page.getByRole("tablist", { name: "Project views" }).getByRole("tab"),
-	).toHaveText(TABS.map(([name]) => name));
+	).toHaveText([...TABS.map(([name]) => name), ABOUT_TAB]);
 	await expect(
 		page.getByRole("button", { name: "Build with AI" }),
 	).toBeVisible();
@@ -231,4 +247,83 @@ test("Ctrl+J still acts while a popover (not a modal) is open", async ({
 	).toBeVisible();
 	await page.keyboard.press("Control+j");
 	await expect(panel).toHaveJSProperty("offsetHeight", 48);
+});
+
+// The About slice on the mock transport (P1b Task 18): every shape through its pattern (aboutSteps.ts).
+test.describe("the About screen", () => {
+	test("shows the query's version and platform", async ({ page }) => {
+		await page.goto("/");
+		await openAbout(page);
+		await expect(page).toHaveURL(/#\/about$/);
+		await checkInfo(page, MOCK_VERSION, "browser");
+	});
+
+	test("saves the note; a stale write shows the banner, and Keep mine and Take theirs resolve it", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		await openAbout(page);
+		await checkNoteStaleWrite(page);
+	});
+
+	test("runs the demo job: answered with approve, answered with deny, and cancelled", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		await openAbout(page);
+		await checkJobApproved(page);
+		await checkJobDenied(page);
+		await checkJobCancelled(page);
+	});
+
+	test("starts and stops the ticker", async ({ page }) => {
+		await page.goto("/");
+		await openAbout(page);
+		await checkTicker(page);
+	});
+
+	test("Ctrl+K runs about.runDemoJob, and the job shows on the About screen", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		await openAbout(page);
+		await checkPaletteRunsDemoJob(page);
+	});
+
+	// A reload cannot reattach here: the mock's services live in the page, so a reload starts a fresh backend (the
+	// Electron spec proves reattach against the real main process). What the browser proves: leaving About mid-job
+	// and coming back shows the same job, its output so far and its question, still answerable.
+	test("leaving mid-job and coming back shows the job, its output and its question again", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		await openAbout(page);
+		await section(page, "Jobs")
+			.getByRole("button", { name: "Run the demo job" })
+			.click();
+		await expect(newestJob(page)).toHaveAttribute("data-state", "running");
+		await page.getByRole("tab", { name: "Canvas" }).click();
+		await expect(
+			page.getByText("Demo job is waiting for you", { exact: true }),
+		).toBeVisible({ timeout: STEP_TIMEOUT });
+		// A waiting job is never only a toast: About's tab carries the icon.
+		await expect(
+			page.getByRole("tab", { name: "About Needs your answer" }),
+		).toBeVisible();
+		await openAbout(page);
+		const job = newestJob(page);
+		await expect(job).toHaveAttribute("data-state", "waiting");
+		await expect(
+			section(page, "Jobs")
+				.getByRole("region", { name: "Demo job output" })
+				.getByText("Step 2 of 3: Preparing the demo"),
+		).toBeVisible();
+		await job
+			.getByRole("region", { name: "Run the last step?" })
+			.getByRole("button", { name: "Run the last step" })
+			.click();
+		await expect(job).toHaveAttribute("data-state", "succeeded", {
+			timeout: STEP_TIMEOUT,
+		});
+	});
 });

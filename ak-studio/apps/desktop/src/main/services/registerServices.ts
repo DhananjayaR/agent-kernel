@@ -3,6 +3,8 @@
 // fails the test and not only the app's start-up. No Electron import: index.ts passes Electron's values in.
 // Feature services join here: the runtime's through registerFeatureServices (packages/runtime/src/features.ts),
 // a desktop-only one (it needs Node) on its own line, added by `pnpm new:operation --desktop`.
+
+import type { JobKindMap, JobKinds } from "@ak-studio/contract";
 import {
 	EventBus,
 	JobService,
@@ -28,6 +30,11 @@ export interface ServiceDeps {
 	jobRecordsDir: string;
 	/** The main process's log, the one the registry was given; the services' lines reach it masked. */
 	log: Log;
+	/**
+	 * The job kinds JobService runs; the contract's by default. Only the e2e test hooks pass more (testJobs.ts: the
+	 * contract's kinds and a test kind), so their runner can be defined.
+	 */
+	jobKinds?: JobKindMap;
 }
 
 /** The registered services, for index.ts to read start-up state from (the stored theme) and to quit with. */
@@ -69,6 +76,10 @@ export function registerServices(
 		records: new NodeJobRecordStore(deps.jobRecordsDir, { log: maskedLog }),
 		masker,
 		log,
+		// Typed as the contract's kinds: the extra test kind is reached only through testJobs.ts.
+		...(deps.jobKinds === undefined
+			? {}
+			: { jobKinds: deps.jobKinds as JobKinds }),
 	});
 	registry.register(jobs);
 	const sessions = new SessionService({ events, streams, scopes, masker, log });

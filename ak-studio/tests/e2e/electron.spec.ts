@@ -1,11 +1,15 @@
-// Electron smoke test: the built, unpackaged app (apps/desktop/out/, from `pnpm build:e2e`) with the real main
-// process. Started with AK_STUDIO_TEST_HOOKS=1 so main exposes the request gate's counter, and with a fresh
-// --user-data-dir per test. Production and packaged builds have no hooks, and packaged builds lack the --inspect
-// support Playwright needs.
+// Electron end-to-end tests: the built, unpackaged app (apps/desktop/out/, from `pnpm build:e2e`) with the real main
+// process. Started with AK_STUDIO_TEST_HOOKS=1 so main exposes its test hooks (the request gate's counter, and the
+// test job kind that survives quit), and with a fresh --user-data-dir per test. Production and packaged builds have
+// no hooks, and packaged builds lack the --inspect support Playwright needs. Main's native dialogs are stubbed in
+// every test (stubDialogs). The About slice (P1b Task 18) runs here through every shape, as in the browser, plus
+// what only the real main process has: reattach after a reload, the quit rule, a crash's interrupted job, and the
+// 10,000-line burst's frame times.
 import {
 	existsSync,
 	mkdirSync,
 	mkdtempSync,
+	readdirSync,
 	readFileSync,
 	rmSync,
 	writeFileSync,
@@ -20,11 +24,26 @@ import {
 	type Page,
 	test,
 } from "@playwright/test";
+import {
+	checkInfo,
+	checkJobApproved,
+	checkJobCancelled,
+	checkJobDenied,
+	checkNoteStaleWrite,
+	checkPaletteRunsDemoJob,
+	checkTicker,
+	newestJob,
+	openAbout,
+	STEP_TIMEOUT,
+	section,
+} from "./aboutSteps";
 
-/** Main's read-only test hooks (apps/desktop/src/main/index.ts, StudioTestHooks). */
+/** Main's test hooks (apps/desktop/src/main/index.ts, StudioTestHooks). */
 interface StudioTestHooks {
 	cancelledRequestCount(): number;
 	cancelledRequestUrls(): readonly string[];
+	startSurvivingJob(): string;
+	finishSurvivingJobs(): void;
 }
 type WithHooks = { __akStudioTestHooks?: StudioTestHooks };
 
@@ -33,16 +52,8 @@ interface Studio {
 	page: Page;
 }
 
-/**
- * Launches the built app, runs `body`, then closes the app. With no `userDataDir` it uses a fresh data folder and
- * removes it afterwards, even if the launch, the body or `app.close()` throws; removal retries, since on Windows the
- * app's child processes can hold files for a moment after close. A caller that passes `userDataDir` (a restart
- * test) owns the folder.
- */
-async function withStudio(
-	body: (studio: Studio) => Promise<void>,
-	options: { userDataDir?: string } = {},
-) {
+/** Launches the built app with test hooks on, on `userDataDir`; the caller closes it (or kills it). */
+async function launchStudio(userDataDir: string): Promise<Studio> {
 	const desktopDir = resolve(test.info().project.testDir, "../../apps/desktop");
 	const mainEntry = join(desktopDir, "out/main/index.js");
 	if (!existsSync(mainEntry)) {
@@ -60,29 +71,113 @@ async function withStudio(
 			env[key] = value;
 	}
 	env.AK_STUDIO_TEST_HOOKS = "1";
+	const app = await electron.launch({
+		executablePath,
+		args: [desktopDir, `--user-data-dir=${userDataDir}`],
+		cwd: desktopDir,
+		env,
+		// No emulation (null is Playwright's "no override"): prefers-color-scheme comes from Electron's
+		// nativeTheme, which follows the stored preference.
+		colorScheme: null,
+	});
+	await stubDialogs(app);
+	return { app, page: await app.firstWindow() };
+}
 
+/**
+ * Launches the built app, runs `body`, then closes the app. With no `userDataDir` it uses a fresh data folder and
+ * removes it afterwards, even if the launch, the body or `app.close()` throws; removal retries, since on Windows the
+ * app's child processes can hold files for a moment after close. A caller that passes `userDataDir` (a restart
+ * test) owns the folder. Main's native dialogs are stubbed (stubDialogs): a test that leaves a job running or a note
+ * unsaved still closes, as the stub lets the quit go on.
+ */
+async function withStudio(
+	body: (studio: Studio) => Promise<void>,
+	options: { userDataDir?: string } = {},
+) {
 	const ownFolder = options.userDataDir === undefined;
 	let userDataDir = options.userDataDir;
-	let app: ElectronApplication | undefined;
+	let studio: Studio | undefined;
 	try {
 		userDataDir ??= mkdtempSync(join(tmpdir(), "ak-studio-e2e-"));
-		app = await electron.launch({
-			executablePath,
-			args: [desktopDir, `--user-data-dir=${userDataDir}`],
-			cwd: desktopDir,
-			env,
-			// No emulation (null is Playwright's "no override"): prefers-color-scheme comes from Electron's
-			// nativeTheme, which follows the stored preference.
-			colorScheme: null,
-		});
-		await body({ app, page: await app.firstWindow() });
+		studio = await launchStudio(userDataDir);
+		await body(studio);
 	} finally {
 		try {
-			await app?.close();
+			await studio?.app.close();
 		} finally {
 			if (ownFolder && userDataDir) removeFolder(userDataDir);
 		}
 	}
+}
+
+/** A native message box main showed, as the stub recorded it. */
+interface DialogCall {
+	message: string;
+	buttons: string[];
+	answer: string;
+}
+type WithDialogStub = {
+	__dialogCalls?: DialogCall[];
+	__dialogAnswers?: string[];
+};
+
+/**
+ * Replaces main's native message boxes (the quit and unload prompts, P1b ruling 11) with a stub that records each
+ * call and answers by button label: the next label queued with `answerDialogs`, else the one that lets the quit or
+ * unload go on. A real dialog would wait for a person and hang the test.
+ */
+async function stubDialogs(app: ElectronApplication): Promise<void> {
+	await app.evaluate(({ dialog }) => {
+		const g = globalThis as WithDialogStub;
+		g.__dialogCalls = [];
+		g.__dialogAnswers = [];
+		const goOn = [
+			"Quit without saving",
+			"Cancel jobs and quit",
+			"Quit anyway",
+			"Leave",
+		];
+		type Options = { message: string; buttons?: string[]; cancelId?: number };
+		const answer = (first: unknown, second?: unknown): number => {
+			const options = (second ?? first) as Options;
+			const buttons = options.buttons ?? [];
+			const wanted =
+				g.__dialogAnswers?.shift() ??
+				buttons.find((label) => goOn.includes(label));
+			const index = wanted === undefined ? -1 : buttons.indexOf(wanted);
+			const chosen = index >= 0 ? index : (options.cancelId ?? 0);
+			g.__dialogCalls?.push({
+				message: options.message,
+				buttons,
+				answer: buttons[chosen] ?? "",
+			});
+			return chosen;
+		};
+		const stub = dialog as unknown as {
+			showMessageBox: (a: unknown, b?: unknown) => Promise<unknown>;
+			showMessageBoxSync: (a: unknown, b?: unknown) => number;
+		};
+		stub.showMessageBox = async (a, b) => ({
+			response: answer(a, b),
+			checkboxChecked: false,
+		});
+		stub.showMessageBoxSync = (a, b) => answer(a, b);
+	});
+}
+
+/** Queues the labels the stubbed dialogs answer next, in order. */
+function answerDialogs(app: ElectronApplication, labels: string[]) {
+	return app.evaluate((_electron, queued) => {
+		(globalThis as WithDialogStub).__dialogAnswers = [...queued];
+	}, labels);
+}
+
+/** The dialogs main has shown so far. */
+function dialogCalls(app: ElectronApplication): Promise<DialogCall[]> {
+	return app.evaluate(() => [
+		...((globalThis as WithDialogStub).__dialogCalls ?? []),
+	]);
 }
 
 function removeFolder(dir: string): void {
@@ -191,6 +286,10 @@ test("each tab opens its empty state, naming the phase that fills it", async () 
 			["Test & trace", "test-trace", /P8.*P9/],
 			["Deploy", "deploy", /P10/],
 		] as const;
+		// The five product tabs, then About's temporary one (it goes with the About feature when P2 lands).
+		await expect(
+			page.getByRole("tablist", { name: "Project views" }).getByRole("tab"),
+		).toHaveText([...tabs.map(([name]) => name), "About"]);
 		for (const [name, path, phase] of tabs) {
 			await page.getByRole("tab", { name }).click();
 			expect(page.url()).toBe(`app://studio/#/${path}`);
@@ -513,5 +612,295 @@ test("the request gate counts a refused request (so a zero count means something
 			count: 1,
 			urls: ["https://example.invalid/"],
 		});
+	});
+});
+
+// ---- The About slice (P1b Task 18) on the real main process ----
+
+/** Starts a job of main's test kind (testJobs.ts): it survives quit, so it blocks one until it finishes. */
+function startSurvivingJob(app: ElectronApplication): Promise<string> {
+	return app.evaluate(() => {
+		const hooks = (globalThis as WithHooks).__akStudioTestHooks;
+		if (!hooks) throw new Error("test hooks missing");
+		return hooks.startSurvivingJob();
+	});
+}
+
+function finishSurvivingJobs(app: ElectronApplication): Promise<void> {
+	return app.evaluate(() => {
+		(globalThis as WithHooks).__akStudioTestHooks?.finishSurvivingJobs();
+	});
+}
+
+/** Asks main to quit (as the menu, Cmd+Q or the OS would): the quit rule decides. */
+function requestQuit(app: ElectronApplication): Promise<void> {
+	return app.evaluate(({ app }) => {
+		app.quit();
+	});
+}
+
+/** Resolves with the exit code once the app's main process has exited. */
+function exited(app: ElectronApplication): Promise<number | null> {
+	const child = app.process();
+	if (child.exitCode !== null) return Promise.resolve(child.exitCode);
+	return new Promise((resolve) => child.once("exit", (code) => resolve(code)));
+}
+
+/** Starts the demo job on the About screen and waits for its question (it then waits there indefinitely). */
+async function parkDemoJobAtQuestion(page: Page): Promise<void> {
+	await section(page, "Jobs")
+		.getByRole("button", { name: "Run the demo job" })
+		.click();
+	await expect(
+		newestJob(page).getByRole("region", { name: "Run the last step?" }),
+	).toBeVisible({ timeout: STEP_TIMEOUT });
+}
+
+/** The crash records main has on disk (`<userData>/jobs/*.json`, NodeJobRecordStore). */
+function jobRecords(dir: string): string[] {
+	try {
+		return readdirSync(join(dir, "jobs")).filter((name) =>
+			name.endsWith(".json"),
+		);
+	} catch {
+		return [];
+	}
+}
+
+test("the About screen works through every shape on the real main process", async () => {
+	await withStudio(async ({ app, page }) => {
+		const version = await app.evaluate(({ app }) => app.getVersion());
+		await openAbout(page);
+		expect(page.url()).toBe("app://studio/#/about");
+		await checkInfo(page, version, process.platform);
+		await checkNoteStaleWrite(page);
+		await checkJobApproved(page);
+		await checkJobDenied(page);
+		await checkJobCancelled(page);
+		await checkTicker(page);
+		await checkPaletteRunsDemoJob(page);
+	});
+});
+
+test("a reload mid-job reattaches to the job and its stream: the lines continue and the question is still answerable", async () => {
+	await withStudio(async ({ page }) => {
+		await openAbout(page);
+		const output = () =>
+			section(page, "Jobs").getByRole("region", { name: "Demo job output" });
+		await section(page, "Jobs")
+			.getByRole("button", { name: "Run the demo job" })
+			.click();
+		await expect(
+			output().getByText("Step 1 of 3: Checking the app"),
+		).toBeVisible();
+		await page.reload();
+		await expect(
+			page.getByRole("heading", { name: "About", level: 2 }),
+		).toBeVisible();
+		// The same job, from `jobs.list`, and its stream's backlog; then the lines go on to the question.
+		const job = newestJob(page);
+		await expect(job).toHaveAttribute("data-state", /running|waiting/);
+		await expect(
+			output().getByText("Step 1 of 3: Checking the app"),
+		).toBeVisible();
+		const card = job.getByRole("region", { name: "Run the last step?" });
+		await expect(card).toBeVisible({ timeout: STEP_TIMEOUT });
+		await expect(
+			output().getByText("Step 2 of 3: Preparing the demo"),
+		).toBeVisible();
+		await card.getByRole("button", { name: "Run the last step" }).click();
+		await expect(job).toHaveAttribute("data-state", "succeeded", {
+			timeout: STEP_TIMEOUT,
+		});
+		await expect(
+			output().getByText("Step 3 of 3: Finishing the demo"),
+		).toBeVisible();
+	});
+});
+
+test("quitting with the demo job running asks first: Keep working stays, Cancel jobs and quit exits", async () => {
+	await withStudio(async ({ app, page }) => {
+		await openAbout(page);
+		await parkDemoJobAtQuestion(page);
+		await answerDialogs(app, ["Keep working"]);
+		await requestQuit(app);
+		await expect.poll(() => dialogCalls(app)).toHaveLength(1);
+		expect((await dialogCalls(app))[0]).toEqual({
+			message: "Quit and cancel 1 job?",
+			buttons: ["Cancel jobs and quit", "Keep working"],
+			answer: "Keep working",
+		});
+		// Still here, the job still waiting for its answer.
+		await page.waitForTimeout(500);
+		expect(app.process().exitCode).toBeNull();
+		await expect(newestJob(page)).toHaveAttribute("data-state", "waiting");
+
+		const exit = exited(app);
+		await answerDialogs(app, ["Cancel jobs and quit"]);
+		await requestQuit(app);
+		expect(await exit).toBe(0);
+	});
+});
+
+test("a started job that survives quit blocks it: the dialog offers Wait, and Wait keeps the app open", async () => {
+	await withStudio(async ({ app, page }) => {
+		await expect(appVersion(page)).not.toBeEmpty();
+		await startSurvivingJob(app);
+		await answerDialogs(app, ["Wait"]);
+		await requestQuit(app);
+		await expect.poll(() => dialogCalls(app)).toHaveLength(1);
+		const [call] = await dialogCalls(app);
+		expect(call?.message).toBe("1 job must finish before the app can quit");
+		expect(call?.buttons).toEqual(["Wait", "Quit anyway"]);
+		expect(call?.answer).toBe("Wait");
+		// Wait only keeps the app open.
+		await page.waitForTimeout(500);
+		expect(app.process().exitCode).toBeNull();
+		await expect(appVersion(page)).not.toBeEmpty();
+		// Once the job has finished, quitting asks nothing.
+		await finishSurvivingJobs(app);
+		const exit = exited(app);
+		await requestQuit(app);
+		expect(await exit).toBe(0);
+	});
+});
+
+test("quitting with an unsaved note and a running job asks about the unsaved work first, then the job", async () => {
+	await withStudio(async ({ app, page }) => {
+		await openAbout(page);
+		const field = section(page, "Note").getByRole("textbox", {
+			name: "Note",
+		});
+		await expect(field).toBeEnabled();
+		await field.fill("Not saved yet");
+		await parkDemoJobAtQuestion(page);
+		// Quit without saving, then keep working when asked about the job: both questions, in order, and the app
+		// stays.
+		await answerDialogs(app, ["Quit without saving", "Keep working"]);
+		await requestQuit(app);
+		await expect.poll(() => dialogCalls(app)).toHaveLength(2);
+		const [unsaved, jobs] = await dialogCalls(app);
+		expect(unsaved).toEqual({
+			message: "Quit without saving?",
+			buttons: ["Quit without saving", "Stay"],
+			answer: "Quit without saving",
+		});
+		expect(unsaved && jobs && [jobs.message, jobs.answer]).toEqual([
+			"Quit and cancel 1 job?",
+			"Keep working",
+		]);
+		await page.waitForTimeout(500);
+		expect(app.process().exitCode).toBeNull();
+		await expect(field).toHaveValue("Not saved yet");
+
+		// Answered the same way to leave: it quits, with no unload question after "Quit without saving".
+		const exit = exited(app);
+		await answerDialogs(app, ["Quit without saving", "Cancel jobs and quit"]);
+		await requestQuit(app);
+		expect(await exit).toBe(0);
+	});
+});
+
+test("killing the app mid-job shows the job as interrupted on the next launch; Dismiss removes its record", async () => {
+	await withDataFolder(async (dir) => {
+		const first = await launchStudio(dir);
+		const exit = exited(first.app);
+		try {
+			await openAbout(first.page);
+			await section(first.page, "Jobs")
+				.getByRole("button", { name: "Run the demo job" })
+				.click();
+			await expect(newestJob(first.page)).toHaveAttribute(
+				"data-state",
+				"running",
+			);
+			// The job's start record is on disk before the kill.
+			await expect.poll(() => jobRecords(dir)).toHaveLength(1);
+		} finally {
+			const pid = first.app.process().pid;
+			if (pid !== undefined) process.kill(pid, "SIGKILL");
+		}
+		expect(await exit).toBeNull();
+		expect(jobRecords(dir)).toHaveLength(1);
+
+		await withStudio(
+			async ({ page }) => {
+				await openAbout(page);
+				const notice = page
+					.locator('[data-slot="inline-banner"]')
+					.filter({ hasText: "Demo job was interrupted" });
+				await expect(notice).toBeVisible();
+				await expect(notice).toContainText(
+					"The app closed while it ran, so it did not finish.",
+				);
+				// This run has no such job: nothing is running.
+				await expect(newestJob(page)).toHaveCount(0);
+				await notice.getByRole("button", { name: "Dismiss" }).click();
+				await expect(notice).toBeHidden();
+				await expect.poll(() => jobRecords(dir)).toEqual([]);
+			},
+			{ userDataDir: dir },
+		);
+	});
+});
+
+test("a 10,000-line burst on the ticker keeps the window responsive, and the list shows its last line", async () => {
+	await withStudio(async ({ page }) => {
+		await openAbout(page);
+		const ticker = section(page, "Ticker");
+		const burst = ticker.getByRole("switch", {
+			name: "Write 10,000 lines at once after the first tick",
+		});
+		// The switch's input is visually hidden: press its label, as a person would.
+		await ticker
+			.getByText("Write 10,000 lines at once after the first tick")
+			.click();
+		await expect(burst).toBeChecked();
+		// Frame times from before the start: the burst lands after the first tick, a second in.
+		await page.evaluate(() => {
+			const w = window as unknown as {
+				__frames: number[];
+				__sampling: boolean;
+			};
+			w.__frames = [];
+			w.__sampling = true;
+			let last = performance.now();
+			const sample = (now: number) => {
+				w.__frames.push(now - last);
+				last = now;
+				if (w.__sampling) requestAnimationFrame(sample);
+			};
+			requestAnimationFrame(sample);
+		});
+		await ticker.getByRole("button", { name: "Start" }).click();
+		const output = ticker.getByRole("region", { name: "Ticker output" });
+		// The list follows the end: the burst's last line (the stream keeps the newest 5,000), then the ticks.
+		await expect(output.getByText("Burst line 10000 of 10000")).toBeVisible({
+			timeout: STEP_TIMEOUT,
+		});
+		await page.waitForTimeout(500);
+		const frames = await page.evaluate(() => {
+			const w = window as unknown as {
+				__frames: number[];
+				__sampling: boolean;
+			};
+			w.__sampling = false;
+			return w.__frames.slice(1);
+		});
+		const sorted = [...frames].sort((a, b) => a - b);
+		const median = sorted[Math.floor(sorted.length / 2)] ?? 0;
+		const longest = sorted[sorted.length - 1] ?? 0;
+		const measured = `${frames.length} frames, median ${median.toFixed(1)} ms, longest ${longest.toFixed(1)} ms`;
+		console.log(`[burst] ${measured}`);
+		test
+			.info()
+			.annotations.push({ type: "burst frame times", description: measured });
+		// At least a second and a half of frames was sampled (so a stalled rAF cannot pass), with no frame gap long
+		// enough to feel frozen.
+		expect(frames.length).toBeGreaterThan(30);
+		expect(longest).toBeLessThan(200);
+		expect(median).toBeLessThan(50);
+		await ticker.getByRole("button", { name: "Stop" }).click();
+		await expect(ticker.getByRole("button", { name: "Start" })).toBeVisible();
 	});
 });
