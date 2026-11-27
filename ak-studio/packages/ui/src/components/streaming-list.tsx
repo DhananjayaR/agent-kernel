@@ -356,7 +356,7 @@ export function StreamingListView({
 			)}
 			{...props}
 		>
-			<header className="flex min-h-control-l shrink-0 items-center gap-2 border-b border-border-default pr-1 pl-edge">
+			<div className="flex min-h-control-l shrink-0 items-center gap-2 border-b border-border-default pr-1 pl-edge">
 				<h3
 					id={labelId}
 					className="min-w-0 truncate text-ui-sm font-action text-text"
@@ -400,7 +400,7 @@ export function StreamingListView({
 						{text.clear}
 					</Button>
 				) : null}
-			</header>
+			</div>
 			{error ? (
 				<div className="shrink-0 p-2">
 					<ErrorBanner error={error} />
