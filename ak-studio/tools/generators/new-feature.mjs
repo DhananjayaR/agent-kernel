@@ -126,7 +126,7 @@ function main(argv) {
 		`new:feature: created the ${name} feature`,
 		plan,
 		written,
-		`Next: add its operations with \`pnpm new:operation ${name} <operation> --shape query|command|job [--project]\`, and a tab (if it has one) in its manifest. The screen shows only the title: before it ships, give it an empty state that says what the place is for and offers the first action (copy rules).`,
+		`Next: add its operations with \`pnpm new:operation ${name} <operation> --shape query|command|job [--project]\`, and a tab (if it has one) in its manifest. The screen shows only the title: a real feature's screen gets an empty state that says what the place is for and offers the first action (copy rules) before it ships; a sample task may leave it as it is.`,
 	);
 }
 
