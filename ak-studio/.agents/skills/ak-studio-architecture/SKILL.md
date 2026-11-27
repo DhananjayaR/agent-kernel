@@ -241,7 +241,7 @@ when a test needs something more, return it from `serve()` rather than writing a
 - A domain event: `const emit = vi.spyOn(events, "emit")`, then
   `expect(emit).toHaveBeenCalledWith({ type: "domain.changed", domain: "<feature>" })`.
 - A runner that sleeps: `await runUntil("succeeded")` moves the clock a second at a time until the job (the oldest
-  listed, or `runUntil(state, jobId)`) reaches the state, and answers the job; `runUntil("waiting-for-user")` stops
+  listed, or `runUntil(state, jobId)`) reaches the state, and returns the job; `runUntil("waiting-for-user")` stops
   at its question. For one step exactly, `await stepOnce(ms)`: it waits until the runner sleeps on the clock, then
   moves it `ms`. A bare `clock.advance(ms)` straight after starting a job can run before the runner reaches its
   sleep, and then moves nothing.

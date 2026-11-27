@@ -187,6 +187,7 @@ describe("AboutService", () => {
 				message: aboutStrings.noteChanged,
 			},
 		});
+		expect(JSON.stringify(stale)).not.toContain("mine");
 		expect(emit).not.toHaveBeenCalled();
 		expect(await registry.request("about.note", {})).toMatchObject({
 			value: { note: "theirs" },

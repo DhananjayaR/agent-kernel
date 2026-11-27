@@ -98,7 +98,7 @@ Then fill in what the generator left as `{}`:
 3. **Update the generated tests**: they assert `{}` in and out, and fail once the schemas change.
    - **Service test.** Extend the generated `serve()` (see "Testing a service" in `ak-studio-architecture`). It
      returns `clock`, the `FakeClock` the service sleeps on, and two ways to move it: `await runUntil("succeeded")`
-     runs the job to that state and answers it (the generated job test uses it, so it still passes once the runner
+     runs the job to that state and returns it (the generated job test uses it, so it still passes once the runner
      sleeps per step), and `await stepOnce(ms)` waits until the runner sleeps, then runs one step. A bare
      `clock.advance(ms)` straight after the start can come before the runner's sleep and move nothing. It serves
      `job.cancel`: `await registry.request("job.cancel", { jobId })` stops a job (or `await jobs.cancelAll(jobs.list())`
@@ -278,7 +278,7 @@ Other refusals:
 - Leaving the generated `{}` schemas and tests as they are.
 - A job test that waits on a `FakeClock` nobody moves (it times out), or moves it before the runner sleeps (use
   `runUntil` or `stepOnce`).
-- Copying About's job selection instead of calling `useJobIdsToShow`.
+- Selecting a screen's jobs from `useJobStore` by hand instead of calling `useJobIdsToShow`.
 - A `<header>` in a screen.
 - `getByText` on a job's step line (it is there twice), or looking for `StreamingList` rows in a unit test.
 - Reading `job.input` (there is none): check the result.

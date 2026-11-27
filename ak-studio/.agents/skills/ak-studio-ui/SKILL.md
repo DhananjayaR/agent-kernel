@@ -256,9 +256,9 @@ do not run that; run the pinned command above instead. It holds no credentials.
   every changed image before committing. Never commit a baseline you have not looked at.
 - **Running the long suites.** Run them in the background with output to `.logs/` (ignored by git), named for your
   run so parallel runs never share a file: `pnpm test:storybook > .logs/<worktree>-storybook.log 2>&1`. On a quiet
-  12-core machine: `pnpm lint` and `pnpm typecheck` take seconds, `pnpm test` about 1.5 minutes,
-  `pnpm test:storybook` about 1 minute, `pnpm build-storybook` under 10 seconds and `pnpm test:visual:run`
-  about 5 minutes; expect two to three times that while other runs share the machine.
+  12-core machine: `pnpm lint` and `pnpm typecheck` 5 to 30 seconds each, `pnpm test` 1.5 to 2 minutes,
+  `pnpm test:storybook` 1 to 2 minutes (2 with `--maxWorkers=2`), `pnpm build-storybook` under 10 seconds and
+  `pnpm test:visual:run` 5 to 6 minutes; expect two to three times that while other runs share the machine.
   `pnpm test:visual` rebuilds Storybook and then runs `pnpm test:visual:run`, which reuses the last build: after
   changing only a story's code, rebuild (`pnpm build-storybook`) before `test:visual:run`. A subset runs with
   `-g`: `pnpm test:visual:run -g "screens-about|patterns-command-row"`.

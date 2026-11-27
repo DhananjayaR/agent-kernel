@@ -1,7 +1,7 @@
 // A mock backend wired as App.tsx wires the app, for hook tests that need what comes back as events: the transport
 // set, a query client, and the one `events` subscription feeding the job and session stores (and refreshing
 // queries on `domain.changed`). The stores are module singletons, so it empties them first. Tests pass the
-// mock's options (a FakeClock from @ak-studio/runtime, so steps and ticks run at once) and call `dispose`.
+// mock's options (a FakeClock from shared/bridge/mockTransport, so steps and ticks run at once) and call `dispose`.
 import { QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { setTransport } from "../shared/bridge/client";

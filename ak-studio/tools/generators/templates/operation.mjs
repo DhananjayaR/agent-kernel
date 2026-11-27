@@ -273,7 +273,7 @@ function serve() {
 	};
 	/**
 	 * Moves the clock on a second at a time until the job \`jobId\` (default: the oldest listed) is in \`state\`, and
-	 * answers it. A job that asks the user stops at \`waiting-for-user\` until the test answers with \`job.respond\`.
+	 * returns it. A job that asks the user stops at \`waiting-for-user\` until the test answers with \`job.respond\`.
 	 */
 	const runUntil = async (
 		state: Job["state"],
