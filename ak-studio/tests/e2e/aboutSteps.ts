@@ -153,10 +153,15 @@ export async function checkTicker(page: Page): Promise<void> {
 	});
 	await ticker.getByRole("button", { name: "Stop" }).click();
 	await expect(ticker.getByRole("button", { name: "Start" })).toBeVisible();
-	// Stopped: no tick more than a second and a half later.
-	const lines = await output.getByText(/^Tick \d+$/).count();
+	// Stopped: the last line (the list follows the end) is the same a second and a half later.
+	const lastTick = () =>
+		output
+			.getByText(/^Tick \d+$/)
+			.last()
+			.textContent();
+	const last = await lastTick();
 	await page.waitForTimeout(1500);
-	expect(await output.getByText(/^Tick \d+$/).count()).toBe(lines);
+	expect(await lastTick()).toBe(last);
 }
 
 /** Ctrl+K, "demo job", Enter: the palette runs about.runDemoJob, and the job shows on the About screen. */

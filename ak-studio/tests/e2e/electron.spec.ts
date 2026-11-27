@@ -94,8 +94,10 @@ async function launchStudio(userDataDir: string): Promise<Studio> {
  * Launches the built app, runs `body`, then closes the app. With no `userDataDir` it uses a fresh data folder and
  * removes it afterwards, even if the launch, the body or `app.close()` throws; removal retries, since on Windows the
  * app's child processes can hold files for a moment after close. A caller that passes `userDataDir` (a restart
- * test) owns the folder. Main's native dialogs are stubbed (stubDialogs): a test that leaves a job running or a note
- * unsaved still closes, as the stub lets the quit go on.
+ * test) owns the folder. Main's native dialogs are stubbed (stubDialogs). After the body, while the app still runs,
+ * no dialog may have come that the test did not queue an answer for, and no queued answer may be left unused (a
+ * test that expected a dialog that never came): either fails the test. Teardown's own quit questions (a test that
+ * leaves a job running or a note unsaved) come after that check, and the stub lets that quit go on.
  */
 async function withStudio(
 	body: (studio: Studio) => Promise<void>,
@@ -108,6 +110,8 @@ async function withStudio(
 		userDataDir ??= mkdtempSync(join(tmpdir(), "ak-studio-e2e-"));
 		studio = await launchStudio(userDataDir);
 		await body(studio);
+		if (studio.app.process().exitCode === null)
+			await expectOnlyQueuedDialogs(studio.app);
 	} finally {
 		try {
 			await studio?.app.close();
@@ -122,6 +126,8 @@ interface DialogCall {
 	message: string;
 	buttons: string[];
 	answer: string;
+	/** The test queued this answer (answerDialogs); false: the stub answered a dialog no test asked for. */
+	queued: boolean;
 }
 type WithDialogStub = {
 	__dialogCalls?: DialogCall[];
@@ -130,8 +136,9 @@ type WithDialogStub = {
 
 /**
  * Replaces main's native message boxes (the quit and unload prompts, P1b ruling 11) with a stub that records each
- * call and answers by button label: the next label queued with `answerDialogs`, else the one that lets the quit or
- * unload go on. A real dialog would wait for a person and hang the test.
+ * call and answers by button label: the next label queued with `answerDialogs`, else (recorded as not queued, which
+ * withStudio fails) the one that lets the quit or unload go on. A real dialog would wait for a person and hang the
+ * test.
  */
 async function stubDialogs(app: ElectronApplication): Promise<void> {
 	await app.evaluate(({ dialog }) => {
@@ -148,15 +155,15 @@ async function stubDialogs(app: ElectronApplication): Promise<void> {
 		const answer = (first: unknown, second?: unknown): number => {
 			const options = (second ?? first) as Options;
 			const buttons = options.buttons ?? [];
-			const wanted =
-				g.__dialogAnswers?.shift() ??
-				buttons.find((label) => goOn.includes(label));
+			const queued = g.__dialogAnswers?.shift();
+			const wanted = queued ?? buttons.find((label) => goOn.includes(label));
 			const index = wanted === undefined ? -1 : buttons.indexOf(wanted);
 			const chosen = index >= 0 ? index : (options.cancelId ?? 0);
 			g.__dialogCalls?.push({
 				message: options.message,
 				buttons,
 				answer: buttons[chosen] ?? "",
+				queued: queued !== undefined,
 			});
 			return chosen;
 		};
@@ -184,6 +191,24 @@ function dialogCalls(app: ElectronApplication): Promise<DialogCall[]> {
 	return app.evaluate(() => [
 		...((globalThis as WithDialogStub).__dialogCalls ?? []),
 	]);
+}
+
+/** No dialog came that the test did not queue an answer for, and no queued answer is left unused. */
+async function expectOnlyQueuedDialogs(
+	app: ElectronApplication,
+): Promise<void> {
+	const { calls, left } = await app.evaluate(() => {
+		const g = globalThis as WithDialogStub;
+		return {
+			calls: [...(g.__dialogCalls ?? [])],
+			left: [...(g.__dialogAnswers ?? [])],
+		};
+	});
+	expect(
+		calls.filter((call) => !call.queued),
+		"dialogs the test did not expect",
+	).toEqual([]);
+	expect(left, "queued answers no dialog used").toEqual([]);
 }
 
 function removeFolder(dir: string): void {
@@ -645,12 +670,24 @@ function requestQuit(app: ElectronApplication): Promise<void> {
 	});
 }
 
-/** Resolves with the exit code once the app's main process has exited. */
-function exited(app: ElectronApplication): Promise<number | null> {
-	const child = app.process();
-	if (child.exitCode !== null) return Promise.resolve(child.exitCode);
-	return new Promise((resolve) => child.once("exit", (code) => resolve(code)));
+/** How the app's main process ended. */
+interface Exit {
+	code: number | null;
+	signal: NodeJS.Signals | null;
 }
+
+/** Resolves once the app's main process has exited, with its code and signal. */
+function exited(app: ElectronApplication): Promise<Exit> {
+	const child = app.process();
+	if (child.exitCode !== null || child.signalCode !== null)
+		return Promise.resolve({ code: child.exitCode, signal: child.signalCode });
+	return new Promise((resolve) =>
+		child.once("exit", (code, signal) => resolve({ code, signal })),
+	);
+}
+
+/** A clean exit: code 0. */
+const CLEAN_EXIT: Exit = { code: 0, signal: null };
 
 /** Starts the demo job on the About screen and waits for its question (it then waits there indefinitely). */
 async function parkDemoJobAtQuestion(page: Page): Promise<void> {
@@ -696,14 +733,25 @@ test("a reload mid-job reattaches to the job and its stream: the lines continue 
 		await section(page, "Jobs")
 			.getByRole("button", { name: "Run the demo job" })
 			.click();
+		const step2 = () => output().getByText("Step 2 of 3: Preparing the demo");
 		await expect(
 			output().getByText("Step 1 of 3: Checking the app"),
 		).toBeVisible();
+		// Reloaded between the first line and the second (a step takes a second), with one job in this run.
+		const cards = () =>
+			section(page, "Jobs").getByRole("region", {
+				name: "Demo job",
+				exact: true,
+			});
+		await expect(cards()).toHaveCount(1);
+		await expect(step2()).toHaveCount(0);
 		await page.reload();
 		await expect(
 			page.getByRole("heading", { name: "About", level: 2 }),
 		).toBeVisible();
-		// The same job, from `jobs.list`, and its stream's backlog; then the lines go on to the question.
+		// The same job (the run's only one, from `jobs.list`), still live, and its stream's backlog; then the lines go
+		// on to the question.
+		await expect(cards()).toHaveCount(1);
 		const job = newestJob(page);
 		await expect(job).toHaveAttribute("data-state", /running|waiting/);
 		await expect(
@@ -711,9 +759,7 @@ test("a reload mid-job reattaches to the job and its stream: the lines continue 
 		).toBeVisible();
 		const card = job.getByRole("region", { name: "Run the last step?" });
 		await expect(card).toBeVisible({ timeout: STEP_TIMEOUT });
-		await expect(
-			output().getByText("Step 2 of 3: Preparing the demo"),
-		).toBeVisible();
+		await expect(step2()).toBeVisible();
 		await card.getByRole("button", { name: "Run the last step" }).click();
 		await expect(job).toHaveAttribute("data-state", "succeeded", {
 			timeout: STEP_TIMEOUT,
@@ -735,6 +781,7 @@ test("quitting with the demo job running asks first: Keep working stays, Cancel 
 			message: "Quit and cancel 1 job?",
 			buttons: ["Cancel jobs and quit", "Keep working"],
 			answer: "Keep working",
+			queued: true,
 		});
 		// Still here, the job still waiting for its answer.
 		await page.waitForTimeout(500);
@@ -744,7 +791,7 @@ test("quitting with the demo job running asks first: Keep working stays, Cancel 
 		const exit = exited(app);
 		await answerDialogs(app, ["Cancel jobs and quit"]);
 		await requestQuit(app);
-		expect(await exit).toBe(0);
+		expect(await exit).toEqual(CLEAN_EXIT);
 	});
 });
 
@@ -768,7 +815,7 @@ test("a started job that survives quit blocks it: the dialog offers Wait, and Wa
 		const exit = exited(app);
 		await answerDialogs(app, ["Wait"]);
 		await requestQuit(app);
-		expect(await exit).toBe(0);
+		expect(await exit).toEqual(CLEAN_EXIT);
 	});
 });
 
@@ -791,6 +838,7 @@ test("quitting with an unsaved note and a running job asks about the unsaved wor
 			message: "Quit without saving?",
 			buttons: ["Quit without saving", "Stay"],
 			answer: "Quit without saving",
+			queued: true,
 		});
 		expect(unsaved && jobs && [jobs.message, jobs.answer]).toEqual([
 			"Quit and cancel 1 job?",
@@ -809,7 +857,7 @@ test("quitting with an unsaved note and a running job asks about the unsaved wor
 			"Stay",
 		]);
 		await requestQuit(app);
-		expect(await exit).toBe(0);
+		expect(await exit).toEqual(CLEAN_EXIT);
 	});
 });
 
@@ -832,7 +880,14 @@ test("killing the app mid-job shows the job as interrupted on the next launch; D
 			const pid = first.app.process().pid;
 			if (pid !== undefined) process.kill(pid, "SIGKILL");
 		}
-		expect(await exit).toBeNull();
+		// Not a clean exit: on Linux and macOS the SIGKILL signal; on Windows the kill is TerminateProcess, seen as
+		// exit code 1 with no signal.
+		const killed = await exit;
+		expect(
+			killed.signal === "SIGKILL" ||
+				(killed.code !== null && killed.code !== 0),
+			`killed, not a clean exit: ${JSON.stringify(killed)}`,
+		).toBe(true);
 		expect(jobRecords(dir)).toHaveLength(1);
 
 		await withStudio(
