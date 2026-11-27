@@ -15,7 +15,7 @@ This repo ships unrelated sets of "skills," named similarly but serving differen
 | **Bundled skills** | [ak-py/src/agentkernel/skills/](ak-py/src/agentkernel/skills/) (`ak-init`, `ak-build`, `ak-add-capabilities`, `ak-add-integration`, `ak-cloud-deploy`, `ak-test`) | End users of the `agentkernel` PyPI package | Shipped *inside* the package so a downstream developer's coding assistant can scaffold and extend agents built *with* OAK |
 | **Studio skills** | [ak-studio/.agents/skills/ak-studio-*](ak-studio/.agents/skills/) (`ak-studio-architecture`, `ak-studio-new-feature`, `ak-studio-ui`; guide in [ak-studio/AGENTS.md](ak-studio/AGENTS.md)) | You, working on OAK Studio in `ak-studio/` | Architecture, adding a feature with the generators, and the UI rules of the Electron desktop app; loaded only for work in `ak-studio/` |
 
-If a task is about changing OAK's own source, use the dev skills under `.agents/skills/`.
+If a task is about changing OAK's own source, use the dev skills under `.agents/skills/` (for `ak-studio/`, the Studio skills).
 Never edit the bundled skills to document a dev-only workflow, and never edit the dev skills to
 change end-user-facing scaffolding behavior — read the description in each `SKILL.md` before
 editing either.

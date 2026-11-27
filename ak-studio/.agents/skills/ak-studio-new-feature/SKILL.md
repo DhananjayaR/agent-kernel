@@ -72,14 +72,14 @@ writes, end to end:
   service is created and its factory listed in `FEATURE_SERVICES` (`packages/runtime/src/features.ts`). A job's
   method is its runner, `(input, ctx: JobContext)`, given to JobService with `jobs.define`;
 - the hook `use<Feature><Name>` in the feature's `api/` with its test: a query's uses `useStudioQuery` keyed
-  `<feature>Keys.app("<name>")`; a command's `useStudioMutation`; a job's `useStartJob`;
+  `<feature>Keys.app("<operationCamel>")` (for example `wordCountKeys.app("readSummary")`); a command's `useStudioMutation`; a job's `useStartJob`;
 - a job only: its kind in the manifest's `jobs`, so the feature owns its background notices.
 
 Flags:
 
 - `--project`: the input is `{ projectId }`, `errors` lists `ERROR_CODES.projectNotOpen`, the handler calls
   `this.#deps.scopes.require(projectId)` (JobService does it for a job) and a query's hook takes the project's id
-  and keys by `<feature>Keys.detail(projectId, "<name>")`.
+  and keys by `<feature>Keys.detail(projectId, "<operationCamel>")`.
 - `--desktop` (a query or command whose handler needs Node or Electron): the handler goes in
   `apps/desktop/src/main/services/<Feature>Service.ts`, registered in
   `apps/desktop/src/main/services/registerServices.ts`, and the browser's mock answers it from a fixture added to

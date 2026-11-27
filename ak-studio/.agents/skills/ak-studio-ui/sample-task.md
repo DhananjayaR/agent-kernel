@@ -19,7 +19,7 @@ a session's port and model.
    text in muted text, so it is not mistaken for a value. A long value wraps inside its column and never makes the
    page scroll sideways. Labels and values come from props; the component holds no copy but the not-set default.
 4. Stories, under `Display/Detail list`, each with a `play` function that checks what it shows:
-   - `Default`: two items, plain values.
+   - `Default`: two items, plain values. It replaces the `Default` story the generator wrote.
    - `MonoValues`: one literal value (a path such as `deploy/backend.tf`) and one figures value (a duration such as
      `1:02:03`), checking each has the right font utility.
    - `NotSet`: an item with no value, showing the default not-set text.

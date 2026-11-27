@@ -84,7 +84,9 @@ Rules:
    records the revision it was taken from, is written back by one command with that `baseRevision`, and is dropped
    once the write is confirmed and re-read. If the source changes underneath it, the copy is kept and flagged as
    conflicting, and the user chooses. Use `useWorkingCopy` (`apps/renderer/src/shared/working-copy/useWorkingCopy.ts`);
-   never write your own.
+   never write your own. A view that holds a working copy mounts `UnsavedChangesGuard`
+   (`apps/renderer/src/shared/patterns/UnsavedChangesGuard.tsx`); it never calls `useUnsavedBlocker` or
+   `useUnsavedLabel` itself. The app has exactly one router blocker, so one dialog names every unsaved view.
 4. **Every query key comes from the feature's key factory**, `keys("<feature>")` in `api/keys.ts`
    (`apps/renderer/src/shared/query/keys.ts`): `.app(...parts)` for app-level data (`[domain, ...parts]`),
    `.detail(projectId, ...parts)` for project data (`[domain, projectId, ...parts]`). Give each query its own parts.

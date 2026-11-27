@@ -20,7 +20,8 @@ written only on the revision it was read at.
      runtime service.
    - A `baseRevision` that is not the current revision fails with `file.changedOnDisk` and a message that says what
      to do next. The error carries no content.
-   - A successful write emits `domain.changed` for the `scratch-pad` domain.
+   - A successful write emits `domain.changed` for the `scratch-pad` domain (have the test's `serve()` helper return
+     the `EventBus` it built, and spy on `events.emit`).
    - The service's copy (the stale-write message) lives in a strings module beside the service.
 4. Tests:
    - In `ScratchPadService.test.ts`: the empty pad and its revision; a write on the current revision answers the

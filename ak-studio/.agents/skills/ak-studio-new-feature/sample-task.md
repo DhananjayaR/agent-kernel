@@ -30,7 +30,7 @@ Add a feature named `word-count` that counts the words in a text as a job.
    - a `StreamingList` of the newest job's output.
 5. Tests:
    - `WordCountService.test.ts`: the job runs to `{ words }` for a sample text and to `{ words: 0 }` for an empty
-     one, moving a `FakeClock`; a job cancelled during a step ends `cancelled`; an input over 100,000 characters is
+     one, moving a `FakeClock` (pass one in the service's deps from `serve()` and keep a reference to it); a job cancelled during a step ends `cancelled`; an input over 100,000 characters is
      refused with `bridge.invalidInput`.
    - The generated hook test, updated for the real input and result.
    - The manifest test: the route, `show` and both commands (`word-count.countSample` starts a job).

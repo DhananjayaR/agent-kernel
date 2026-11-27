@@ -58,9 +58,9 @@ An unbuilt component is added through the design gate in the phase that first ne
   `text-on-*`; borders `border-border-control` and `border-border-default` (decorative dividers only); the
   `focus-ring` utility. The naming is documented at the
   top of `theme.css`.
-- **No arbitrary values** (`p-[13px]`, `gap-(--x)`) and no inline colour styles. The spacing and type scales are
-  closed: only the steps in `theme.css` (`text-ui-xs` to `text-ui-3xl`, `text-heading`; the spacing keys such as
-  `control-m`, `row`, `edge`).
+- **No arbitrary values** (`p-[13px]`, `gap-(--x)`) and no inline colour styles. Spacing uses Tailwind's 4 px numeric
+  scale (`gap-4`, `p-8`, `w-80`) plus the named keys in `theme.css` (`control-m`, `row`, `edge`); type uses only the
+  steps in `theme.css` (`text-ui-xs` to `text-ui-3xl`, `text-heading`). `check-classes` refuses anything else.
 - **Colour roles are fixed:** primary for the primary action, focus and selection; the AI colour for the coding
   agent only; success, warning and danger for states. State is never colour alone: an icon or label goes with it.
 - **Floating layers** (menus, popovers, modals, toasts) and docked surfaces are solid, not glass.
