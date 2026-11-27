@@ -164,9 +164,10 @@ Rules the tests hold you to:
   `projectId` lists `ERROR_CODES.projectNotOpen`.
 - `capability` names a catalog id. The catalog is empty until P2, so no operation declares one yet (a contract test
   checks every declared id exists).
-- Types for handlers and hooks come from the contract: `HandlerInputOf<Operations["x.y"]>`,
-  `HandlerResultOf<Operations["x.y"]>`, `JobResultOf<"x.y">`, `SessionArgsOf<"x.y">`, `SessionInfoOf<"x.y">`,
-  `InputOf<"x.y">`, `OutputOf<"x.y">`.
+- Types for handlers and hooks come from the contract, all imported from `@ak-studio/contract`:
+  `HandlerInputOf<Operations["x.y"]>`, `HandlerResultOf<Operations["x.y"]>`, `JobResultOf<"x.y">`,
+  `SessionArgsOf<"x.y">`, `SessionInfoOf<"x.y">`, `InputOf<"x.y">`, `OutputOf<"x.y">`, and `Revision`; so are the
+  values `StudioFailure` and `ERROR_CODES`.
 - Use `pnpm new:operation` to add a query, command or job (see `ak-studio-new-feature`). It writes the declaration,
   the map entry, the service method, the hook and their tests. Session kinds are written by hand.
 
@@ -209,6 +210,33 @@ export class AboutService implements FeatureService {
 
 - Each operation's handler is a method. `register` is the class's **last member** (the generator inserts there
   and refuses otherwise).
+- The generator writes a handler with no input, `x(): HandlerResultOf<...>`, wired as
+  `registry.handle("x.y", () => this.x())`. Once the operation has input, the method takes it and the `register`
+  line passes it on; a handler that awaits (a Web Crypto digest) is `async` and answers a `Promise`. As
+  `AboutService` does for `about.setNote`:
+
+```ts
+import {
+	ERROR_CODES,
+	type HandlerInputOf,
+	type HandlerResultOf,
+	type Operations,
+	type Revision,
+	StudioFailure,
+} from "@ak-studio/contract";
+
+	async setNote({
+		note,
+		baseRevision,
+	}: HandlerInputOf<Operations["about.setNote"]>): Promise<
+		HandlerResultOf<Operations["about.setNote"]>
+	> {
+		// ...
+	}
+
+	// in register:
+	registry.handle("about.setNote", (input) => this.setNote(input));
+```
 - The service's factory, `(deps) => new XService(deps)`, is listed in `FEATURE_SERVICES` in
   `packages/runtime/src/features.ts`. The desktop's `registerServices` (`apps/desktop/src/main/services/registerServices.ts`)
   and the mock transport both call `registerFeatureServices`, so the browser serves exactly what the app serves.
@@ -221,9 +249,12 @@ export class AboutService implements FeatureService {
   `apps/desktop/src/main/services/<Feature>Service.ts` (`pnpm new:operation ... --desktop`), registered in
   `registerServices.ts` with `registry.register(new XService(featureDeps))`. The mock answers it from a fixture in
   `apps/renderer/src/shared/bridge/desktopFixtures.ts`. A job is never desktop-only.
-- Copy a service needs (messages, step labels) lives in a strings module beside it, as
-  `packages/runtime/src/about/strings.ts` does. Do not import anything from `about/`: the About feature is a
-  throwaway slice, deleted when P2 lands its first real feature.
+- Copy a service needs (error messages, step labels, output lines, a job's question) lives in
+  `packages/runtime/src/<feature>/strings.ts`, exporting `<featureCamel>Strings` (`scratchPadStrings`). About does
+  this: `packages/runtime/src/about/strings.ts` exports `aboutStrings`, the demo job's steps, its output line and
+  question, and the note's stale-write message. The renderer feature's own `strings.ts` takes the same name for the
+  copy its screen shows; the two never meet, since the renderer cannot import the runtime. Do not import anything
+  from `about/`: the About feature is a throwaway slice, deleted when P2 lands its first real feature.
 - `ServiceRegistry.start()` fails when a declared operation has no handler, so a missing registration fails at
   start-up and in `apps/desktop/src/main/services/registerServices.test.ts`.
 
@@ -384,7 +415,10 @@ export const EMPTY_PAD_REVISION: Revision =
   (`@ak-studio/runtime` does not export feature services' helpers): take the base revision from a read through the
   mock's typed transport, `const { revision } = await backend.transport.request("<feature>.<read>", {})`
   (`backend` from `createMockBackend()`, or `connectMock().backend`), and check the write's answered revision
-  against the next read's. (About's own hook test writes the two digests out; do not copy that.)
+  against the next read's. Type the write's answer with `OutputOf` (from `@ak-studio/contract`):
+  `let written: OutputOf<"<feature>.<write>"> | undefined;`, then
+  `await act(async () => { written = await result.current.mutateAsync({ ...input, baseRevision }); });`. (About's
+  own hook test writes the two digests out; do not copy that.)
 
 - In the view: `useWorkingCopy({ value, revision, write, reread })`, with `ChangedOnDisk` and
   `UnsavedChangesGuard` over it (see `NoteSection` in `features/about/screens/AboutScreen.tsx`).

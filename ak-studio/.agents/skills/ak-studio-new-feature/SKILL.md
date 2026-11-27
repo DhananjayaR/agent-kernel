@@ -27,7 +27,9 @@ behind each step and `ak-studio-ui` for the screen.
 
 - A screen is built only after its design gate is signed off
   (`docs/specs/950-agent-kernel-studio-phase-1/implementation/design-process.md`; each phase document records its
-  sign-off). Contract, services and hooks do not wait for the gate.
+  sign-off). Contract, services and hooks do not wait for the gate. A sample task (throwaway practice, never
+  merged, like the skills' `sample-task.md` files) is exempt and builds the screen it describes; a real feature's
+  screen is not.
 - Names are kebab-case, at most 40 characters, never a path: `release-notes`, `read-summary`. The generators refuse
   the reserved feature names `app`, `events`, `features`, `job`, `jobs`, `session`, `sessions`, `shared`, `shell`,
   `stream`, `streams`, `window`, any name a contract or runtime module already has, and Windows device names
@@ -94,7 +96,9 @@ Then fill in what the generator left as `{}`:
    (domain codes only). For a job, the `result` schema and a `title` that reads well.
 2. The handler or runner (see `ak-studio-architecture`: `StudioFailure` for errors, `domain.changed` after a write,
    `ctx.step`, `ctx.stream.write`, `ctx.confirm` and `ctx.cancel()`, every wait through
-   `this.#deps.clock.sleep(ms, ctx.signal)`), and its copy in a strings module beside the service.
+   `this.#deps.clock.sleep(ms, ctx.signal)`), and its copy in a strings module beside the service. Replace the
+   generated method whole, its doc comment too: the job's ("Runs one `x.y` job; its answer is the job's result.
+   `ctx` reports steps, ...") describes the stub, so write one that says what the runner does.
 3. **Update the generated tests**: they assert `{}` in and out, and fail once the schemas change.
    - **Service test.** Extend the generated `serve()` (see "Testing a service" in `ak-studio-architecture`). It
      returns `clock`, the `FakeClock` the service sleeps on, and two ways to move it: `await runUntil("succeeded")`
@@ -103,11 +107,46 @@ Then fill in what the generator left as `{}`:
      `clock.advance(ms)` straight after the start can come before the runner's sleep and move nothing. It serves
      `job.cancel`: `await registry.request("job.cancel", { jobId })` stops a job (or `await jobs.cancelAll(jobs.list())`
      for every job). It returns `lines`: `await lines(jobs.list()[0]?.streamId)` reads a job's output.
+   - **A cancel during a step** (service test): `await stepOnce(ms)` ends step 1; wait for step 2,
+     `await vi.waitFor(() => expect(jobs.list()[0]?.progress?.step).toBe(2))`; cancel with no clock move,
+     `await registry.request("job.cancel", { jobId: jobs.list()[0]?.id })`; then
+     `await vi.waitFor(() => expect(jobs.list()[0]?.state).toBe("cancelled"))` and `expect(clock.sleeping).toBe(0)`:
+     the signal ended the wait, and nothing is left asleep.
    - **Hook test.** Pass `createMockBackend({ clock })` a `FakeClock` the same way, or read the job through the
      stores with `connectMock` (`apps/renderer/src/test/connectedMock.tsx`), which proves the events path a view
-     relies on. In renderer tests and stories, import `FakeClock` from `shared/bridge/mockTransport`.
+     relies on. In renderer tests and stories, import `FakeClock` from `shared/bridge/mockTransport`. A job's hook
+     test, as `apps/renderer/src/features/about/api/useAboutDemoJob.test.tsx` writes it (`useJob` from
+     `shared/jobs/jobStore`, `mock` disposed in `afterEach`):
+
+     ```tsx
+     const clock = new FakeClock();
+     mock = connectMock({ clock });
+     const { result, rerender } = renderHook(
+     	({ jobId }: { jobId: string | undefined }) => ({
+     		start: useAboutDemoJob(),
+     		job: useJob(jobId),
+     	}),
+     	{ wrapper: mock.wrapper, initialProps: { jobId: undefined as string | undefined } },
+     );
+     const jobId = await act(() => result.current.start.start({}));
+     rerender({ jobId });
+     await waitFor(() => expect(result.current.job?.progress?.step).toBe(1));
+     await act(() => clock.advance(1000));
+     await waitFor(() => expect(result.current.job?.progress?.step).toBe(2));
+     ```
+
+   - **The clock in renderer tests.** Before each `clock.advance(ms)`, wait until the runner sleeps: the step it
+     sleeps in is visible (`job.progress.step`, or the step text on screen) or
+     `await waitFor(() => expect(clock.sleeping).toBeGreaterThan(0))`. An advance before that moves nothing.
    - **A `Job` has no `input` field.** To prove a job ran on the input you gave (a command's fixed sample text, say),
      move the clock to the end and check the job's `result`.
+
+**Which strings module.** A feature has two, one per side, both exporting `<featureCamel>Strings`. The renderer's
+`apps/renderer/src/features/<feature>/strings.ts` holds what the screen and the manifest show (headings, labels,
+buttons, command titles, a result line) and any text the screen or a command sends as input (a fixed sample
+text). The runtime's `packages/runtime/src/<feature>/strings.ts` holds what the service emits (step labels, output
+lines, a job's question, error messages); the screen shows those from the job and the stream, never from a copy of
+its own.
 
 ### Written by hand: session kinds and app commands
 
@@ -185,7 +224,10 @@ Build it from the patterns (`ak-studio-ui`), in this order of preference: a conn
   depend on Storybook): each story renders the screen inside `MockApp` (`apps/renderer/src/test/MockApp.tsx`) with a
   `FakeClock` from a loader (`FakeClock` is imported from `shared/bridge/mockTransport` in a story), one story per
   state, and a `play` that reaches the state. Copy the structure of
-  `apps/renderer/src/features/about/screens/AboutScreen.stories.tsx`.
+  `apps/renderer/src/features/about/screens/AboutScreen.stories.tsx`, with its `Loaded` and `Play` types: the
+  renderer has no Storybook types, so `Play` types by hand the parts of the play context a story uses
+  (`loaded.clock`, `canvas.findByRole`, `canvas.findByText`, `userEvent.click`, `userEvent.type`); add a member
+  there when a story needs another, and write `play: async ({ canvas }: Play) => ...`.
 - **The generated stubs are replaced, not extended**: the screen's `Default` story (`export const Default = {}`)
   gives way to the stories of the screen's real states, and the generated manifest test (it renders the screen bare)
   is rewritten once the screen reads data: render it inside `MockApp`, as
@@ -220,9 +262,12 @@ pnpm test:e2e                             # when a screen or app code changed
 ```
 
 `pnpm lint` stops at the first check that fails. Run the long suites in the background with output to
-`.logs/<worktree>-<suite>.log` (ignored by git; a name unique to your run). How long each takes, and what to do
-when many tests time out at once, is in "Running the long suites" in `ak-studio-ui`. A single renderer test (the
-Shell tests most often) that times out under load: rerun it alone
+`.logs/<worktree>-<suite>.log` (the folder is there already; git ignores the logs; a name unique to your run),
+ending with an exit line to wait on: `( pnpm test; echo "exit code $?" ) > .logs/<worktree>-test.log 2>&1 &`.
+`pnpm test` takes 45 seconds to 2 minutes on a quiet machine and 3 to 5 minutes while other runs share it. The
+wait loop, every suite's times (quiet and loaded) and the fewer-workers commands
+(`pnpm test:storybook --maxWorkers=2`) are in "Running the long suites" in `ak-studio-ui`. A single renderer test
+(the Shell tests most often) that times out under load: rerun it alone
 (`pnpm --filter @ak-studio/renderer exec vitest run <file>`) before concluding anything.
 
 A PR is one slice: one operation, one component or one screen state, with its stories and tests.

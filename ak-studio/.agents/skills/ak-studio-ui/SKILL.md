@@ -62,9 +62,13 @@ An unbuilt component is added through the design gate in the phase that first ne
   scale (`gap-4`, `p-8`, `w-80`) plus the named keys in `theme.css` (`control-m`, `row`, `edge`); type uses only the
   steps in `theme.css` (`text-ui-xs` to `text-ui-3xl`, `text-heading`). `check-classes` refuses anything else.
 - **Layout without arbitrary values.** Label and value rows: a flex row per item, the label `w-32 shrink-0` and the
-  value `min-w-0 flex-1 break-words`; or a grid with a numeric template (`grid grid-cols-2`, `grid-cols-3`), never
+  value `min-w-0 flex-1 wrap-anywhere`; or a grid with a numeric template (`grid grid-cols-2`, `grid-cols-3`), never
   `grid-cols-[...]`. A long value wraps only when its box may shrink: `min-w-0` on a flex or grid child (its default
-  minimum is its content's width) and `break-words` on text with no spaces. A fixed width comes from the scale
+  minimum is its content's width) and a wrap utility on the text. **The wrapping rule:** a value (a path, command,
+  identifier, token, URL, anything pasted) gets `wrap-anywhere`, as `CommandRow` and `SessionControl` do: it breaks
+  a string with no spaces, and those breaks count toward the box's minimum width, so it wraps even in a box sized
+  to its content. Prose (a sentence, a message) gets `break-words`: it breaks a word only when the word alone
+  overflows, and the box stays at least one word wide. A fixed width comes from the scale
   (`w-80` is 320 px). A `<dl>` holds its `dt` and `dd` directly (as `InfoSection`'s grid in `AboutScreen.tsx`
   does) or wraps each item's `dt` and `dd` in one `div` (for a flex row per item); both are valid HTML, any other
   child is not.
@@ -189,6 +193,11 @@ classes.
   defaults by hand ("Copy defaults").
 - Either way, export the component and its props type from `packages/ui/src/index.ts`, and put its English
   defaults in `src/strings.ts` as below.
+- The generated component is a stub too: `<Name>Props = HTMLAttributes<HTMLDivElement>` and a `<div>` root with
+  `data-slot="<name>"`. Keep `data-slot` (stories find the root by it) and `cn(..., className)`, and change the
+  props type with the root: a `<dl>` root takes `HTMLAttributes<HTMLDListElement>`, and a component whose content
+  comes from its own props (an `items` list) drops `children`:
+  `Omit<HTMLAttributes<HTMLDListElement>, "children"> & { items: ... }`.
 - The generated stories are stubs to replace, not extend: the meta's `args: { children: ... }` and the `Default`
   story fit the generated `<div>`, not your props. Rewrite the meta's `args` for the real props (the typecheck fails
   otherwise) and the `Default` story for the real default state.
@@ -234,7 +243,9 @@ do not run that; run the pinned command above instead. It holds no credentials.
   story for anything with a keyboard model. Each `play` function proves its state was reached, using the helpers
   in `src/lib/story-checks.ts` (`hover`, `tabTo`, `expectFocusRing`, `expectHeight`, `expectSolidLayer`,
   `expectTokenColour`, `expectNoOverflow`, ...), and checks the Spectrum 2 measurement that matters (32 px
-  controls, the 2 px focus ring 2 px away).
+  controls, the 2 px focus ring 2 px away). A font utility (`mono-literal`, `mono-figures`, `font-heading`) is
+  checked by its class, `await expect(value).toHaveClass("mono-literal")`: that is enough, since `theme.css` defines
+  what each one does, once.
 - Storybook (`packages/ui/.storybook/`) indexes `packages/ui/src` and the renderer's stories. `pnpm test:storybook`
   runs every story in headless Chromium in both themes with axe (`a11y: { test: "error" }`), and the icon-size
   check after each. A violation fails the story; fix the component, do not disable the rule.
@@ -254,19 +265,37 @@ do not run that; run the pinned command above instead. It holds no credentials.
 - A new story has no baseline: run `pnpm test:visual --update-snapshots=missing`, look at each new image, and
   commit them. After an intended change to an existing story: `pnpm test:visual --update-snapshots`, then review
   every changed image before committing. Never commit a baseline you have not looked at.
-- **Running the long suites.** Run them in the background with output to `.logs/` (ignored by git), named for your
-  run so parallel runs never share a file: `pnpm test:storybook > .logs/<worktree>-storybook.log 2>&1`. On a quiet
-  12-core machine: `pnpm lint` and `pnpm typecheck` 5 to 30 seconds each, `pnpm test` 1.5 to 2 minutes,
-  `pnpm test:storybook` 1 to 2 minutes (2 with `--maxWorkers=2`), `pnpm build-storybook` under 10 seconds and
-  `pnpm test:visual:run` 5 to 6 minutes; expect two to three times that while other runs share the machine.
+- **Running the long suites.** Run them in the background with output to `.logs/` (committed empty: git ignores
+  everything in it but its `.gitkeep`), named for your run so parallel runs never share a file. End the command
+  with an exit line and wait for that line: `pnpm test` runs several vitest runs, each with its own `Test Files`
+  summary, so the first summary is not the end, and a run that crashes prints none.
+
+  ```bash
+  ( pnpm test:storybook; echo "exit code $?" ) > .logs/<worktree>-storybook.log 2>&1 &
+  until grep -q '^exit code ' .logs/<worktree>-storybook.log; do sleep 15; done
+  tail -n 25 .logs/<worktree>-storybook.log
+  ```
+
+  Then read the summary: vitest's `Test Files  1 failed | 105 passed (106)` and `Tests  ...` (the last pair is the
+  last run's), Playwright's `120 passed (5.2m)` with any `failed` count above it, and `exit code 0`.
+
+  | Command                          | Quiet (12 cores, nothing else running) | Loaded (other runs share the machine) |
+  | -------------------------------- | -------------------------------------- | ------------------------------------- |
+  | `pnpm lint`, `pnpm typecheck`    | 5 to 30 seconds each                   | up to 1.5 minutes each                |
+  | `pnpm test`                      | 45 seconds to 2 minutes                | 3 to 5 minutes                        |
+  | `pnpm test:storybook`            | 1 to 2 minutes (`--maxWorkers=2` too)  | 3 to 5 minutes                        |
+  | `pnpm build-storybook`           | under 10 seconds                       | under 30 seconds                      |
+  | `pnpm test:visual:run`           | 5 to 6 minutes                         | 10 to 15 minutes                      |
+
   `pnpm test:visual` rebuilds Storybook and then runs `pnpm test:visual:run`, which reuses the last build: after
   changing only a story's code, rebuild (`pnpm build-storybook`) before `test:visual:run`. A subset runs with
   `-g`: `pnpm test:visual:run -g "screens-about|patterns-command-row"`.
 - **When many tests time out at once**, the machine is usually overloaded: check `uptime` (a load average
-  well above the core count, `nproc`) and rerun with fewer workers, from `packages/ui`
-  `pnpm exec vitest run --project storybook-dark --project storybook-light --maxWorkers=2`, and from `ak-studio/`
-  `pnpm test:visual:run --workers=2`. A single story, screenshot or renderer test (the Shell tests most often) that
-  times out: rerun it alone (`pnpm test:visual:run -g <story id>`, for example
+  well above the core count, `nproc`) and rerun with fewer workers. From `ak-studio/`, arguments after a script
+  name reach vitest or Playwright (no `--`): `pnpm test:storybook --maxWorkers=2`, `pnpm test:visual --workers=2`
+  or `pnpm test:visual:run --workers=2`. A single story file: `pnpm test:storybook src/components/<name>.stories.tsx`
+  (the path from `packages/ui`). A single story, screenshot or renderer test (the Shell tests most often) that
+  times out or fails once: rerun it alone (`pnpm test:visual:run -g <story id>`, for example
   `-g patterns-streaming-list--following`) before concluding anything.
 - **"No other baseline changed"** is checked with `git status`: after a run with `--update-snapshots`, the only
   modified or new files under `tests/visual/__screenshots__/` are the stories you meant to change.
@@ -303,7 +332,7 @@ map of full class strings. `pnpm lint` runs check-classes before check-palette a
 
 - `text-blue-500`, `p-[13px]`, `grid-cols-[...]`, `style={{ color: ... }}`: none exist here. Use the role tokens
   and the scale.
-- A long value that overflows its column: the flex or grid child lacks `min-w-0`, or the text lacks `break-words`.
+- A long value that overflows its column: the flex or grid child lacks `min-w-0`, or the value lacks `wrap-anywhere`.
 - A `Badge` or a coloured word for a state: use `StatusChip`.
 - A plain `<code>` for a command the app ran: use `CommandRow`.
 - A spinner with no label for slow work: make it a job and show `JobProgress`.
