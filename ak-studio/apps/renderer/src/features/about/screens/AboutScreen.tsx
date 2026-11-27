@@ -61,7 +61,7 @@ const ACTIVE: ReadonlySet<Job["state"]> = new Set([
 
 export function AboutScreen() {
 	return (
-		<div className="h-full overflow-auto">
+		<div className="relative h-full overflow-auto">
 			<div className="mx-auto flex max-w-3xl flex-col gap-6 p-6">
 				<header className="flex flex-col gap-1">
 					<h2 className="font-heading text-ui-xl font-bold text-text">

@@ -423,7 +423,7 @@ export function DesktopShell<T extends string = AppTabId>({
 			<TabPanel
 				key={selectedTab}
 				id={selectedTab}
-				className="size-full overflow-auto rounded-none pt-0"
+				className="relative size-full overflow-auto rounded-none pt-0"
 			>
 				{children}
 			</TabPanel>
@@ -433,7 +433,7 @@ export function DesktopShell<T extends string = AppTabId>({
 		<div
 			data-slot="desktop-shell"
 			className={cn(
-				"flex h-dvh w-full min-w-0 flex-col overflow-hidden bg-surface text-text",
+				"relative flex h-dvh w-full min-w-0 flex-col overflow-hidden bg-surface text-text",
 				className,
 			)}
 		>

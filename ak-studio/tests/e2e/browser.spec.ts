@@ -80,6 +80,21 @@ test("each tab opens its empty state, naming the phase that fills it", async ({
 	await expect(page).toHaveURL(/#\/canvas$/);
 });
 
+// Only the content area scrolls, never the window. An absolutely positioned helper (a screen-reader live region, a
+// hidden input) whose nearest positioned ancestor is the page once pushed the whole window into scrolling on About.
+test("no tab makes the window itself scroll", async ({ page }) => {
+	await page.goto("/");
+	const tabs = page.getByRole("tablist").first().getByRole("tab");
+	for (const tab of await tabs.all()) {
+		await tab.click();
+		await page.waitForTimeout(300);
+		const overflow = await page.evaluate(
+			() => document.documentElement.scrollHeight - window.innerHeight,
+		);
+		expect(overflow, `window overflow on ${await tab.textContent()}`).toBe(0);
+	}
+});
+
 test("the theme switches from the settings modal and sets data-theme", async ({
 	page,
 }) => {
