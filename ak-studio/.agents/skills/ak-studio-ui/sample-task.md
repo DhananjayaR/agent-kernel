@@ -1,5 +1,8 @@
 # Sample task: a small presentational component with its stories
 
+Start from branch `feature/950-agent-kernel-studio-phase-1` (fast-forward your worktree to it if it was made from
+another branch).
+
 This task tests the `ak-studio-ui` skill. Run it in a scratch branch or worktree, from `ak-studio/`, using only the
 skill. No network is needed: the component is made with the generator, not from shadcn.
 
@@ -11,8 +14,8 @@ a session's port and model.
 1. Create it with `pnpm new:component detail-list --group Display`.
 2. Props:
    - `items`: `{ label: string; value?: string; mono?: "literal" | "figures" }[]`;
-   - `notSetText` (optional): what an item with no value shows, defaulting to an English default in
-     `packages/ui/src/strings.ts`;
+   - `strings` (optional): overrides of the component's copy, `Partial<DetailListStrings>`, whose one key, `notSet`,
+     is what an item with no value shows ("Not set" by default), following the skill's copy-defaults convention;
    - `className`.
 3. It renders a `<dl>`: each label as a `<dt>` in muted text, each value as a `<dd>` in normal text. `mono: "literal"`
    sets the value in `mono-literal`, `mono: "figures"` in `mono-figures`. An item with no value shows the not-set
@@ -24,12 +27,14 @@ a session's port and model.
      `1:02:03`), checking each has the right font utility.
    - `NotSet`: an item with no value, showing the default not-set text.
    - `LongValue`: a value of 200 characters with no spaces, at a 320 px wide frame, checking nothing overflows.
-5. Export `DetailList` and `DetailListProps` from `packages/ui/src/index.ts` (the generator does this).
+5. Export `DetailList` and `DetailListProps` from `packages/ui/src/index.ts` (the generator does this), and
+   `DetailListStrings` beside the other strings types.
 6. Create its visual baselines and look at each one.
 
 ## Done means
 
-All of these, from `ak-studio/`, with no hand edits after the skill's steps:
+All of these, from `ak-studio/`, with no edits beyond what the skill tells you to do (running `pnpm format` is one
+of them):
 
 - `pnpm lint` passes (including check-classes, check-palette and check-stories).
 - `pnpm typecheck` and `pnpm test` pass.

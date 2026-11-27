@@ -1,5 +1,8 @@
 # Sample task: a sample feature with a job
 
+Start from branch `feature/950-agent-kernel-studio-phase-1` (fast-forward your worktree to it if it was made from
+another branch).
+
 This task tests the `ak-studio-new-feature` skill (with `ak-studio-architecture` and `ak-studio-ui` where it points
 to them). Run it in a scratch branch or worktree, from `ak-studio/`, using only the skills. Read the About feature
 where the skills point to it, but import nothing from it.
@@ -12,9 +15,10 @@ Add a feature named `word-count` that counts the words in a text as a job.
 2. The job `word-count.countWords`:
    - input `{ text }`, at most 100,000 characters; result `{ words }`, a whole number; title "Count words";
      cancellable; does not survive quit.
-   - Three steps, each reported with `ctx.step` and one line of output: reading the text, counting the words,
-     checking the count. Each step waits 500 ms through the service's clock with the job's signal, so Stop ends it
-     at once as `cancelled`.
+   - Three steps, labelled "Reading the text", "Counting the words" and "Checking the count". Each step, in order:
+     reports itself with `ctx.step`, writes one line of output ("Step 1 of 3: Reading the text"), then waits 500 ms
+     through the service's clock with the job's signal, so Stop ends it at once as `cancelled`. The words are
+     counted in step 2, before its wait; steps 1 and 3 do nothing else.
    - The words are the text's runs of non-space characters; an empty text has 0 words.
    - The step labels and output lines live in a strings module beside the service.
 3. The manifest: the generator lists the job kind in `jobs`. Add an app command `word-count.show` ("Open word
@@ -26,21 +30,26 @@ Add a feature named `word-count` that counts the words in a text as a job.
    - a `Textarea` for the text and one primary button, "Count words", which starts the job (pending look after
      300 ms; a refused start shown with `ErrorView`);
    - `JobProgressList` over the feature's jobs from the job store (the live ones and the newest that ended), with
-     the result in one line ("12 words");
+     the result in one line from the feature's strings: "1 word" for one, "<n> words" for any other number ("0 words",
+     "12 words");
    - a `StreamingList` of the newest job's output.
 5. Tests:
    - `WordCountService.test.ts`: the job runs to `{ words }` for a sample text and to `{ words: 0 }` for an empty
-     one, moving a `FakeClock` (pass one in the service's deps from `serve()` and keep a reference to it); a job cancelled during a step ends `cancelled`; an input over 100,000 characters is
-     refused with `bridge.invalidInput`.
+     one, moving the `FakeClock` the generated `serve()` returns; its output is the three step lines; a job
+     cancelled with `job.cancel` during a step ends `cancelled`; an input over 100,000 characters is refused with
+     `bridge.invalidInput`.
    - The generated hook test, updated for the real input and result.
-   - The manifest test: the route, `show` and both commands (`word-count.countSample` starts a job).
+   - The manifest test, replacing the generated one: the route, `show` and both commands
+     (`word-count.countSample` starts a job that ends with the sample text's word count).
    - A screen test on the mock: typing a text and pressing "Count words" shows the job's steps and then its result.
-6. Screen stories (`Screens/Word count`): `Empty` (nothing typed, no job), `Running` (a job part way, the clock
-   moved by one step) and `Counted` (a job that finished), each on `MockApp` with a `FakeClock` from a loader.
+6. Screen stories (`Screens/Word count`), replacing the generated `Default`: `Empty` (nothing typed, no job),
+   `Running` (a job part way, the clock moved by one step) and `Counted` (a job that finished), each on `MockApp`
+   with a `FakeClock` from a loader.
 
 ## Done means
 
-All of these, from `ak-studio/`, with no hand edits after the skill's steps:
+All of these, from `ak-studio/`, with no edits beyond what the skills tell you to do (running `pnpm format` is one
+of them):
 
 - `pnpm lint` passes (including check-stories, check-classes and the boundary rules: the feature imports no other
   feature and nothing from `about/`).

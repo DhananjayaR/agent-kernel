@@ -61,6 +61,11 @@ An unbuilt component is added through the design gate in the phase that first ne
 - **No arbitrary values** (`p-[13px]`, `gap-(--x)`) and no inline colour styles. Spacing uses Tailwind's 4 px numeric
   scale (`gap-4`, `p-8`, `w-80`) plus the named keys in `theme.css` (`control-m`, `row`, `edge`); type uses only the
   steps in `theme.css` (`text-ui-xs` to `text-ui-3xl`, `text-heading`). `check-classes` refuses anything else.
+- **Layout without arbitrary values.** Label and value rows: a flex row per item, the label `w-32 shrink-0` and the
+  value `min-w-0 flex-1 break-words`; or a grid with a numeric template (`grid grid-cols-2`, `grid-cols-3`), never
+  `grid-cols-[...]`. A long value wraps only when its box may shrink: `min-w-0` on a flex or grid child (its default
+  minimum is its content's width) and `break-words` on text with no spaces. A fixed width comes from the scale
+  (`w-80` is 320 px).
 - **Colour roles are fixed:** primary for the primary action, focus and selection; the AI colour for the coding
   agent only; success, warning and danger for states. State is never colour alone: an icon or label goes with it.
 - **Floating layers** (menus, popovers, modals, toasts) and docked surfaces are solid, not glass.
@@ -94,9 +99,9 @@ An unbuilt component is added through the design gate in the phase that first ne
 - Empty states say what the place is for and offer the first action.
 - No placeholder copy ships (no "TODO", "lorem", "placeholder").
 - English only in Release 1. Copy lives in one strings module per feature (`features/<name>/strings.ts`), per
-  runtime feature service (beside it), and per package (`packages/ui/src/strings.ts`, whose defaults every
-  component lets a prop override). Components in `packages/ui` take their words as props; they never hard-code
-  feature copy.
+  runtime feature service (beside it), and per package (`packages/ui/src/strings.ts`). Components in `packages/ui`
+  take their words as props; they never hard-code feature copy. A component's own defaults follow the convention in
+  "Copy defaults" (section 3).
 
 ### Behaviour rules
 
@@ -180,7 +185,26 @@ classes.
   `src/components/<name>.tsx` (`<Name>` and `<Name>Props`), its stories under `<Group>/<Name in sentence case>`, and
   the exports in `src/index.ts`. The group defaults to Display.
 - Either way, export the component and its props type from `packages/ui/src/index.ts`, and put its English
-  defaults in `src/strings.ts` under the component's key, each overridable by a prop.
+  defaults in `src/strings.ts` as below.
+- The generated stories are stubs to replace, not extend: the meta's `args: { children: ... }` and the `Default`
+  story fit the generated `<div>`, not your props. Rewrite the meta's `args` for the real props (the typecheck fails
+  otherwise) and the `Default` story for the real default state.
+
+### Copy defaults
+
+Every component that shows words of its own (a button label, an empty text, "Not set") does it the same way, as
+`CommandRow` (`src/components/command-row.tsx`) does:
+
+1. In `src/strings.ts`: the English defaults in `uiStrings` under the component's camelCase key
+   (`commandRow: { ... }`), and its type beside the others,
+   `export type CommandRowStrings = { -readonly [K in keyof typeof uiStrings.commandRow]: string };`. Add the
+   component's name to the list in the file's header comment.
+2. In the component: a `strings?: Partial<CommandRowStrings>` prop ("Overrides of the default copy"), merged over
+   the defaults with `const text = { ...uiStrings.commandRow, ...strings };`, and only `text.*` rendered.
+3. In `src/index.ts`: export the `<Name>Strings` type beside the other `...Strings` types from `./strings`.
+
+A few older single-label components take one named prop instead (StatusChip's `label`, Combobox's `emptyText`); a
+new component uses `strings`.
 
 ### The shadcn MCP server
 
@@ -207,6 +231,8 @@ do not run that; run the pinned command above instead. It holds no credentials.
 - Storybook (`packages/ui/.storybook/`) indexes `packages/ui/src` and the renderer's stories. `pnpm test:storybook`
   runs every story in headless Chromium in both themes with axe (`a11y: { test: "error" }`), and the icon-size
   check after each. A violation fails the story; fix the component, do not disable the rule.
+- A story that needs a fixed-width frame (a long value at 320 px) wraps the story in a decorator with a width from
+  the scale: `decorators: [(Story) => <div className="w-80"><Story /></div>]`; no inline style.
 - Shell-sized stories set `parameters.fullBleed` and a viewport (`parameters.viewport` and `globals.viewport`).
   Screen stories in the renderer use `MockApp` (`apps/renderer/src/test/MockApp.tsx`) with a `FakeClock` from a
   loader, as `AboutScreen.stories.tsx` does, so time only moves when a play function moves it.
@@ -218,19 +244,27 @@ do not run that; run the pinned command above instead. It holds no credentials.
 - A new story has no baseline: run `pnpm test:visual --update-snapshots=missing`, look at each new image, and
   commit them. After an intended change to an existing story: `pnpm test:visual --update-snapshots`, then review
   every changed image before committing. Never commit a baseline you have not looked at.
+- **Running the long suites.** `pnpm test:storybook` and `pnpm test:visual` take minutes, and `pnpm test:visual`
+  rebuilds Storybook each time (`pnpm test:visual:run` reuses the last build). Run them in the background with
+  output to a log file of your own. Under heavy load one story or screenshot can fail or time out: rerun it alone
+  (`pnpm test:visual:run -g <story id>`, for example `-g patterns-streaming-list--following`) before concluding
+  anything. The renderer's unit tests (the Shell tests most often) can also time out under load: rerun them before
+  treating a timeout as a failure.
 
 ### What check-classes and check-palette refuse
 
 `pnpm check-classes` reads the `.ts` and `.tsx` under `apps/renderer/src` and `packages/ui/src`. It fails on:
 
-- an arbitrary value or property (`p-[13px]`, `[mask:none]`);
+- an arbitrary value of any utility (`p-[13px]`, `grid-cols-[max-content_minmax(0,1fr)]`) or an arbitrary property
+  (`[mask:none]`);
 - the CSS-variable shorthand (`bg-(--x)`) for any variable but React Aria's `--trigger-width`;
 - an inline colour style: a colour property in `style={{ ... }}` or a `CSSProperties` object, on `.style` or
   through `setProperty`, or a literal `fill`, `stroke` or `color` attribute other than `currentColor` or `none`.
 
 Only `src/tokens.stories.tsx` may paint colours inline. `pnpm check-palette` refuses a default-palette class and
-colour literals (hex, `rgb()`, `hsl()`, `oklch()`) outside `theme.css` and unit tests. Neither can see class names
-built at run time (`` `bg-${tone}` ``): write each class in full, or pick from a map of full class strings.
+colour literals (hex, `rgb()`, `hsl()`, `oklch()`) outside `theme.css` and unit tests, and reports arbitrary values
+too. Neither can see class names built at run time (`` `bg-${tone}` ``): write each class in full, or pick from a
+map of full class strings. `pnpm lint` runs check-classes before check-palette and stops at the first that fails.
 
 ### Checklist for a new component
 
@@ -238,13 +272,18 @@ built at run time (`` `bg-${tone}` ``): write each class in full, or pick from a
 2. Tokens only; `rounded-control` for controls; 16 or 20 px Tabler icons, `aria-hidden`; `mono-literal` for literal
    text; `relative` on any scroll container.
 3. Named for assistive technology (fields by `label`, `aria-label` or `aria-labelledby`); state never colour alone.
-4. English defaults in `src/strings.ts`, overridable by props; exported with its props type from `src/index.ts`.
-5. Stories for every state, with play functions; an entry in `tools/story-requirements.json` if it is a pattern.
-6. `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:storybook`, then the visual baselines as above.
+4. English defaults in `src/strings.ts` with a `strings` prop over them ("Copy defaults"); exported with its props
+   type and its `<Name>Strings` type from `src/index.ts`.
+5. Stories for every state, with play functions, replacing the generated `Default` and meta `args`; an entry in
+   `tools/story-requirements.json` if it is a pattern.
+6. `pnpm format` (Biome writes its formatting into what you edited by hand), then `pnpm lint`, `pnpm typecheck`,
+   `pnpm test`, `pnpm test:storybook`, then the visual baselines as above.
 
 ## Common mistakes
 
-- `text-blue-500`, `p-[13px]`, `style={{ color: ... }}`: none exist here. Use the role tokens and the scale.
+- `text-blue-500`, `p-[13px]`, `grid-cols-[...]`, `style={{ color: ... }}`: none exist here. Use the role tokens
+  and the scale.
+- A long value that overflows its column: the flex or grid child lacks `min-w-0`, or the text lacks `break-words`.
 - A `Badge` or a coloured word for a state: use `StatusChip`.
 - A plain `<code>` for a command the app ran: use `CommandRow`.
 - A spinner with no label for slow work: make it a job and show `JobProgress`.

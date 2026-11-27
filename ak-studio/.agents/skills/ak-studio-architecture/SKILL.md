@@ -56,8 +56,9 @@ runtime services → `contract`; desktop → `runtime`, `contract`.
 - Electron's values are imported only in `apps/desktop/src/main/index.ts` and `apps/desktop/src/preload/index.ts`
   (a type-only import is allowed anywhere in desktop). Everything else in main (services, the quit rule, the menu)
   takes Electron's values as arguments, so it is tested without Electron.
-- Unit tests in the renderer may import `@ak-studio/runtime` (for `FakeClock` and constants); nothing else in the
-  renderer outside `shared/bridge/` may.
+- Unit tests in the renderer may import `@ak-studio/runtime` (for its constants); nothing else in the renderer
+  outside `shared/bridge/` may, stories included. So a renderer test or story imports `FakeClock` from
+  `shared/bridge/mockTransport`, which re-exports the runtime's: one import that works in both.
 - Enforced by dependency-cruiser (`.dependency-cruiser.cjs`, `pnpm depcruise`, proved by `pnpm depcruise:selftest`)
   and Biome's `noNodejsModules` and restricted imports (`biome.json`). Both run in `pnpm lint`. A rule broken
   means the design is wrong; do not add an exemption.
@@ -210,8 +211,9 @@ export class AboutService implements FeatureService {
 - The service's factory, `(deps) => new XService(deps)`, is listed in `FEATURE_SERVICES` in
   `packages/runtime/src/features.ts`. The desktop's `registerServices` (`apps/desktop/src/main/services/registerServices.ts`)
   and the mock transport both call `registerFeatureServices`, so the browser serves exactly what the app serves.
-- To fail with a code, throw `new StudioFailure({ code: ERROR_CODES.x, message })`. Anything else thrown becomes
-  `internal.unexpected`. Exceptions never cross the bridge: the registry converts them.
+- To fail with a code, throw `new StudioFailure({ code: ERROR_CODES.x, message })`; `StudioFailure` and
+  `ERROR_CODES` are imported from `@ak-studio/contract`. Anything else thrown becomes `internal.unexpected`.
+  Exceptions never cross the bridge: the registry converts them.
 - Runtime code is browser-safe: no `node:*` import. For a hash use Web Crypto (`crypto.subtle.digest`), as
   `AboutService` does. Processes, files and watching go through the ports.
 - A query or command whose handler needs Node or Electron goes in a desktop-only service,
@@ -223,6 +225,22 @@ export class AboutService implements FeatureService {
   throwaway slice, deleted when P2 lands its first real feature.
 - `ServiceRegistry.start()` fails when a declared operation has no handler, so a missing registration fails at
   start-up and in `apps/desktop/src/main/services/registerServices.test.ts`.
+
+### Testing a service
+
+The generator writes `<Feature>Service.test.ts` with a `serve()` helper. It builds the service on real core
+services and a `FakeClock`, and starts a registry serving the feature's operations, the shared job and session
+operations (`job.cancel`, `job.respond`, `jobs.list`, ...) and `stream.read`. It returns
+`{ registry, jobs, sessions, streams, events, scopes, clock, lines, names }`. **`serve()` is the helper to extend**:
+when a test needs something more, return it from `serve()` rather than writing a second helper.
+
+- Call an operation as the renderer does: `await registry.request("<feature>.<name>", input)`, which answers
+  `{ ok: true, value }` or `{ ok: false, error }`.
+- A domain event: `const emit = vi.spyOn(events, "emit")`, then
+  `expect(emit).toHaveBeenCalledWith({ type: "domain.changed", domain: "<feature>" })`.
+- A runner that sleeps: `await clock.advance(ms)` moves it on, one step at a time.
+- A cancel: `await registry.request("job.cancel", { jobId })`.
+- A job's output: `await lines(jobs.list()[0]?.streamId)` answers the lines written so far.
 
 ## Jobs
 
@@ -325,10 +343,13 @@ next).
   `{ content, revision }`, `write(path, content, baseRevision)` answers `{ revision }` or throws
   `FileChangedOnDiskFailure`. Its `current` content stays in the main process; let it propagate and the registry
   sends only the `StudioError`. Writes are atomic (temporary file, then rename).
-- A revision over something held in memory (as `about.setNote` does) is computed with Web Crypto, in the runtime:
+- A revision over something held in memory (as `about.setNote` does) is computed with Web Crypto by a helper in the
+  feature's own service file, `packages/runtime/src/<feature>/<Feature>Service.ts`. There is no shared helper.
+  Write it as `noteRevision` in `packages/runtime/src/about/AboutService.ts` is written (read it; do not import it),
+  named for your feature, and export it so the service test can use it:
 
 ```ts
-export async function noteRevision(text: string): Promise<Revision> {
+export async function padRevision(text: string): Promise<Revision> {
 	const bytes = new TextEncoder().encode(text);
 	const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
 	return Array.from(digest, (b) => b.toString(16).padStart(2, "0")).join("");
@@ -338,6 +359,12 @@ export async function noteRevision(text: string): Promise<Revision> {
 Await the digest first, then compare `baseRevision` and write with no `await` in between, so two writes on one
 base cannot both win. The empty string's revision is
 `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`. Emit `domain.changed` after the write.
+
+- **Revisions in tests.** In the service test, compute each expected revision with the same helper
+  (`await padRevision("hello")`) rather than hard-coding a digest; check the helper once against the empty string's
+  revision above. A renderer hook test cannot import the helper (the runtime's index does not export feature
+  services' helpers): take the base revision from a read, `await backend.registry.request("<feature>.<read>", {})`
+  on the `createMockBackend()` it sets as the transport, and check the answered revision against the next read's.
 
 - In the view: `useWorkingCopy({ value, revision, write, reread })`, with `ChangedOnDisk` and
   `UnsavedChangesGuard` over it (see `NoteSection` in `features/about/screens/AboutScreen.tsx`).
@@ -365,8 +392,8 @@ desktop-only operations. Inputs and outputs are parsed as in the app. So:
   with no Electron and no Python.
 - A feature behaves the same in the browser and the app. If it does not, the bug is in the feature, not the mock.
 - Tests and stories pass `clock: new FakeClock(...)` to run steps and ticks at once (`connectMock` in
-  `apps/renderer/src/test/connectedMock.tsx`, `MockApp` in `apps/renderer/src/test/MockApp.tsx`; stories import
-  `FakeClock` from `shared/bridge/mockTransport`).
+  `apps/renderer/src/test/connectedMock.tsx`, `MockApp` in `apps/renderer/src/test/MockApp.tsx`), importing
+  `FakeClock` from `shared/bridge/mockTransport`.
 
 ## What enforces what
 
@@ -380,11 +407,15 @@ desktop-only operations. Inputs and outputs are parsed as in the app. So:
 | Every component and screen has its stories                                                                 | `pnpm check-stories`                                  |
 | No arbitrary values or inline colours                                                                      | `pnpm check-classes`, `pnpm check-palette`            |
 
-Before committing a change here: `pnpm lint`, `pnpm typecheck` and `pnpm test`, from `ak-studio/`.
+Before committing a change here, from `ak-studio/`: `pnpm format` (Biome writes its formatting and safe fixes into
+anything you edited by hand), then `pnpm lint`, `pnpm typecheck` and `pnpm test`. `pnpm lint` stops at the first
+check that fails, so fix that one and run it again.
 
 ## Common mistakes
 
 - Importing `node:crypto` (or any `node:*`) in `packages/runtime`. Use Web Crypto.
+- Hard-coding a SHA-256 digest in a service test instead of computing it with the feature's revision helper.
+- Writing a second test helper beside `serve()` instead of returning what the test needs from it.
 - Declaring an operation in `operations.ts` itself, or importing `./operations` from a feature's contract file.
 - A plain `z.object` input, or a `z.strictObject` output.
 - Listing `bridge.invalidInput` in `errors`.

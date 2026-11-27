@@ -34,6 +34,8 @@ behind each step and `ak-studio-ui` for the screen.
   (`con`, `nul`, `lpt1`, ...).
 - Every generator plans all its files before writing, refuses rather than overwrites, and writes all or nothing,
   then formats what it wrote with Biome. A refused run changes nothing. `--help` prints the usage.
+- What you write by hand is not formatted for you: run `pnpm format` after your edits, before `pnpm lint` (Biome's
+  format check fails otherwise).
 
 ## 1. The feature folder
 
@@ -93,11 +95,16 @@ Then fill in what the generator left as `{}`:
 2. The handler or runner (see `ak-studio-architecture`: `StudioFailure` for errors, `domain.changed` after a write,
    `ctx.step`, `ctx.stream.write`, `ctx.confirm` and `ctx.cancel()`, every wait through
    `this.#deps.clock.sleep(ms, ctx.signal)`), and its copy in a strings module beside the service.
-3. **Update the generated tests**: they assert `{}` in and out, and fail once the schemas change. A runner that
-   sleeps on the clock needs its test to move the clock: build the service with a `FakeClock` you keep and call
-   `await clock.advance(ms)`. In a hook test, pass `createMockBackend({ clock })` the same way, or read the job
-   through the stores with `connectMock` (`apps/renderer/src/test/connectedMock.tsx`), which proves the events path
-   a view relies on.
+3. **Update the generated tests**: they assert `{}` in and out, and fail once the schemas change.
+   - **Service test.** Extend the generated `serve()` (see "Testing a service" in `ak-studio-architecture`). It
+     returns `clock`, the `FakeClock` the service sleeps on: `await clock.advance(ms)` runs a step. It serves
+     `job.cancel`: `await registry.request("job.cancel", { jobId })` stops a job (or `await jobs.cancelAll(jobs.list())`
+     for every job). It returns `lines`: `await lines(jobs.list()[0]?.streamId)` reads a job's output.
+   - **Hook test.** Pass `createMockBackend({ clock })` a `FakeClock` the same way, or read the job through the
+     stores with `connectMock` (`apps/renderer/src/test/connectedMock.tsx`), which proves the events path a view
+     relies on. In renderer tests and stories, import `FakeClock` from `shared/bridge/mockTransport`.
+   - **A `Job` has no `input` field.** To prove a job ran on the input you gave (a command's fixed sample text, say),
+     move the clock to the end and check the job's `result`.
 
 ### Written by hand: session kinds and app commands
 
@@ -149,6 +156,12 @@ Build it from the patterns (`ak-studio-ui`), in this order of preference: a conn
 | Something long-lived         | `SessionControl` and `StreamingList`                                                                                                                                                                                            |
 | Nothing yet                  | `StateMessage` or `EmptyState`: what the place is for and the first action                                                                                                                                                      |
 
+- **Head a screen** with a `div` holding an `h2` and one sentence, as `AboutScreen` does; never a `<header>`. A
+  screen's stories and tests render it without the shell, where a `<header>` is a banner landmark, and any second
+  one fails axe (`landmark-no-duplicate-banner`); in the app, the shell's top bar is the window's one banner.
+- **Put each part of a screen in a labelled section**, `<section aria-labelledby={id}>` (About's `Section`), and
+  every `StreamingList` inside one: `StreamingList` brings its own `<header>`, which is a second banner landmark
+  outside a section.
 - All copy comes from `strings.ts`. One primary button per view. A scrolling area is `relative h-full overflow-auto`.
 - A press that starts work shows its pending state after 300 ms (`usePendingAfter(flag, callId)`), as
   `DemoJobSection` in `apps/renderer/src/features/about/screens/AboutScreen.tsx` does.
@@ -160,10 +173,19 @@ Build it from the patterns (`ak-studio-ui`), in this order of preference: a conn
   `FakeClock` from a loader (`FakeClock` is imported from `shared/bridge/mockTransport` in a story), one story per
   state, and a `play` that reaches the state. Copy the structure of
   `apps/renderer/src/features/about/screens/AboutScreen.stories.tsx`.
-- **Manifest test**: the generated one renders the screen bare. Once the screen reads data, render it inside
-  `MockApp`, as `apps/renderer/src/features/about/manifest.test.tsx` does.
+- **The generated stubs are replaced, not extended**: the screen's `Default` story (`export const Default = {}`)
+  gives way to the stories of the screen's real states, and the generated manifest test (it renders the screen bare)
+  is rewritten once the screen reads data: render it inside `MockApp`, as
+  `apps/renderer/src/features/about/manifest.test.tsx` does, and test the route, `show` and each command.
 - **Screen test** (`screens/<Name>Screen.test.tsx`): each section through its pattern on the mock, with a
-  `FakeClock` the test moves, as `AboutScreen.test.tsx` does.
+  `FakeClock` the test moves (`act(() => clock.advance(ms))`), as `AboutScreen.test.tsx` does. Two patterns need a
+  particular query:
+  - `JobProgress` writes its step line ("Step 1 of 3 · Reading the text") twice: visibly and in an `sr-only`
+    status for screen readers, so `getByText` finds two. Read the job's card, the region named after the job's
+    title: `screen.getByRole("region", { name: "<job title>" }).textContent`.
+  - `StreamingList` is virtualised, and happy-dom has no layout, so its rows never render in a unit test. Assert
+    output through the stream store, `useStreamStore.getState().streams`, as the `streamed()` helper in
+    `AboutScreen.test.tsx` does. Stories run in a real browser and can find the rows.
 - **Service tests**: every operation through a real registry, including each error code it lists.
 - **End-to-end** (when the screen ships): steps shared by `tests/e2e/browser.spec.ts` (the mock in Chromium) and
   `tests/e2e/electron.spec.ts` (the built app), in a steps file like `tests/e2e/aboutSteps.ts`. The steps use the
@@ -174,7 +196,8 @@ Build it from the patterns (`ak-studio-ui`), in this order of preference: a conn
 From `ak-studio/`:
 
 ```bash
-pnpm lint         # Biome, check-palette, check-classes, check-stories, compile-schemas, depcruise and self-tests
+pnpm format       # Biome writes its formatting and safe fixes into what you edited by hand
+pnpm lint         # Biome, check-classes, check-palette, check-stories, compile-schemas, depcruise and self-tests
 pnpm typecheck
 pnpm test         # unit tests of every member, the tools' tests and the generator test
 pnpm test:storybook                       # when a story, component or screen changed
@@ -182,6 +205,12 @@ pnpm test:visual --update-snapshots=missing   # new stories: then open and commi
 pnpm test:visual                          # when a story, component or screen changed
 pnpm test:e2e                             # when a screen or app code changed
 ```
+
+`pnpm lint` stops at the first check that fails. `pnpm test:storybook` and `pnpm test:visual` take minutes (and
+`pnpm test:visual` rebuilds Storybook each time), so run them in the background with output to a log file of your
+own. Under heavy load a renderer test (the Shell tests most often) or a single screenshot can time out: rerun it
+alone (`pnpm --filter @ak-studio/renderer exec vitest run <file>`, `pnpm test:visual:run -g <story id>`) before
+concluding anything.
 
 A PR is one slice: one operation, one component or one screen state, with its stories and tests.
 
@@ -235,6 +264,10 @@ Other refusals:
 - Hand-writing a feature folder, a contract file or a service instead of running the generator.
 - Leaving the generated `{}` schemas and tests as they are.
 - A job test that waits on a `FakeClock` nobody moves (it times out).
+- A `<header>` in a screen, or a `StreamingList` outside a labelled `<section>`.
+- `getByText` on a job's step line (it is there twice), or looking for `StreamingList` rows in a unit test.
+- Reading `job.input` (there is none): check the result.
+- Extending the generated `Default` story or bare manifest test instead of replacing them.
 - Importing another feature, or anything from `about/`.
 - Adding a tab without the design gate.
 - Forgetting `show` for a feature that owns jobs, or `InterruptedJobs` on its screen.
