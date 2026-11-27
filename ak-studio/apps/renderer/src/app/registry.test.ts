@@ -62,7 +62,8 @@ function unknownCommandIds(
 }
 
 describe("the registry's tabs", () => {
-	it("are the five current tabs, in order, with their labels and paths", () => {
+	// The five product tabs, then About's temporary tab (it goes with the About feature when P2 lands).
+	it("are the five product tabs, in order, then About's, with their labels and paths", () => {
 		expect(
 			registry.tabs.map(({ id, label, path }) => ({ id, label, path })),
 		).toEqual([
@@ -71,6 +72,7 @@ describe("the registry's tabs", () => {
 			{ id: "config", label: "Config", path: "/config" },
 			{ id: "test-trace", label: "Test & trace", path: "/test-trace" },
 			{ id: "deploy", label: "Deploy", path: "/deploy" },
+			{ id: "about", label: "About", path: "/about" },
 		]);
 		expect(registry.defaultTab.id).toBe("canvas");
 	});

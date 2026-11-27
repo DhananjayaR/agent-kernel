@@ -50,6 +50,12 @@ import { desktopFixtureHandlers, type FixtureDeps } from "./desktopFixtures";
 import { FIXTURE_FILES } from "./fixtures";
 import { logStreamError, type StreamErrorHandler } from "./ipcTransport";
 
+/**
+ * The runtime's fake clock, for the mock's `clock` option: steps and ticks run when the caller moves time on. Exported
+ * here because screen stories cannot import @ak-studio/runtime (only shared/bridge may, and unit tests).
+ */
+export { FakeClock } from "@ak-studio/runtime";
+
 export type MockHandlers = {
 	[N in OperationName]: (
 		input: HandlerInputOf<Operations[N]>,

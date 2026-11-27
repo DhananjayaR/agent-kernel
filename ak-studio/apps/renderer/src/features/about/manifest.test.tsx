@@ -1,4 +1,4 @@
-// The About feature's manifest: its id and route, the screen that route mounts (the empty state, titled from the
+// The About feature's manifest: its id, its temporary tab and route, the screen that route mounts (titled from the
 // feature's strings), and its app commands: one starts the demo job through runCommand, one opens the screen.
 import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -9,6 +9,7 @@ import {
 	setCommands,
 } from "../../shared/commands/runCommand";
 import { type ConnectedMock, connectMock } from "../../test/connectedMock";
+import { MockApp } from "../../test/MockApp";
 import { aboutFeature } from "./manifest";
 import { aboutStrings } from "./strings";
 
@@ -21,16 +22,28 @@ afterEach(() => {
 });
 
 describe("aboutFeature", () => {
-	it("mounts its screen at /about, titled with the feature's name, saying what About is for", () => {
+	it("mounts its screen at /about, titled with the feature's name, saying what About is for", async () => {
 		expect(aboutFeature.id).toBe("about");
 		const route = aboutFeature.routes?.find((r) => r.path === "/about");
 		if (!route) throw new Error("no route at /about");
 		const Screen = route.component;
-		render(<Screen />);
-		expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(
+		render(
+			<MockApp>
+				<Screen />
+			</MockApp>,
+		);
+		expect((await screen.findByRole("heading", { level: 2 })).textContent).toBe(
 			aboutStrings.title,
 		);
-		expect(screen.getByText(aboutStrings.empty.description)).toBeTruthy();
+		expect(screen.getByText(aboutStrings.intro)).toBeTruthy();
+	});
+
+	it("has a temporary tab, the last one, removed with the feature", () => {
+		expect(aboutFeature.tab).toEqual({
+			label: "About",
+			path: "/about",
+			order: 6,
+		});
 	});
 
 	it("offers about.runDemoJob, with a title and no shortcut, which starts the demo job", async () => {

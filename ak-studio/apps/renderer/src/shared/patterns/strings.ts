@@ -15,6 +15,13 @@ export const patternStrings = {
 	/** Several unsaved views named together in one dialog: "{first} and {last}", the rest joined with ", ". */
 	unsavedJoin: "{first} and {last}",
 	unsavedJoinComma: ", ",
+	/** A job an earlier run left unfinished (InterruptedJobs): `{job}` is its title. */
+	interruptedJob: {
+		title: "{job} was interrupted",
+		description:
+			"The app closed while it ran, so it did not finish. Check what it was changing before you run it again.",
+		dismiss: "Dismiss",
+	},
 	/** The clipboard refused a version gate's Copy. */
 	copyCommandFailed: {
 		title: "The upgrade command could not be copied",

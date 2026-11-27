@@ -135,7 +135,7 @@ describe("JobProgress", () => {
 			name: "Run the last step?",
 		});
 		await userEvent.click(
-			within(card).getByRole("button", { name: "Stop the job" }),
+			within(card).getByRole("button", { name: "Skip the last step" }),
 		);
 		await waitFor(() => expect(region.dataset.state).toBe("cancelled"));
 		expect(within(card).getByRole("status").textContent).toBe("Denied");

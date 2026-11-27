@@ -589,6 +589,10 @@ describe("UnsavedChangesGuard while a view's own save runs", () => {
 			vi.useRealTimers();
 		}
 		expect(stay).toHaveProperty("disabled", false);
+		// Only Stay comes back: the write still on its way would undo a Discard.
+		expect(
+			within(dialog).getByRole("button", { name: "Discard changes" }),
+		).toHaveProperty("disabled", true);
 		expect(dialog.textContent).toContain(
 			"Saving is taking longer than it should.",
 		);
@@ -599,6 +603,18 @@ describe("UnsavedChangesGuard while a view's own save runs", () => {
 		expect(router.state.location.pathname).toBe("/");
 		expect(
 			screen.getByText("the session section shows: the session section mine"),
+		).toBeTruthy();
+		// The stuck save lands after Stay: it leaves the view clean, and nothing navigates.
+		await act(async () => a.answer({ revision: R2 }));
+		expect(screen.queryByRole("alertdialog")).toBeNull();
+		expect(router.state.location.pathname).toBe("/");
+		expect(screen.queryByText("Other view")).toBeNull();
+		// It did land: leaving again asks about the other view only.
+		fireEvent.click(screen.getByRole("button", { name: "Leave" }));
+		expect(
+			await screen.findByRole("alertdialog", {
+				name: "Unsaved changes in the session section",
+			}),
 		).toBeTruthy();
 	});
 });
