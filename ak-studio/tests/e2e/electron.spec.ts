@@ -80,8 +80,14 @@ async function launchStudio(userDataDir: string): Promise<Studio> {
 		// nativeTheme, which follows the stored preference.
 		colorScheme: null,
 	});
-	await stubDialogs(app);
-	return { app, page: await app.firstWindow() };
+	try {
+		await stubDialogs(app);
+		return { app, page: await app.firstWindow() };
+	} catch (err) {
+		// The caller never gets the app: close it here, so it does not outlive its data folder.
+		await app.close().catch(() => {});
+		throw err;
+	}
 }
 
 /**
@@ -757,9 +763,10 @@ test("a started job that survives quit blocks it: the dialog offers Wait, and Wa
 		await page.waitForTimeout(500);
 		expect(app.process().exitCode).toBeNull();
 		await expect(appVersion(page)).not.toBeEmpty();
-		// Once the job has finished, quitting asks nothing.
+		// Once the job has finished, quitting asks nothing: were it still asked, "Wait" would keep the app open.
 		await finishSurvivingJobs(app);
 		const exit = exited(app);
+		await answerDialogs(app, ["Wait"]);
 		await requestQuit(app);
 		expect(await exit).toBe(0);
 	});
@@ -793,9 +800,14 @@ test("quitting with an unsaved note and a running job asks about the unsaved wor
 		expect(app.process().exitCode).toBeNull();
 		await expect(field).toHaveValue("Not saved yet");
 
-		// Answered the same way to leave: it quits, with no unload question after "Quit without saving".
+		// Answered the same way to leave: it quits, with no unload question after "Quit without saving" (were the
+		// window's unload asked, the queued "Stay" would keep it open).
 		const exit = exited(app);
-		await answerDialogs(app, ["Quit without saving", "Cancel jobs and quit"]);
+		await answerDialogs(app, [
+			"Quit without saving",
+			"Cancel jobs and quit",
+			"Stay",
+		]);
 		await requestQuit(app);
 		expect(await exit).toBe(0);
 	});
