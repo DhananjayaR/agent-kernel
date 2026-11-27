@@ -12,7 +12,8 @@
 			"!**/*.validate.d.ts",
 			"!**/tools/check-classes-fixture",
 			"!**/tools/check-stories-fixture",
-			"!**/tools/biome-selftest/fixture"
+			"!**/tools/biome-selftest/fixture",
+			"!**/.agents"
 		]
 	},
 	"formatter": { "enabled": true, "indentStyle": "tab", "lineEnding": "lf" },
