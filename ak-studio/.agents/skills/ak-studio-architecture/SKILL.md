@@ -57,9 +57,9 @@ runtime services → `contract`; desktop → `runtime`, `contract`.
   (a type-only import is allowed anywhere in desktop). Everything else in main (services, the quit rule, the menu)
   takes Electron's values as arguments, so it is tested without Electron.
 - Unit tests in the renderer may import `@ak-studio/runtime` (for its constants); nothing else in the renderer
-  outside `shared/bridge/` may, stories included. So a new renderer test or story imports `FakeClock` from
-  `shared/bridge/mockTransport`, which re-exports the runtime's: one import that works in both. (The existing
-  tests, `AboutScreen.test.tsx` among them, import it from `@ak-studio/runtime`; that is allowed too.)
+  outside `shared/bridge/` may, stories included. So every renderer test and story imports `FakeClock` from
+  `shared/bridge/mockTransport`, which re-exports the runtime's: one import that works in both, as
+  `AboutScreen.test.tsx` and `AboutScreen.stories.tsx` do.
 - Enforced by dependency-cruiser (`.dependency-cruiser.cjs`, `pnpm depcruise`, proved by `pnpm depcruise:selftest`)
   and Biome's `noNodejsModules` and restricted imports (`biome.json`). Both run in `pnpm lint`. A rule broken
   means the design is wrong; do not add an exemption.
@@ -232,14 +232,19 @@ export class AboutService implements FeatureService {
 The generator writes `<Feature>Service.test.ts` with a `serve()` helper. It builds the service on real core
 services and a `FakeClock`, and starts a registry serving the feature's operations, the shared job and session
 operations (`job.cancel`, `job.respond`, `jobs.list`, ...) and `stream.read`. It returns
-`{ registry, jobs, sessions, streams, events, scopes, clock, lines, names }`. **`serve()` is the helper to extend**:
+`{ registry, jobs, sessions, streams, events, scopes, clock, lines, runUntil, stepOnce, names }`. **`serve()` is the
+helper to extend**:
 when a test needs something more, return it from `serve()` rather than writing a second helper.
 
 - Call an operation as the renderer does: `await registry.request("<feature>.<name>", input)`, which answers
   `{ ok: true, value }` or `{ ok: false, error }`.
 - A domain event: `const emit = vi.spyOn(events, "emit")`, then
   `expect(emit).toHaveBeenCalledWith({ type: "domain.changed", domain: "<feature>" })`.
-- A runner that sleeps: `await clock.advance(ms)` moves it on, one step at a time.
+- A runner that sleeps: `await runUntil("succeeded")` moves the clock a second at a time until the job (the oldest
+  listed, or `runUntil(state, jobId)`) reaches the state, and answers the job; `runUntil("waiting-for-user")` stops
+  at its question. For one step exactly, `await stepOnce(ms)`: it waits until the runner sleeps on the clock, then
+  moves it `ms`. A bare `clock.advance(ms)` straight after starting a job can run before the runner reaches its
+  sleep, and then moves nothing.
 - A cancel: `await registry.request("job.cancel", { jobId })`.
 - A job's output: `await lines(jobs.list()[0]?.streamId)` answers the lines written so far.
 
@@ -292,7 +297,8 @@ async demoJob(ctx: JobContext): Promise<JobResultOf<"about.demoJob">> {
 - **Ownership.** The feature that owns a job kind lists it in its manifest's `jobs` and names a `show` command; the
   background job notice uses both. A registry test fails unless every contract job kind has exactly one owner.
 - Renderer: `useStartJob("x.y").start(input)` (or `startJob` outside React) answers the id; read the job with
-  `useJob(jobId)` or `useJobStore`; show it with `JobProgress` / `JobProgressList`, which also renders its question.
+  `useJob(jobId)` or `useJobStore`, and a screen's jobs with `useJobIdsToShow(kinds)` (`shared/jobs/jobStore.ts`);
+  show them with `JobProgress` / `JobProgressList`, which also renders the question.
 
 ## Sessions
 
@@ -344,6 +350,10 @@ next).
   `{ content, revision }`, `write(path, content, baseRevision)` answers `{ revision }` or throws
   `FileChangedOnDiskFailure`. Its `current` content stays in the main process; let it propagate and the registry
   sends only the `StudioError`. Writes are atomic (temporary file, then rename).
+- **Test that the error carries no content** by matching the whole answer exactly, so no extra field can pass, and
+  by checking the refused text is nowhere in it, as `AboutService.test.ts` does for `about.setNote`:
+  `expect(stale).toEqual({ ok: false, error: { code: "file.changedOnDisk", message: strings.padChanged } })` and
+  `expect(JSON.stringify(stale)).not.toContain("<the refused text>")`.
 - A revision over something held in memory (as `about.setNote` does) is computed with Web Crypto by a helper in the
   feature's own service file, `packages/runtime/src/<feature>/<Feature>Service.ts`. There is no shared helper.
   Write it as `noteRevision` in `packages/runtime/src/about/AboutService.ts` is written (read it; do not import it),
@@ -358,16 +368,23 @@ export async function padRevision(text: string): Promise<Revision> {
 ```
 
 Await the digest first, then compare `baseRevision` and write with no `await` in between, so two writes on one
-base cannot both win. The empty string's revision is
-`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`. Emit `domain.changed` after the write.
+base cannot both win. Emit `domain.changed` after the write. The starting (empty) value's revision is a constant
+beside the helper, `EMPTY_<X>_REVISION`, as `EMPTY_NOTE_REVISION` is in `AboutService.ts`; the service starts on it
+(`#revision: Revision = EMPTY_PAD_REVISION`), and it is the one digest written out:
+
+```ts
+/** The revision of the empty pad: the SHA-256 of "" (a test checks the helper against it). */
+export const EMPTY_PAD_REVISION: Revision =
+	"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+```
 
 - **Revisions in tests.** In the service test, compute each expected revision with the same helper
-  (`await padRevision("hello")`) rather than hard-coding a digest; check the helper once against the empty string's
-  revision above. A renderer hook test cannot import the helper (`@ak-studio/runtime` does not export feature
-  services' helpers): take the base revision from a read through the mock's typed transport,
-  `const { revision } = await backend.transport.request("<feature>.<read>", {})` (`backend` from
-  `createMockBackend()`, or `connectMock().backend`), and check the write's answered revision against the next
-  read's. (About's own hook test writes the two digests out; do not copy that.)
+  (`await padRevision("hello")`) rather than hard-coding a digest, and check the helper once against the constant:
+  `expect(await padRevision("")).toBe(EMPTY_PAD_REVISION)`. A renderer hook test cannot import the helper
+  (`@ak-studio/runtime` does not export feature services' helpers): take the base revision from a read through the
+  mock's typed transport, `const { revision } = await backend.transport.request("<feature>.<read>", {})`
+  (`backend` from `createMockBackend()`, or `connectMock().backend`), and check the write's answered revision
+  against the next read's. (About's own hook test writes the two digests out; do not copy that.)
 
 - In the view: `useWorkingCopy({ value, revision, write, reread })`, with `ChangedOnDisk` and
   `UnsavedChangesGuard` over it (see `NoteSection` in `features/about/screens/AboutScreen.tsx`).
@@ -417,7 +434,9 @@ check that fails, so fix that one and run it again.
 ## Common mistakes
 
 - Importing `node:crypto` (or any `node:*`) in `packages/runtime`. Use Web Crypto.
-- Hard-coding a SHA-256 digest in a service test instead of computing it with the feature's revision helper.
+- Hard-coding a SHA-256 digest in a service test instead of computing it with the feature's revision helper (or
+  using `EMPTY_<X>_REVISION`).
+- Moving the `FakeClock` right after starting a job, before its runner sleeps: use `runUntil` or `stepOnce`.
 - Writing a second test helper beside `serve()` instead of returning what the test needs from it.
 - Declaring an operation in `operations.ts` itself, or importing `./operations` from a feature's contract file.
 - A plain `z.object` input, or a `z.strictObject` output.

@@ -65,7 +65,9 @@ An unbuilt component is added through the design gate in the phase that first ne
   value `min-w-0 flex-1 break-words`; or a grid with a numeric template (`grid grid-cols-2`, `grid-cols-3`), never
   `grid-cols-[...]`. A long value wraps only when its box may shrink: `min-w-0` on a flex or grid child (its default
   minimum is its content's width) and `break-words` on text with no spaces. A fixed width comes from the scale
-  (`w-80` is 320 px).
+  (`w-80` is 320 px). A `<dl>` holds its `dt` and `dd` directly (as `InfoSection`'s grid in `AboutScreen.tsx`
+  does) or wraps each item's `dt` and `dd` in one `div` (for a flex row per item); both are valid HTML, any other
+  child is not.
 - **Colour roles are fixed:** primary for the primary action, focus and selection; the AI colour for the coding
   agent only; success, warning and danger for states. State is never colour alone: an icon or label goes with it.
 - **Floating layers** (menus, popovers, modals, toasts) and docked surfaces are solid, not glass.
@@ -183,7 +185,8 @@ classes.
     recipes from `src/lib/styles.ts`.
 - **From nothing:** `pnpm new:component <name> [--group Controls|Display|Overlays|Structure|Patterns]` writes
   `src/components/<name>.tsx` (`<Name>` and `<Name>Props`), its stories under `<Group>/<Name in sentence case>`, and
-  the exports in `src/index.ts`. The group defaults to Display.
+  the exports in `src/index.ts`. The group defaults to Display. It does not touch `src/strings.ts`: add the copy
+  defaults by hand ("Copy defaults").
 - Either way, export the component and its props type from `packages/ui/src/index.ts`, and put its English
   defaults in `src/strings.ts` as below.
 - The generated stories are stubs to replace, not extend: the meta's `args: { children: ... }` and the `Default`
@@ -197,14 +200,18 @@ Every component that shows words of its own (a button label, an empty text, "Not
 
 1. In `src/strings.ts`: the English defaults in `uiStrings` under the component's camelCase key
    (`commandRow: { ... }`), and its type beside the others,
-   `export type CommandRowStrings = { -readonly [K in keyof typeof uiStrings.commandRow]: string };`. Add the
-   component's name to the list in the file's header comment.
+   `export type CommandRowStrings = { -readonly [K in keyof typeof uiStrings.commandRow]: string };`. The keys are
+   not alphabetical: they run in about the order the header comment names the components (in prose, not a
+   list), with the shell's parts last (`shell` to `statusBar`, `buildWithAI` and `settings` among them). Put a new
+   key beside related ones (a shell part among the shell's), otherwise after `versionNotice`, before `shell`, and
+   name the component at the same place in the header's sentence.
 2. In the component: a `strings?: Partial<CommandRowStrings>` prop ("Overrides of the default copy"), merged over
    the defaults with `const text = { ...uiStrings.commandRow, ...strings };`, and only `text.*` rendered.
 3. In `src/index.ts`: export the `<Name>Strings` type beside the other `...Strings` types from `./strings`.
 
 A few older single-label components take one named prop instead (StatusChip's `label`, Combobox's `emptyText`); a
-new component uses `strings`.
+new component uses `strings`. A component that shows a not-set text for a missing value shows it for `""` too
+(`value === undefined || value === ""`), so an empty value never renders as a blank; a story covers both.
 
 ### The shadcn MCP server
 
@@ -226,13 +233,16 @@ do not run that; run the pinned command above instead. It holds no credentials.
 - One story per state: default, hover, focus, disabled, invalid, read-only where they apply, and a `Keyboard`
   story for anything with a keyboard model. Each `play` function proves its state was reached, using the helpers
   in `src/lib/story-checks.ts` (`hover`, `tabTo`, `expectFocusRing`, `expectHeight`, `expectSolidLayer`,
-  `expectTokenColour`, ...), and checks the Spectrum 2 measurement that matters (32 px controls, the 2 px focus
-  ring 2 px away).
+  `expectTokenColour`, `expectNoOverflow`, ...), and checks the Spectrum 2 measurement that matters (32 px
+  controls, the 2 px focus ring 2 px away).
 - Storybook (`packages/ui/.storybook/`) indexes `packages/ui/src` and the renderer's stories. `pnpm test:storybook`
   runs every story in headless Chromium in both themes with axe (`a11y: { test: "error" }`), and the icon-size
   check after each. A violation fails the story; fix the component, do not disable the rule.
 - A story that needs a fixed-width frame (a long value at 320 px) wraps the story in a decorator with a width from
-  the scale: `decorators: [(Story) => <div className="w-80"><Story /></div>]`; no inline style.
+  the scale: `decorators: [(Story) => <div className="w-80"><Story /></div>]`; no inline style. Its `play` proves
+  the value wraps with `await expectNoOverflow(el)` (`el` the component's root): nothing past its right edge and
+  nothing to scroll sideways, in it or in the page, as the `List` story in `command-row.stories.tsx` does. Do not
+  write `scrollWidth` checks by hand.
 - Shell-sized stories set `parameters.fullBleed` and a viewport (`parameters.viewport` and `globals.viewport`).
   Screen stories in the renderer use `MockApp` (`apps/renderer/src/test/MockApp.tsx`) with a `FakeClock` from a
   loader, as `AboutScreen.stories.tsx` does, so time only moves when a play function moves it.
@@ -244,12 +254,22 @@ do not run that; run the pinned command above instead. It holds no credentials.
 - A new story has no baseline: run `pnpm test:visual --update-snapshots=missing`, look at each new image, and
   commit them. After an intended change to an existing story: `pnpm test:visual --update-snapshots`, then review
   every changed image before committing. Never commit a baseline you have not looked at.
-- **Running the long suites.** `pnpm test:storybook` and `pnpm test:visual` take minutes, and `pnpm test:visual`
-  rebuilds Storybook each time (`pnpm test:visual:run` reuses the last build). Run them in the background with
-  output to a log file of your own. Under heavy load one story or screenshot can fail or time out: rerun it alone
-  (`pnpm test:visual:run -g <story id>`, for example `-g patterns-streaming-list--following`) before concluding
-  anything. The renderer's unit tests (the Shell tests most often) can also time out under load: rerun them before
-  treating a timeout as a failure.
+- **Running the long suites.** Run them in the background with output to `.logs/` (ignored by git), named for your
+  run so parallel runs never share a file: `pnpm test:storybook > .logs/<worktree>-storybook.log 2>&1`. On a quiet
+  12-core machine: `pnpm lint` and `pnpm typecheck` take seconds, `pnpm test` about 1.5 minutes,
+  `pnpm test:storybook` about 1 minute, `pnpm build-storybook` under 10 seconds and `pnpm test:visual:run`
+  about 5 minutes; expect two to three times that while other runs share the machine.
+  `pnpm test:visual` rebuilds Storybook and then runs `pnpm test:visual:run`, which reuses the last build: after
+  changing only a story's code, rebuild (`pnpm build-storybook`) before `test:visual:run`. A subset runs with
+  `-g`: `pnpm test:visual:run -g "screens-about|patterns-command-row"`.
+- **When many tests time out at once**, the machine is usually overloaded: check `uptime` (a load average
+  well above the core count, `nproc`) and rerun with fewer workers, from `packages/ui`
+  `pnpm exec vitest run --project storybook-dark --project storybook-light --maxWorkers=2`, and from `ak-studio/`
+  `pnpm test:visual:run --workers=2`. A single story, screenshot or renderer test (the Shell tests most often) that
+  times out: rerun it alone (`pnpm test:visual:run -g <story id>`, for example
+  `-g patterns-streaming-list--following`) before concluding anything.
+- **"No other baseline changed"** is checked with `git status`: after a run with `--update-snapshots`, the only
+  modified or new files under `tests/visual/__screenshots__/` are the stories you meant to change.
 
 ### What check-classes and check-palette refuse
 

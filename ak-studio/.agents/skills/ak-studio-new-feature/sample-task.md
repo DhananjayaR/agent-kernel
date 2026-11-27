@@ -29,15 +29,15 @@ Add a feature named `word-count` that counts the words in a text as a job.
    - `InterruptedJobs` for the feature's job kind;
    - a `Textarea` for the text and one primary button, "Count words", which starts the job (pending look after
      300 ms; a refused start shown with `ErrorView`);
-   - `JobProgressList` over the feature's jobs from the job store (the live ones and the newest that ended), with
+   - `JobProgressList` over the feature's jobs from `useJobIdsToShow` (the live ones and the newest), with
      the result in one line from the feature's strings: "1 word" for one, "<n> words" for any other number ("0 words",
      "12 words");
    - a `StreamingList` of the newest job's output.
 5. Tests:
    - `WordCountService.test.ts`: the job runs to `{ words }` for a sample text and to `{ words: 0 }` for an empty
-     one, moving the `FakeClock` the generated `serve()` returns; its output is the three step lines; a job
-     cancelled with `job.cancel` during a step ends `cancelled`; an input over 100,000 characters is refused with
-     `bridge.invalidInput`.
+     one, moving the clock with the generated `serve()`'s `runUntil` and `stepOnce`; its output is the three step
+     lines; a job cancelled with `job.cancel` during a step ends `cancelled`; an input over 100,000 characters is
+     refused with `bridge.invalidInput`.
    - The generated hook test, updated for the real input and result.
    - The manifest test, replacing the generated one: the route, `show` and both commands
      (`word-count.countSample` starts a job that ends with the sample text's word count).

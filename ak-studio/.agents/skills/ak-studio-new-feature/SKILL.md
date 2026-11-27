@@ -97,7 +97,10 @@ Then fill in what the generator left as `{}`:
    `this.#deps.clock.sleep(ms, ctx.signal)`), and its copy in a strings module beside the service.
 3. **Update the generated tests**: they assert `{}` in and out, and fail once the schemas change.
    - **Service test.** Extend the generated `serve()` (see "Testing a service" in `ak-studio-architecture`). It
-     returns `clock`, the `FakeClock` the service sleeps on: `await clock.advance(ms)` runs a step. It serves
+     returns `clock`, the `FakeClock` the service sleeps on, and two ways to move it: `await runUntil("succeeded")`
+     runs the job to that state and answers it (the generated job test uses it, so it still passes once the runner
+     sleeps per step), and `await stepOnce(ms)` waits until the runner sleeps, then runs one step. A bare
+     `clock.advance(ms)` straight after the start can come before the runner's sleep and move nothing. It serves
      `job.cancel`: `await registry.request("job.cancel", { jobId })` stops a job (or `await jobs.cancelAll(jobs.list())`
      for every job). It returns `lines`: `await lines(jobs.list()[0]?.streamId)` reads a job's output.
    - **Hook test.** Pass `createMockBackend({ clock })` a `FakeClock` the same way, or read the job through the
@@ -151,7 +154,7 @@ Build it from the patterns (`ak-studio-ui`), in this order of preference: a conn
 | Read data                    | The generated query hook; `isPending` and `showPending` for the 300 ms pending look; a `Skeleton` while it reads                                                                                                                |
 | A failure                    | `<ErrorView error={query.error.error} />`, or the failure of a press with `failureOf(reason)` (`shared/patterns/presentError.ts`)                                                                                               |
 | Edit and save                | `useWorkingCopy` over the query and the command, with `ChangedOnDisk` and `UnsavedChangesGuard`                                                                                                                                 |
-| Start a job and show it      | The generated job hook's `start`, then `JobProgressList` over the feature's jobs read from `useJobStore` by kind (so a job started from the palette or reattached after a reload shows too), and `StreamingList` for its output |
+| Start a job and show it      | The generated job hook's `start`, then `<JobProgressList jobIds={useJobIdsToShow(kinds)} />` (below), and `StreamingList` for the newest job's output                                                                           |
 | A job left by an earlier run | `<InterruptedJobs kinds={[...the manifest's jobs]} />` at the top of the screen                                                                                                                                                 |
 | Something long-lived         | `SessionControl` and `StreamingList`                                                                                                                                                                                            |
 | Nothing yet                  | `StateMessage` or `EmptyState`: what the place is for and the first action                                                                                                                                                      |
@@ -160,7 +163,19 @@ Build it from the patterns (`ak-studio-ui`), in this order of preference: a conn
   screen's stories render it without the shell (and its `<main>`), where a `<header>` is a banner landmark.
   `StreamingList` renders a `<header>` of its own, so a screen `<header>` beside one is a second banner and fails
   axe (`landmark-no-duplicate-banner`, `landmark-unique`).
+- **The jobs to show** come from `useJobIdsToShow(kinds)` (`apps/renderer/src/shared/jobs/jobStore.ts`), `kinds`
+  being the manifest's `jobs` (the same array `InterruptedJobs` takes): every live job of those kinds and the
+  newest whatever its state, oldest first, read from the job store, so a job started from the palette or
+  reattached after a reload shows too. Never keep the id `start` answered. `DemoJobSection` in `AboutScreen.tsx`
+  uses it.
+- **Input bounds stay in the contract.** In P1b a screen does not mirror the input schema's bounds (no `maxLength`
+  on a `Textarea`, though it accepts React Aria's): the contract and the kernel are the authority, and an input
+  over a bound is refused with `bridge.invalidInput`, shown with `ErrorView`. A later phase may add field limits
+  through its design gate.
 - All copy comes from `strings.ts`. One primary button per view. A scrolling area is `relative h-full overflow-auto`.
+  Copy that changes with a count is a function in the strings module (`result: (n: number) => ...`); test its
+  singular and plural on the function itself (`expect(wordCountStrings.result(1)).toBe("1 word")`, then 0 and 2),
+  not by running a job per count.
 - A press that starts work shows its pending state after 300 ms (`usePendingAfter(flag, callId)`), as
   `DemoJobSection` in `apps/renderer/src/features/about/screens/AboutScreen.tsx` does.
 
@@ -204,11 +219,11 @@ pnpm test:visual                          # when a story, component or screen ch
 pnpm test:e2e                             # when a screen or app code changed
 ```
 
-`pnpm lint` stops at the first check that fails. `pnpm test:storybook` and `pnpm test:visual` take minutes (and
-`pnpm test:visual` rebuilds Storybook each time), so run them in the background with output to a log file of your
-own. Under heavy load a renderer test (the Shell tests most often) or a single screenshot can time out: rerun it
-alone (`pnpm --filter @ak-studio/renderer exec vitest run <file>`, `pnpm test:visual:run -g <story id>`) before
-concluding anything.
+`pnpm lint` stops at the first check that fails. Run the long suites in the background with output to
+`.logs/<worktree>-<suite>.log` (ignored by git; a name unique to your run). How long each takes, and what to do
+when many tests time out at once, is in "Running the long suites" in `ak-studio-ui`. A single renderer test (the
+Shell tests most often) that times out under load: rerun it alone
+(`pnpm --filter @ak-studio/renderer exec vitest run <file>`) before concluding anything.
 
 A PR is one slice: one operation, one component or one screen state, with its stories and tests.
 
@@ -261,7 +276,9 @@ Other refusals:
 
 - Hand-writing a feature folder, a contract file or a service instead of running the generator.
 - Leaving the generated `{}` schemas and tests as they are.
-- A job test that waits on a `FakeClock` nobody moves (it times out).
+- A job test that waits on a `FakeClock` nobody moves (it times out), or moves it before the runner sleeps (use
+  `runUntil` or `stepOnce`).
+- Copying About's job selection instead of calling `useJobIdsToShow`.
 - A `<header>` in a screen.
 - `getByText` on a job's step line (it is there twice), or looking for `StreamingList` rows in a unit test.
 - Reading `job.input` (there is none): check the result.
