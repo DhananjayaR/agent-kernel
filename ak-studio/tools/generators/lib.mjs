@@ -8,9 +8,11 @@
 import { execFileSync } from "node:child_process";
 import {
 	chmodSync,
+	closeSync,
 	existsSync,
 	lstatSync,
 	mkdirSync,
+	openSync,
 	readFileSync,
 	realpathSync,
 	renameSync,
@@ -192,8 +194,9 @@ export class Plan {
 
 	/**
 	 * Writes every planned file, then formats them with the workspace's Biome. All or nothing:
-	 * - each file is written to a temporary file beside it (`.<name>.generator-tmp`), given the mode of the file it
-	 *   replaces, and renamed into place;
+	 * - each file is written to a temporary file beside it (`.<name>.<pid>.generator-tmp`, unique to the run),
+	 *   created only if nothing is at that path (a file or folder in the way is refused, and never removed), given
+	 *   the mode of the file it replaces, and renamed into place;
 	 * - each missing folder is made one level at a time and recorded;
 	 * - if a write, a rename or Biome fails, every edited file gets its original text back (again through a
 	 *   temporary file and a rename), every created file, temporary file and folder is removed, and the original
@@ -222,11 +225,30 @@ export class Plan {
 				madeDirs.push(d);
 			}
 		};
-		/** Writes `text` to `full` through a temporary file and a rename, keeping `mode` when given. */
+		/**
+		 * Writes `text` to `full` through a temporary file and a rename, keeping `mode` when given. The temporary file
+		 * is created exclusively (`wx`), so something already at its path is refused rather than overwritten, and it
+		 * joins the cleanup set as soon as this run owns it, before any content is written: a write that fails part
+		 * way leaves nothing behind, and a path this run did not create is never removed.
+		 */
 		const replace = (full, text, mode) => {
 			const tmp = tempPath(full);
-			writeFileSync(tmp, text, "utf8");
+			let fd;
+			try {
+				fd = openSync(tmp, "wx");
+			} catch (err) {
+				if (err?.code === "EEXIST")
+					throw new Error(
+						`${tmp} is in the way of the temporary file this run writes ${basename(full)} through (left by another run, or made by hand): remove it and run the generator again`,
+					);
+				throw err;
+			}
 			temps.add(tmp);
+			try {
+				writeFileSync(fd, text, "utf8");
+			} finally {
+				closeSync(fd);
+			}
 			if (mode !== undefined) chmodSync(tmp, mode);
 			renameSync(tmp, full);
 			temps.delete(tmp);
@@ -286,9 +308,12 @@ export class Plan {
 	}
 }
 
-/** The temporary file a write goes through: beside the file, hidden, the same name each run. */
-export function tempPath(full) {
-	return join(dirname(full), `.${basename(full)}.generator-tmp`);
+/**
+ * The temporary file a write goes through: beside the file, hidden, named for the run's process (`pid`), so two runs
+ * at once never share one.
+ */
+export function tempPath(full, pid = process.pid) {
+	return join(dirname(full), `.${basename(full)}.${pid}.generator-tmp`);
 }
 
 /** `biome check --write` over the written files: formatting, sorted imports and exports, safe fixes. */
@@ -418,16 +443,19 @@ export function runCli(main) {
 /**
  * True when the module at `url` is the script node was started with (not imported by a test). Both sides are
  * compared as real paths: node runs a script by its real path, so through a symlinked folder `argv[1]` differs.
+ * When the script's path cannot be resolved it throws, never answering false: a generator that cannot tell whether
+ * it was run must fail loudly, not do nothing. It never exits the process itself, so a test that imports a generator
+ * sees an error rather than losing its runner; only `runCli` (the command-line path) exits.
  */
 export function isMain(url) {
 	if (!process.argv[1]) return false;
+	let script;
 	try {
-		return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(url));
+		script = realpathSync(process.argv[1]);
 	} catch (err) {
-		// Never a silent no-op: a generator that cannot tell whether it was run says so and fails.
-		console.error(
-			`generator: cannot resolve the script's path (${err instanceof Error ? err.message : String(err)})`,
+		throw new Error(
+			`generator: cannot resolve the script's path ${JSON.stringify(process.argv[1])} (${err instanceof Error ? err.message : String(err)})`,
 		);
-		process.exit(1);
 	}
+	return script === realpathSync(fileURLToPath(url));
 }

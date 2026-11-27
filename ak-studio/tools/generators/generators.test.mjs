@@ -28,8 +28,11 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { isMain, Plan, tempPath } from "./lib.mjs";
+import { planComponent } from "./new-component.mjs";
+import { planFeature } from "./new-feature.mjs";
 import { addJobKind } from "./new-operation.mjs";
 
 const STUDIO = fileURLToPath(new URL("../../", import.meta.url));
@@ -96,14 +99,21 @@ function copyWorkspace(parent) {
 	return dest;
 }
 
-/** Every file of the copy outside node_modules and build output, with a hash of its content. */
+/**
+ * Every file, folder and symbolic link of the copy outside node_modules and build output: a file with a hash of its
+ * content, a folder (its path ends in "/") so an empty one left behind is seen, a link with its target.
+ */
 function snapshot(root) {
 	const out = new Map();
 	const walk = (dir) => {
 		for (const entry of readdirSync(dir, { withFileTypes: true })) {
 			if (SKIP.has(entry.name)) continue;
 			const path = join(dir, entry.name);
-			if (entry.isDirectory()) walk(path);
+			if (entry.isDirectory()) {
+				out.set(`${relative(root, path)}/`, "folder");
+				walk(path);
+			} else if (entry.isSymbolicLink())
+				out.set(relative(root, path), `link to ${readlinkSync(path)}`);
 			else if (entry.isFile())
 				out.set(
 					relative(root, path),
@@ -186,6 +196,15 @@ const CREATED = [
 	"packages/ui/src/components/status-line.tsx",
 	"packages/ui/src/components/status-line.stories.tsx",
 ];
+/** The folders the sample run makes (the feature's, and its runtime service's). */
+const CREATED_FOLDERS = [
+	`${FEATURE_DIR}/`,
+	`${FEATURE_DIR}/api/`,
+	`${FEATURE_DIR}/components/`,
+	`${FEATURE_DIR}/model/`,
+	`${FEATURE_DIR}/screens/`,
+	"packages/runtime/src/release-notes/",
+];
 const CHANGED = [
 	"apps/renderer/src/app/features.ts",
 	"packages/contract/src/index.ts",
@@ -237,6 +256,23 @@ describe("addJobKind (new:operation's edit of a feature manifest)", () => {
 			expect(() => addJobKind(manifest(jobs), "a.two")).toThrow(
 				/Add "a\.two" to its `jobs` by hand/,
 			);
+	});
+});
+
+describe("isMain (each generator's check that it was run, not imported)", () => {
+	it("answers false for a generator imported by a test, and throws (never exits) when the script's path cannot be resolved", () => {
+		const script = process.argv[1];
+		try {
+			expect(
+				isMain(pathToFileURL(join(STUDIO, "tools/generators/new-feature.mjs"))),
+			).toBe(false);
+			process.argv[1] = join(tmpdir(), `no-such-generator-${process.pid}.mjs`);
+			expect(() => isMain(import.meta.url)).toThrow(
+				/cannot resolve the script's path/,
+			);
+		} finally {
+			process.argv[1] = script;
+		}
 	});
 });
 
@@ -372,9 +408,8 @@ describe("the generators, run in a copy of the workspace", () => {
 		const changed = [...after.keys()].filter(
 			(path) => before.has(path) && before.get(path) !== after.get(path),
 		);
-		expect(created.sort()).toEqual([...CREATED].sort());
+		expect(created.sort()).toEqual([...CREATED, ...CREATED_FOLDERS].sort());
 		expect(changed.sort()).toEqual([...CHANGED].sort());
-		expect(existsSync(join(copy, FEATURE_DIR, "components"))).toBe(true);
 		const contract = readFileSync(
 			join(copy, "packages/contract/src/operations.ts"),
 			"utf8",
@@ -506,6 +541,46 @@ describe("the generators, run in a copy of the workspace", () => {
 		);
 		expect(snapshot(copy)).toEqual(before);
 		writeFileSync(operations, originalOperations);
+		// No `desktopFixtureHandlers` declaration, then two: a desktop-only operation's fixture has nowhere sure to go.
+		const fixtures = join(
+			copy,
+			"apps/renderer/src/shared/bridge/desktopFixtures.ts",
+		);
+		const originalFixtures = readFileSync(fixtures, "utf8");
+		writeFileSync(
+			fixtures,
+			originalFixtures.replace(
+				"export const desktopFixtureHandlers:",
+				"export const fixtureAnswers:",
+			),
+		);
+		before = snapshot(copy);
+		refused(
+			/cannot find `export const desktopFixtureHandlers/,
+			"new-operation",
+			FEATURE,
+			"read-tally",
+			"--shape",
+			"query",
+			"--desktop",
+		);
+		expect(snapshot(copy)).toEqual(before);
+		writeFileSync(
+			fixtures,
+			`${originalFixtures}\nexport const desktopFixtureHandlers: FixtureHandlers = {};\n`,
+		);
+		before = snapshot(copy);
+		refused(
+			/declares `desktopFixtureHandlers` more than once/,
+			"new-operation",
+			FEATURE,
+			"read-tally",
+			"--shape",
+			"query",
+			"--desktop",
+		);
+		expect(snapshot(copy)).toEqual(before);
+		writeFileSync(fixtures, originalFixtures);
 		// A feature folder made by hand under a contract module's name.
 		const domainFeature = join(copy, "apps/renderer/src/features/domain");
 		mkdirSync(domainFeature);
@@ -547,17 +622,19 @@ describe("the generators, run in a copy of the workspace", () => {
 		);
 	}, 60_000);
 
-	it("put every file back when writing fails part way (on every OS)", () => {
+	// The two tests below run a generator's plan in this process, so the temporary file's name (it carries the
+	// process id) is known and something can be put in its way.
+	it("put every file back when writing fails part way (on every OS), leaving a folder in the way alone", () => {
 		const src = join(copy, "packages/ui/src");
 		// A folder where the index's temporary file must go: the component and its stories are written first, then
-		// writing the index fails (a file cannot be written over a folder on any OS), and all must be undone.
-		const blocker = join(src, ".index.ts.generator-tmp");
+		// writing the index fails, and all must be undone.
+		const blocker = tempPath(join(src, "index.ts"));
 		mkdirSync(blocker);
 		const before = snapshot(copy);
-		refused(
-			/writing failed, so nothing was changed/,
-			"new-component",
-			"toolbar-row",
+		const plan = new Plan(copy);
+		planComponent(plan, "toolbar-row");
+		expect(() => plan.write()).toThrow(
+			/writing failed, so nothing was changed[\s\S]*is in the way/,
 		);
 		expect(snapshot(copy)).toEqual(before);
 		expect(existsSync(join(src, "components/toolbar-row.tsx"))).toBe(false);
@@ -569,22 +646,32 @@ describe("the generators, run in a copy of the workspace", () => {
 		rmSync(blocker, { recursive: true });
 	}, 60_000);
 
-	it("remove the folders it made when a new feature fails part way", () => {
-		const features = join(copy, "apps/renderer/src/app");
-		const blocker = join(features, ".features.ts.generator-tmp");
-		mkdirSync(blocker);
+	it("refuse a file in the way of a temporary file, never writing over it or removing it", () => {
+		const features = join(copy, "apps/renderer/src/app/features.ts");
+		const blocker = tempPath(features);
+		writeFileSync(blocker, "left by another run\n");
 		const before = snapshot(copy);
-		refused(
-			/writing failed, so nothing was changed/,
-			"new-feature",
-			"changelog",
+		const plan = new Plan(copy);
+		planFeature(plan, "changelog");
+		expect(() => plan.write()).toThrow(
+			/writing failed, so nothing was changed[\s\S]*is in the way/,
 		);
+		// The feature's folders and files are gone again, and the file in the way is exactly as it was.
 		expect(snapshot(copy)).toEqual(before);
 		expect(existsSync(join(copy, "apps/renderer/src/features/changelog"))).toBe(
 			false,
 		);
-		rmSync(blocker, { recursive: true });
+		expect(readFileSync(blocker, "utf8")).toBe("left by another run\n");
+		rmSync(blocker);
 	}, 60_000);
+
+	it("name each temporary file for the run's process, so two runs never share one", () => {
+		const full = join(copy, "packages/ui/src/index.ts");
+		expect(tempPath(full, 1234)).toBe(
+			join(copy, "packages/ui/src/.index.ts.1234.generator-tmp"),
+		);
+		expect(tempPath(full)).not.toBe(tempPath(full, process.pid + 1));
+	});
 
 	it("keep a comment on register with register, and add a fixture inside its object when code follows it", () => {
 		const service = join(

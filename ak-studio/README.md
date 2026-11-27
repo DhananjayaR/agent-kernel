@@ -111,9 +111,10 @@ from one, so the skeleton is never hand-written and passes every check as genera
 refuses to overwrite anything, and a refused run writes nothing. It then runs Biome (`check --write`) on what it
 wrote, which sorts the imports and exports it added.
 
-Writing is all or nothing: each file goes to a temporary file beside it (`.<name>.generator-tmp`, keeping the mode
-of the file it replaces) and is renamed into place, and if a write or the Biome step fails, every edited file gets
-its original text back and every created file and folder is removed. A file that is a symbolic link is never
+Writing is all or nothing: each file goes to a temporary file beside it (`.<name>.<pid>.generator-tmp`, named for
+the run's process and created only if nothing is at that path, keeping the mode of the file it replaces) and is
+renamed into place, and if a write or the Biome step fails, every edited file gets its original text back and every
+created file and folder is removed. Something already at a temporary file's path is refused and left alone. A file that is a symbolic link is never
 edited (the run is refused). Edit
 points are found by structure (`register` must be the service's last member, and a comment on it stays with it; a
 case goes at the end of the service test's `describe`; a fixture at the end of the `desktopFixtureHandlers`
@@ -164,8 +165,8 @@ About feature (`features/about/`, `packages/runtime/src/about/`) has one of each
 `pnpm test:generators` copies the workspace into a temporary folder (the files git sees, with `node_modules`
 linked so `@ak-studio/*` resolves inside the copy), checks the refusals leave the copy unchanged, runs all three
 generators (a feature, a query, a command, a job, desktop-only and project-scoped operations, and a component),
-checks appends to hand-edited files, edit points it must refuse, a run through a symlinked path and a write that
-fails part way (the copy byte-identical after), then runs Biome,
+checks appends to hand-edited files, edit points it must refuse, a run through a symlinked path, a write that
+fails part way and a file in the way of a temporary file (the copy, folders included, byte-identical after), then runs Biome,
 depcruise, check-stories, check-classes, `tsc -b` and the contract, runtime, desktop and renderer tests in the
 copy, and deletes it. About 15 s.
 
