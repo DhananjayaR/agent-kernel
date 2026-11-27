@@ -136,6 +136,22 @@ test("the bottom panel hides and shows with Ctrl+J and its toggle, keeping focus
 	const show = page.getByRole("button", { name: "Show the panel" });
 	await expect(show).toBeVisible();
 	await expect(panel).toHaveJSProperty("offsetHeight", 48);
+	// Closed, nothing in the panel may scroll: an area left with no height once drew a stub scroll bar.
+	expect(
+		await page.evaluate(
+			() =>
+				[
+					...document.querySelectorAll(
+						'[data-slot="bottom-panel"], [data-slot="bottom-panel"] *',
+					),
+				].filter((el) => {
+					const { overflowY } = getComputedStyle(el);
+					return (
+						/auto|scroll/.test(overflowY) && el.scrollHeight > el.clientHeight
+					);
+				}).length,
+		),
+	).toBe(0);
 	await show.click();
 	await expect(panel).toHaveJSProperty("offsetHeight", 240);
 	await expect(

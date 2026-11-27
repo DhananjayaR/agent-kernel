@@ -166,7 +166,11 @@ export function BottomPanel({
 					<div
 						ref={viewsRef}
 						inert={!isOpen}
-						className="min-h-0 flex-1 overflow-auto border-t border-border-default"
+						// Closed, the strip leaves this area no height: it must not scroll, or a stub scroll bar shows.
+						className={cn(
+							"relative min-h-0 flex-1 border-t border-border-default",
+							isOpen ? "overflow-auto" : "overflow-hidden",
+						)}
 					>
 						<TabPanel
 							key={selectedTab}
