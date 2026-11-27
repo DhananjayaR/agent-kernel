@@ -287,6 +287,8 @@ do not run that; run the pinned command above instead. It holds no credentials.
   | `pnpm build-storybook`           | under 10 seconds                       | under 30 seconds                      |
   | `pnpm test:visual:run`           | 5 to 6 minutes                         | 10 to 15 minutes                      |
 
+  The loaded times are about two to three times the quiet ones; `pnpm test` has taken over 3 minutes.
+
   `pnpm test:visual` rebuilds Storybook and then runs `pnpm test:visual:run`, which reuses the last build: after
   changing only a story's code, rebuild (`pnpm build-storybook`) before `test:visual:run`. A subset runs with
   `-g`: `pnpm test:visual:run -g "screens-about|patterns-command-row"`.

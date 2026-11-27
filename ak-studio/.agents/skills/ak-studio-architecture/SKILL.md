@@ -210,10 +210,10 @@ export class AboutService implements FeatureService {
 
 - Each operation's handler is a method. `register` is the class's **last member** (the generator inserts there
   and refuses otherwise).
-- The generator writes a handler with no input, `x(): HandlerResultOf<...>`, wired as
-  `registry.handle("x.y", () => this.x())`. Once the operation has input, the method takes it and the `register`
-  line passes it on; a handler that awaits (a Web Crypto digest) is `async` and answers a `Promise`. As
-  `AboutService` does for `about.setNote`:
+- For a query or command without `--project`, the generator writes a handler with no input,
+  `x(): HandlerResultOf<...>`, wired as `registry.handle("x.y", () => this.x())`. Once the operation has input,
+  the method takes it and the `register` line passes it on; a handler that awaits (a Web Crypto digest) is
+  `async` and answers a `Promise`. As `AboutService` does for `about.setNote`:
 
 ```ts
 import {
@@ -253,8 +253,8 @@ import {
   `packages/runtime/src/<feature>/strings.ts`, exporting `<featureCamel>Strings` (`scratchPadStrings`). About does
   this: `packages/runtime/src/about/strings.ts` exports `aboutStrings`, the demo job's steps, its output line and
   question, and the note's stale-write message. The renderer feature's own `strings.ts` takes the same name for the
-  copy its screen shows; the two never meet, since the renderer cannot import the runtime. Do not import anything
-  from `about/`: the About feature is a throwaway slice, deleted when P2 lands its first real feature.
+  copy its screen shows; the two never meet, since a renderer feature cannot import the runtime. Do not import
+  anything from `about/`: the About feature is a throwaway slice, deleted when P2 lands its first real feature.
 - `ServiceRegistry.start()` fails when a declared operation has no handler, so a missing registration fails at
   start-up and in `apps/desktop/src/main/services/registerServices.test.ts`.
 
