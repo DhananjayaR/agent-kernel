@@ -1,8 +1,8 @@
 # Sample task: a sample feature with a job
 
 This task tests the `ak-studio-new-feature` skill (with `ak-studio-architecture` and `ak-studio-ui` where it points
-to them). Run it in a scratch branch or worktree, from `ak-studio/`, using only the skills. Import nothing from the
-About feature.
+to them). Run it in a scratch branch or worktree, from `ak-studio/`, using only the skills. Read the About feature
+where the skills point to it, but import nothing from it.
 
 ## The task
 

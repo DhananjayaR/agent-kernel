@@ -1,8 +1,8 @@
 # Sample task: a query and a command with a revision
 
 This task tests the `ak-studio-architecture` skill (with `ak-studio-new-feature` for the generator commands). Run it
-in a scratch branch or worktree, from `ak-studio/`, using only the skills. Do not copy from the About feature's
-files, and import nothing from them: About is throwaway.
+in a scratch branch or worktree, from `ak-studio/`, using only the skills. The skills point to the About feature as
+the worked example: read it, but import nothing from it (About is throwaway).
 
 ## The task
 

@@ -148,7 +148,7 @@ Every screen is assembled from these. A feature uses the **connected wrapper** i
 
 The About screen (`apps/renderer/src/features/about/screens/AboutScreen.tsx`, stories in
 `AboutScreen.stories.tsx`) uses most of these together: read it to see the wrappers wired to real hooks. It is
-throwaway; copy its shape, not its code.
+throwaway: read it, do not import from it.
 
 ## 3. Adding or changing a component in `packages/ui`
 
