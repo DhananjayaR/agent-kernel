@@ -156,6 +156,8 @@ ak-studio/
 
 ### Task 1: Design gate options (docs only)
 
+**Done** (commit `2cf49cf8`). Owner sign-off of all five rows: `7f1575a9`.
+
 Done by the controller, with one subagent to read the artboards. No code.
 
 **Files:** create `docs/specs/950-agent-kernel-studio-phase-1/research/technology/p1b-design-gate-options.md`;
@@ -172,6 +174,8 @@ modify `implementation/P1b-data-layer-and-patterns.md` (the palette row, ruling 
 - [ ] **Step 4:** Run the link check. Commit. Send the owner the note.
 
 ### Task 2: Renderer folders and boundary rules
+
+**Done on Linux** (commits `97c4f48b..f44513ed`).
 
 **Files:** move `apps/renderer/src/{App.tsx,shell/,routes/,useAppTheme.ts,useWindowMaximized.ts,theme.ts}`
 into `src/app/`, and `src/bridge/` and `src/queries.ts` into `src/shared/`. Modify `.dependency-cruiser.cjs`
@@ -197,6 +201,8 @@ test environment `happy-dom` with Testing Library; the package `@ak-studio/runti
 - [ ] **Step 5:** Verify (all five commands). Commit.
 
 ### Task 3: Contract shapes, domain types, events and errors
+
+**Done on Linux** (commits `f44513ed..25098ea7`; the options note `2cf49cf8` came first).
 
 **Files:** `packages/contract/src/{shapes,domain,jobs,sessions,events}.ts` (new), `operations.ts`,
 `errors.ts`, `index.ts`, tests beside each.
@@ -244,6 +250,8 @@ test environment `happy-dom` with Testing Library; the package `@ak-studio/runti
 
 ### Task 4: Runtime core: registry, scope, masking, events, streams, ports
 
+**Done on Linux** (commits `25098ea7..a9d629a0`).
+
 **Files:** `packages/runtime/src/{registry,scope,secrets,events,streams,index}.ts`, `src/ports/*.ts`, tests
 beside each. Move `apps/desktop/src/main/bridge/registry.ts` and its test here; the IPC server imports it from
 `@ak-studio/runtime`. Add the `packages/runtime` row to the layer table in [architecture.md](architecture.md#layers)
@@ -286,6 +294,8 @@ beside each. Move `apps/desktop/src/main/bridge/registry.ts` and its test here; 
 
 ### Task 5: JobService and SessionService
 
+**Done on Linux** (commits `a9d629a0..21b59810`).
+
 **Files:** `packages/runtime/src/{jobs,sessions}.ts` and tests;
 `apps/desktop/src/main/infra/NodeJobRecordStore.ts` and test.
 
@@ -322,6 +332,8 @@ beside each. Move `apps/desktop/src/main/bridge/registry.ts` and its test here; 
 
 ### Task 6: Desktop wiring and the quit rule
 
+**Done on Linux** (commits `21b59810..ce28c832`).
+
 **Files:** `apps/desktop/src/main/services/registerServices.ts`, `apps/desktop/src/main/index.ts`, tests.
 
 **Consumes:** Tasks 4 and 5.
@@ -339,6 +351,8 @@ beside each. Move `apps/desktop/src/main/bridge/registry.ts` and its test here; 
 - [ ] **Step 4:** Verify. Commit.
 
 ### Task 7: Renderer data layer
+
+**Done on Linux** (commits `ce28c832..28d07d07`).
 
 **Files:** `apps/renderer/src/shared/{query,events,errors,working-copy}/` and tests;
 `shared/bridge/mockTransport.ts` (rebuilt on `runtime`).
@@ -374,6 +388,8 @@ beside each. Move `apps/desktop/src/main/bridge/registry.ts` and its test here; 
 
 ### Task 8: Stores, reattach and capabilities
 
+**Done on Linux** (commits `50628835..b0296747`).
+
 **Files:** `apps/renderer/src/shared/{streams,jobs,sessions,capability}/`, `packages/kernel-catalog/src/`, tests.
 
 **Consumes:** Task 7 (`connectEvents`, the hooks).
@@ -397,6 +413,8 @@ beside each. Move `apps/desktop/src/main/bridge/registry.ts` and its test here; 
 - [ ] **Step 2:** Implement. Verify. Commit.
 
 ### Task 9: App commands, manifests, shortcuts
+
+**Done on Linux** (commits `b0296747..4e764b60`; review hardening `28306dbc`).
 
 **Files:** `apps/renderer/src/shared/commands/`, `apps/renderer/src/app/{features,registry}.ts`,
 `app/shell/`, `packages/ui/src/components/bottom-panel.tsx`, tests.
@@ -423,6 +441,8 @@ beside each. Move `apps/desktop/src/main/bridge/registry.ts` and its test here; 
 
 ### Task 10: SchemaForm skeleton
 
+**Done on Linux** (commits `4e764b60..254de293`).
+
 **Files:** `apps/renderer/src/shared/forms/`, `tools/compile-schemas.mjs`, tests.
 
 **Produces:** `SchemaForm({ schema, validate, value, onSubmit, overrides? })`: renders string, number,
@@ -439,6 +459,8 @@ Hook Form, and checks fields with a validator precompiled by Ajv standalone (`co
 
 ### Task 11: Fixture project and the mock's data
 
+**Done on Linux** (commits `254de293..66ee4154`).
+
 **Files:** `ak-studio/fixtures/support-triage/` and `fixtures/README.md`;
 `apps/renderer/src/shared/bridge/fixtures.ts`.
 
@@ -450,6 +472,8 @@ Hook Form, and checks fields with a validator precompiled by Ajv standalone (`co
 - [ ] **Step 3:** Verify. Commit.
 
 ### Task 12: Enforcement checks
+
+**Done on Linux** (commits `66ee4154..2c69877d`; the CI workflow is written, not run: ruling 1).
 
 **Files:** `tools/check-classes.mjs` and fixtures; `tools/check-stories.mjs` and fixtures;
 `tools/story-requirements.json`; `packages/ui/.storybook/main.ts` (ruling 16); `tests/visual/`;
@@ -473,6 +497,8 @@ Hook Form, and checks fields with a validator precompiled by Ajv standalone (`co
 
 ### Task 13: Generators
 
+**Done on Linux** (commits `2c69877d..9db350e2`).
+
 **Files:** `tools/generators/{new-feature,new-operation,new-component}.mjs`, `tools/generators/templates/`,
 tests; `package.json` scripts `new:feature`, `new:operation`, `new:component`.
 
@@ -487,6 +513,8 @@ tests; `package.json` scripts `new:feature`, `new:operation`, `new:component`.
 - [ ] **Step 3:** Verify. Commit.
 
 ### Task 14: About slice, without its screen
+
+**Done on Linux** (commits `9db350e2..4ea5346d`).
 
 **Files:** `packages/runtime/src/about/`, contract additions, `apps/renderer/src/features/about/` (made with
 Task 13's generators).
@@ -509,9 +537,13 @@ Task 13's generators).
 
 ### Gate: pattern sign-off
 
+**Done** (all five rows approved as recommended, 26 Nov 2026, commit `7f1575a9`).
+
 Tasks 15 to 18 are not dispatched until the matching rows of the P1b sign-off table are filled.
 
 ### Task 15: Patterns A: job progress, approval, background notice
+
+**Done on Linux** (commits `4b756be7..973c1634`).
 
 Presentational parts in `packages/ui` with stories for every state (gate step 4); connected wrappers in
 `shared/patterns/` (`JobProgress`, `Approval`, `BackgroundJobNotice`) reading the job store. Approval answers
@@ -520,6 +552,8 @@ component's required stories go in `story-requirements.json`.
 
 ### Task 16: Patterns B: session control, streaming list, command row, command palette
 
+**Done on Linux** (commits `973c1634..2d0a72b5`).
+
 `SessionControlView` and `SessionControl`; `StreamingListView` (virtualised with `@tanstack/react-virtual`;
 follows the end until the person scrolls up; "Jump to latest"; copy; clear; ANSI colours mapped to tokens as
 approved) and `StreamingList` over `useStream`; `CommandRow`; `CommandPalette` (React Aria, built from the
@@ -527,11 +561,16 @@ command list of Task 9, showing each shortcut).
 
 ### Task 17: Patterns C: changed on disk, unsaved guard, version gate, state messages
 
+**Done on Linux** (commits `2d0a72b5..3751101e`).
+
 `ChangedOnDiskBanner` with "Keep mine", "Take theirs" and "Compare"; `UnsavedChangesDialog` for in-app
 navigation; `VersionNotice` in its three sizes and `CapabilityGate` over `useCapability`; one family for the
 empty, cannot-read and error states, and `ErrorView` placing any `StudioError` by `errorPresentation`.
 
 ### Task 18: About screen and end-to-end verification
+
+**Done on Linux** (commits `3751101e..d7d0ab2b`). Browser reload cannot reattach (the mock lives in the
+page), so reattach after a reload is proved in Electron; the browser proves leaving mid-job and coming back.
 
 The About screen from the patterns, reached from a tab or the palette. End-to-end, browser and Electron:
 
@@ -546,6 +585,8 @@ The About screen from the patterns, reached from a tab or the palette. End-to-en
 
 ### Task 19: Skills and tooling
 
+**Done on Linux** (commits `d7d0ab2b..a3692748`; the owner's two bug fixes `d540782b` and `278fc9fe` sit inside the range).
+
 - [ ] `ak-studio/.agents/skills/` with `ak-studio/.claude/skills` linked to it; `ak-studio/AGENTS.md`; one line
   in the root `AGENTS.md`; `ak-studio/README.md` notes that a Windows clone needs symbolic links enabled.
 - [ ] `ak-studio-architecture` and `ak-studio-new-feature` (before the gate); `ak-studio-ui` (after Tasks 15 to
@@ -557,10 +598,17 @@ The About screen from the patterns, reached from a tab or the palette. End-to-en
 
 ### Task 20: Skill tests and close-out
 
-- [ ] Each skill's sample task run three times by a coding agent in a scratch worktree, using only the skill:
+**Done on Linux** (commits `a3692748..7c8769d3`).
+
+- [x] Each skill's sample task run three times by a coding agent in a scratch worktree, using only the skill:
   nine runs. Each must pass lint, boundaries, stories and review with no hand edits. A failing skill is
   rewritten and its three runs repeated. Recorded in the PR (ruling 5).
-- [ ] Tick the P1b doc, fill the README progress row, record every Deferred item.
+- [x] Skill tests, recorded here (ruling 5): 9/9 runs passed "Done means", three per skill, on 27 Nov 2026
+  (sonnet agents, one scratch worktree each, three batches). Each skill was revised between rounds: after
+  batch 1 (`8da19a0a`, `eb002db9`, `ce34c2d0`, `c3f53528`, `451a1693`), after batch 2 (`b6e7068b`, `e67bf0cb`,
+  `775ed912`), and in a close-out pass after batch 3 (`f7a26b5f`, `0275d483`, `7c8769d3`). The rounds 2 and 3
+  runs found no wrong statement in the skills; the remaining gaps were guidance on load, logs and recipes.
+- [x] Tick the P1b doc, fill the README progress row, record every Deferred item.
 
 ## Order
 
